@@ -13,7 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tableros: {
       'TABLERO_01': {
         id: 'TABLERO_01',
+        nombre: 'EPET 14 / EPET 20',
         ubicacion: 'Aula Taller 3 - Planta Baja',
+        posX: 20,
+        posY: 45,
         tension_v: 220.0,
         tension_nominal_v: 220.0,
         fase: 'L1',
@@ -30,7 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       'TABLERO_02': {
         id: 'TABLERO_02',
+        nombre: 'Parque Norte',
         ubicacion: 'Parque Norte - Sector Canchas',
+        posX: 45,
+        posY: 30,
         tension_v: 218.5,
         tension_nominal_v: 220.0,
         fase: 'L2',
@@ -38,6 +44,33 @@ document.addEventListener('DOMContentLoaded', () => {
           'FOCO_C1': { id: 'FOCO_C1', corriente_ma: 450.0, estado: 'ok' },
           'FOCO_C2': { id: 'FOCO_C2', corriente_ma: 447.0, estado: 'ok' },
           'FOCO_C3': { id: 'FOCO_C3', corriente_ma: 452.0, estado: 'ok' }
+        }
+      },
+      'TABLERO_03': {
+        id: 'TABLERO_03',
+        nombre: 'Paseo de la Costa',
+        ubicacion: 'Paseo de la Costa - Río Limay',
+        posX: 75,
+        posY: 75,
+        tension_v: 220.0,
+        tension_nominal_v: 220.0,
+        fase: 'L3',
+        focos: {
+          'FOCO_D1': { id: 'FOCO_D1', corriente_ma: 450.0, estado: 'ok' },
+          'FOCO_D2': { id: 'FOCO_D2', corriente_ma: 450.0, estado: 'ok' }
+        }
+      },
+      'TABLERO_04': {
+        id: 'TABLERO_04',
+        nombre: 'Avenida Argentina',
+        ubicacion: 'Av. Argentina y Monolito',
+        posX: 55,
+        posY: 50,
+        tension_v: 221.0,
+        tension_nominal_v: 220.0,
+        fase: 'L1',
+        focos: {
+          'FOCO_E1': { id: 'FOCO_E1', corriente_ma: 450.0, estado: 'ok' }
         }
       }
     },
@@ -56,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
     kpiAlertasCriticas: document.getElementById('kpiAlertasCriticas'),
     kpiAdvertencias: document.getElementById('kpiAdvertencias'),
     kpiTotalFocos: document.getElementById('kpiTotalFocos'),
+
+    // Mapa Semáforo
+    mapPinsContainer: document.getElementById('mapPinsContainer'),
 
     // Panel Telemetría
     selectTablero: document.getElementById('selectTablero'),
@@ -629,7 +665,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (elements.kpiTotalFocos) {
-      elements.kpiTotalFocos.textContent = `${focosOkCount}/${totalFocosCount}`;
+      elements.kpiTotalFocos.textContent = `${focosOkCount} de ${totalFocosCount} Focos`;
+    }
+
+    // 5. Actualizar Banner Semáforo Municipal de Estado General
+    const banner = document.getElementById('generalStatusBanner');
+    const bannerIcon = document.getElementById('generalStatusIcon');
+    const bannerTitle = document.getElementById('generalStatusTitle');
+    const bannerDesc = document.getElementById('generalStatusDesc');
+
+    if (banner && bannerTitle && bannerDesc) {
+      if (criticasCount > 0) {
+        banner.className = 'general-status-banner red';
+        if (bannerIcon) bannerIcon.className = 'fas fa-triangle-exclamation';
+        bannerTitle.textContent = 'ALERTA URGENTE: REVISAR TABLERO INMEDIATAMENTE';
+        bannerDesc.textContent = `Se han detectado ${criticasCount} problema(s) crítico(s) de baja tensión o desconexión abrupta en la red.`;
+      } else if (advertenciasCount > 0) {
+        banner.className = 'general-status-banner yellow';
+        if (bannerIcon) bannerIcon.className = 'fas fa-triangle-exclamation';
+        bannerTitle.textContent = 'ATENCIÓN: REVISIÓN DE FOCOS REQUERIDA';
+        bannerDesc.textContent = `Se registraron ${advertenciasCount} foco(s) con anomalía de consumo que requieren reemplazo.`;
+      } else {
+        banner.className = 'general-status-banner green';
+        if (bannerIcon) bannerIcon.className = 'fas fa-check-circle';
+        bannerTitle.textContent = 'FUNCIONAMIENTO NORMAL';
+        bannerDesc.textContent = 'Todos los tableros eléctricos y luminarias de la ciudad operan sin anomalías.';
+      }
     }
   }
 

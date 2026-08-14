@@ -116,9 +116,11 @@ Al modificar la logica de analisis en el backend o frontend, aplique rigurosamen
 
 La interfaz esta construida en **Vanilla JS** sin dependencias de frameworks React/Vue/Angular.
 
-### Variables de Estado en `js/app.js`
-- `appState.selectedTableroId`: Almacena el ID del tablero visible (ej: `'TABLERO_01'`).
-- `appState.tableros`: Objeto dinamico indexado por ID de tablero que contiene ubicacion, tension y la lista de focos con sus lecturas en mA.
+### Variables de Estado y Elementos en `js/app.js`
+- `appState.selectedTableroId`: Almacena el ID del tablero activo en pantalla (ej: `'TABLERO_01'`).
+- `appState.tableros`: Objeto dinamico indexado por ID de tablero que contiene ubicacion, coordenadas (`posX`, `posY`), tension y focos en mA.
+- `elements.mapPinsContainer`: Contenedor del mapa donde se renderizan los nodos semáforo interactivos.
+- `renderMapPins()`: Funcion encargada de evaluar el estado semáforo de cada tablero (Rojo = Crítico por caida de tension o robo; Amarillo = Advertencia por foco quemado; Verde = Operacion normal) y adjuntar los event listeners de seleccion al hacer clic.
 - `appState.alerts`: Array que almacena el historial de eventos recibidos.
 - `window.luminariaMQTT`: Singleton de la clase `LuminariaMQTTClient` (definida en `js/mqtt-client.js`).
 

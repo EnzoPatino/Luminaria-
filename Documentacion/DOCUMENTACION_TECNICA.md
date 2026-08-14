@@ -239,11 +239,19 @@ volumes:
 
 La UI fue construida sin dependencias de compilacion pesadas, garantizando una carga inmediata y facil mantenimiento.
 
-### Estructura de Archivos del Frontend
+### 5.1 Componentes Principales
 - `index.html`: Maquetacion HTML5 semantica, accesible y modular.
 - `css/styles.css`: Sistema de diseño *Dark Industrial Glassmorphism*, variables CSS adaptativas y media queries para respuesta movil.
 - `js/mqtt-client.js`: Modulo encapsulado para la gestion de conexiones WebSockets Paho MQTT con reconexion y modo simulación.
 - `js/app.js`: Estado global de la aplicacion, procesamiento de eventos JSON, actualizacion de medidores y sintetizador de audio.
+
+### 5.2 Sistema Semaforo de Alertas y Mapa Geografico
+La interfaz incluye una seccion visual de mapa geografico representativo de las zonas monitoreadas en Neuquen (EPET 14/20, Parque Norte, Paseo de la Costa y Av. Argentina). Cada tablero esta representado por un nodo de semaforo interactivo que cambia de color dinamicamente segun la severidad del estado:
+- **Rojo (Critico)**: Se activa ante caidas de tension por debajo de 190V (`BAJA_TENSION`) o desconexiones abruptas/robos de luminarias (`DESCONEXION_ABRUPTA_FOCO`). Emite un pulso luminoso de advertencia.
+- **Amarillo (Advertencia)**: Se activa ante deteccion de focos quemados (`FOCO_QUEMADO`) o mediciones de tension bordem (entre 190V y 210V).
+- **Verde (Normal)**: Indica que la red electrica y todas las luminarias del tablero operan dentro de los parametros nominales (220V / 450mA).
+
+Al hacer clic sobre cualquier nodo del semaforo en el mapa, la UI cambia automaticamente el tablero seleccionado para mostrar su telemetria detallada.
 
 ---
 
