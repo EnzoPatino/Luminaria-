@@ -1,94 +1,75 @@
-# 🔌 Project Luminaria — UI Web de Monitoreo Eléctrico
+# Manual de Integracion Frontend y Mosquitto MQTT
 
-**Proyecto interescolar EPET 14 × EPET 20 — Municipalidad de Neuquén**
-`UI Frontend` · `Preparada para MQTT / Mosquitto` · `HTML + CSS + JS`
-
----
-
-## 📌 Resumen
-
-Esta interfaz web fue diseñada siguiendo las especificaciones de la **Documentación Técnica (Draft v0.2)** y la **Guía de Estudio MQTT**. Es una aplicación **liviana, responsiva y de alto rendimiento**, desarrollada en HTML5, CSS3 vanilla y JavaScript moderno.
-
-Permite a los técnicos y estudiantes monitorear en tiempo real los tableros eléctricos, el voltaje de la red y el estado individual de cada luminaria/foco.
+**Project Luminaria — EPET N.º 14 × EPET N.º 20**
 
 ---
 
-## ⚡ Características Principales
+## 1. Introduccion
 
-1. **Dashboard de Telemetría Eléctrica**:
-   - Medidor analógico/digital de voltaje de red con indicación de umbral crítico (< 190V).
-   - Matriz de luminarias (`FOCO_A1`, `FOCO_A2`, etc.) con monitoreo de consumo en miliamperios (mA) e indicadores LED de estado.
-2. **Recepción de Alertas en Tiempo Real**:
-   - ⚡ `BAJA_TENSION` (CRÍTICA - Rojo): Caída de voltaje en la red eléctrica.
-   - 🚨 `DESCONEXION_ABRUPTA_FOCO` (CRÍTICA - Rojo): Robo o desconexión física abrupta de un foco (< 200ms).
-   - 💡 `FOCO_QUEMADO` (ADVERTENCIA - Amarillo): Falla por consumo anómalo prolongado.
-   - 🟢 `TELEMETRIA_NORMAL` (INFO - Verde): Red y componentes restablecidos.
-3. **Integración con Mosquitto MQTT**:
-   - Conexión vía **WebSockets** usando la librería Paho MQTT.
-   - Configuración de Host, Puerto (9001/8083), Path, ID de Cliente y Topics (`neuquen/iluminacion/#`, `api/evento`).
-4. **Modo Simulación Integrado (EPET 14 Hardware Mock)**:
-   - Incluye un simulador con 1-click para probar los 3 casos de uso documentados sin necesidad de tener un broker Mosquitto encendido o el hardware ESP32 conectado.
-5. **Consola e Inspector MQTT**:
-   - Log visual en tiempo real de todos los mensajes recibidos y transmitidos.
-6. **Alertas Sonoras y Visuales**:
-   - Sintetizador de audio nativo WebAudio API para avisos acústicos diferenciados ante alertas críticas.
+Este documento describe la integracion entre la interfaz de usuario (UI) desarrollada en HTML, CSS y JavaScript nativo y el broker de mensajeria **Mosquitto MQTT**. 
+
+La interfaz permite visualizar la telemetria enviada por los microcontroladores (ESP32) instalados en los tableros electricos y mostrar alertas inmediatas cuando se detectan anomalias de tension o fallas en las luminarias.
 
 ---
 
-## 🚀 Cómo Ejecutar la UI
+## 2. Requisitos de Red y Protocolo
 
-### Opción 1: Abrir directamente en el navegador (Sin servidor)
-Simplemente hace doble clic en [index.html](file:///home/ale/Documentos/BACK/Project_Luminaria/index.html) o ábrelo en cualquier navegador web (Chrome, Firefox, Edge, Safari). La UI arrancará en **Modo Simulación** automáticamente si no detecta Mosquitto activo.
+MQTT utiliza TCP/IP como transporte base. Dado que los navegadores web no pueden abrir sockets TCP nativos directos a puertos como el 1883, la comunicacion entre la UI y Mosquitto se realiza mediante **WebSockets**.
 
-### Opción 2: Usar un servidor HTTP simple de desarrollo
-Si deseas servir la app mediante HTTP:
-```bash
-npx serve /home/ale/Documentos/BACK/Project_Luminaria
-# O usando Python:
-python3 -m http.server 8080 --directory /home/ale/Documentos/BACK/Project_Luminaria
-```
-Luego abre en el navegador: `http://localhost:8080`
+### Puertos Estandar
+- **1883**: Puerto TCP sin cifrar para dispositivos de campo (ESP32, gateways LoRa).
+- **9001**: Puerto WebSocket sin cifrar para clientes web (UI en navegador).
+- **8883**: Puerto TCP cifrado con TLS.
+- **8083**: Puerto WebSocket cifrado o alternativo.
 
 ---
 
-## 📡 Configuración del Broker Mosquitto con WebSockets
+## 3. Configuracion de Mosquitto (`mosquitto.conf`)
 
-Para conectar la UI con un servidor Mosquitto real en Linux / Docker / Windows:
-
-### 1. Configurar `mosquitto.conf`
-Asegúrate de habilitar el listener de WebSockets en tu archivo de configuración de Mosquitto:
+Para permitir que la interfaz web se conecte al servidor Mosquitto, el archivo de configuracion del broker debe incluir la siguiente definicion de listeners:
 
 ```ini
-# mosquitto.conf
+# Configuración global
+persistence true
+persistence_location /mosquitto/data/
+log_dest file /mosquitto/log/mosquitto.log
+
+# Listener 1: Puerto nativo MQTT para hardware y gateways
 listener 1883
 protocol mqtt
+allow_anonymous true
 
-# Listener para WebSockets (Usado por esta UI Web)
+# Listener 2: Puerto WebSockets para la interfaz Web UI
 listener 9001
 protocol websockets
 allow_anonymous true
 ```
 
-### 2. Ejecutar Mosquitto con Docker
-```bash
-docker run -d --name mosquitto -p 1883:1883 -p 9001:9001 \
-  -v /path/to/mosquitto.conf:/mosquitto/config/mosquitto.conf \
-  eclipse-mosquitto
-```
+### Ejecucion con Docker Compose
+```yaml
+version: '3.8'
 
-### 3. Conectar en la UI
-1. Presiona el botón **"Broker MQTT"** en la barra superior de la UI.
-2. Configura:
-   - **Host**: `localhost` (o la IP de la máquina/servidor)
-   - **Puerto WebSocket**: `9001`
-   - **Topics**: `neuquen/iluminacion/#, api/evento`
-3. Haz clic en **"Conectar a Mosquitto"**.
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: luminaria_broker
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+```
 
 ---
 
-## 📦 Estructura del JSON de los Eventos (EPET 14 → Mosquitto/API → UI)
+## 4. Estructura de Payloads JSON
 
-### 1. Baja Tensión
+Todos los eventos enviados a traves del topic `api/evento` o sub-topics bajo `neuquen/iluminacion/#` deben respetar el formato JSON especificado.
+
+### 4.1 Evento: Baja Tension en Red (`BAJA_TENSION`)
+Se emite cuando la tension en la red de 220V cae por debajo del umbral de 190V.
+
 ```json
 {
   "tipo_evento": "BAJA_TENSION",
@@ -105,7 +86,9 @@ docker run -d --name mosquitto -p 1883:1883 -p 9001:9001 \
 }
 ```
 
-### 2. Desconexión Abrupta / Robo de Foco
+### 4.2 Evento: Desconexion Abrupta / Robo de Foco (`DESCONEXION_ABRUPTA_FOCO`)
+Se emite cuando la corriente cae a 0 mA en menos de 200 ms mientras el circuito permanece activo.
+
 ```json
 {
   "tipo_evento": "DESCONEXION_ABRUPTA_FOCO",
@@ -123,7 +106,9 @@ docker run -d --name mosquitto -p 1883:1883 -p 9001:9001 \
 }
 ```
 
-### 3. Foco Quemado
+### 4.3 Evento: Foco Quemado (`FOCO_QUEMADO`)
+Se emite cuando la corriente medida se mantiene significativamente baja (por debajo del 20% del valor esperado) durante mas de 10 segundos.
+
 ```json
 {
   "tipo_evento": "FOCO_QUEMADO",
@@ -137,21 +122,12 @@ docker run -d --name mosquitto -p 1883:1883 -p 9001:9001 \
     "estado_circuito": "ACTIVO"
   },
   "severidad": "ADVERTENCIA",
-  "ubicacion": "Laboratorio de Electrónica - Luminaria 1"
+  "ubicacion": "Laboratorio de Electronica - Luminaria 1"
 }
 ```
 
 ---
 
-## 🛠 Estructura de Archivos del Frontend
+## 5. Modo Simulacion Integrado
 
-```
-Project_Luminaria/
-├── index.html               # Estructura principal y componentes visuales
-├── css/
-│   └── styles.css           # Tema Dark Industrial Glassmorphism y diseño responsivo
-├── js/
-│   ├── mqtt-client.js       # Manejador del cliente Mosquitto WebSocket / Paho
-│   └── app.js               # Lógica de renderizado, medidores, alertas y audio
-└── README_MQTT_UI.md        # Documentación de uso e integración Mosquitto
-```
+La UI incluye un simulador local que emite estos mismos eventos JSON directamente a traves de la logica interna de JavaScript cuando no hay una conexion activa con Mosquitto. Esto permite validar el correcto funcionamiento de la interfaz y la respuesta visual ante anomalias durante el desarrollo o demostraciones tecnicas.
