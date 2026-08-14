@@ -1,7 +1,7 @@
 /**
- * Project Luminaria - Lógica Principal de UI y Gestión de Eventos
- * EPET 14 × EPET 20 — Municipalidad de Neuquén
- * Control visual, medidores, alertas en vivo y simulador
+ * Project Luminaria - Lógica Principal de UI y Gestión de Eventos por Tableros
+ * EPET 14 x EPET 20 — Municipalidad de Neuquén
+ * Monitoreo centralizado por Tableros Eléctricos
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -75,13 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     alerts: [],
-    activeFilter: 'ALL', // ALL | CRITICA | ADVERTENCIA | INFO
+    activeFilter: 'ALL',
     soundEnabled: true
   };
 
-  // Referencias a elementos del DOM
+  // Referencias a elementos DOM
   const elements = {
-    // Header & KPIs
     mqttStatusDot: document.getElementById('mqttStatusDot'),
     mqttStatusText: document.getElementById('mqttStatusText'),
     kpiTensionVal: document.getElementById('kpiTensionVal'),
@@ -90,27 +89,20 @@ document.addEventListener('DOMContentLoaded', () => {
     kpiAdvertencias: document.getElementById('kpiAdvertencias'),
     kpiTotalFocos: document.getElementById('kpiTotalFocos'),
 
-    // Mapa Semáforo
     mapPinsContainer: document.getElementById('mapPinsContainer'),
-
-    // Panel Telemetría
     selectTablero: document.getElementById('selectTablero'),
     tableroUbicacion: document.getElementById('tableroUbicacion'),
     voltageGaugeNum: document.getElementById('voltageGaugeNum'),
     voltageGaugeFill: document.getElementById('voltageGaugeFill'),
     voltageStatusTag: document.getElementById('voltageStatusTag'),
-    focosGridContainer: document.getElementById('focosGridContainer'),
 
-    // Feed de Alertas
     alertsContainer: document.getElementById('alertsContainer'),
     alertsCountBadge: document.getElementById('alertsCountBadge'),
     filterChips: document.querySelectorAll('.filter-chip'),
 
-    // Consola MQTT
     mqttConsoleLog: document.getElementById('mqttConsoleLog'),
     btnClearConsole: document.getElementById('btnClearConsole'),
 
-    // Modales & Botones
     btnOpenMqttModal: document.getElementById('btnOpenMqttModal'),
     btnOpenSimModal: document.getElementById('btnOpenSimModal'),
     btnToggleSound: document.getElementById('btnToggleSound'),
@@ -119,13 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
     closeMqttModal: document.getElementById('closeMqttModal'),
     closeSimModal: document.getElementById('closeSimModal'),
 
-    // Forms
     formMqttConfig: document.getElementById('formMqttConfig'),
-    btnSaveMqttConfig: document.getElementById('btnSaveMqttConfig'),
     btnConnectMosquitto: document.getElementById('btnConnectMosquitto'),
     btnUseSimMode: document.getElementById('btnUseSimMode'),
 
-    // Botones de Simulación Presets
     simBajaTension: document.getElementById('simBajaTension'),
     simDesconexionAbrupta: document.getElementById('simDesconexionAbrupta'),
     simFocoQuemado: document.getElementById('simFocoQuemado'),
@@ -136,30 +125,60 @@ document.addEventListener('DOMContentLoaded', () => {
   // INICIALIZACIÓN
   // ==========================================
   function init() {
+    setupTabNavigation();
     setupEventListeners();
     setupMqttCallbacks();
-    renderTableroSelectOptions();
     updateTableroUI();
     renderAlerts();
     updateKPIs();
+    renderMapPins();
 
-    // Intentar conectar con la configuración guardada o arrancar en modo simulación
+    // Conectar a MQTT o Modo Simulación
     window.luminariaMQTT.connect();
+  }
+
+  // ==========================================
+  // NAVEGACIÓN POR PESTAÑAS (TABS)
+  // ==========================================
+  function setupTabNavigation() {
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+
+        const targetTab = tab.dataset.tab;
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+          pane.classList.remove('active');
+        });
+
+        const targetPaneId = 'tab' + targetTab.charAt(0).toUpperCase() + targetTab.slice(1);
+        const targetPane = document.getElementById(targetPaneId);
+        if (targetPane) {
+          targetPane.classList.add('active');
+        }
+      });
+    });
   }
 
   // ==========================================
   // EVENT LISTENERS & DELEGACIÓN
   // ==========================================
   function setupEventListeners() {
-    // Cambio de tablero seleccionado
+    // Cambio en selector hidden si existiera
     if (elements.selectTablero) {
       elements.selectTablero.addEventListener('change', (e) => {
         appState.selectedTableroId = e.target.value;
         updateTableroUI();
+        renderMapPins();
       });
     }
 
-    // Filtros de alertas
+    // Filtros de Alertas
     elements.filterChips.forEach(chip => {
       chip.addEventListener('click', () => {
         elements.filterChips.forEach(c => c.classList.remove('active'));
@@ -173,12 +192,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.btnClearConsole) {
       elements.btnClearConsole.addEventListener('click', () => {
         if (elements.mqttConsoleLog) {
-          elements.mqttConsoleLog.innerHTML = `<div class="log-entry"><span class="log-time">[${new Date().toLocaleTimeString('es-AR')}]</span> <span class="log-payload">Consola limpiada.</span></div>`;
+          elements.mqttConsoleLog.innerHTML = `<div class="log-row"><span class="log-time">[${new Date().toLocaleTimeString('es-AR')}]</span> <span class="log-text">Consola limpiada.</span></div>`;
         }
       });
     }
 
-    // Toggle Sonido
+    // Activar / Desactivar Sonido
     if (elements.btnToggleSound) {
       elements.btnToggleSound.addEventListener('click', () => {
         appState.soundEnabled = !appState.soundEnabled;
@@ -195,7 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.closeMqttModal) elements.closeMqttModal.addEventListener('click', () => closeModal(elements.mqttModal));
     if (elements.closeSimModal) elements.closeSimModal.addEventListener('click', () => closeModal(elements.simModal));
 
-    // Cerrar modal al hacer click fuera del contenido
     [elements.mqttModal, elements.simModal].forEach(modal => {
       if (modal) {
         modal.addEventListener('click', (e) => {
@@ -204,9 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Form de Configuración MQTT
+    // Form MQTT Config
     if (elements.formMqttConfig) {
-      // Pre-llenar form con valores del cliente
       const cfg = window.luminariaMQTT.config;
       document.getElementById('mqttHost').value = cfg.host;
       document.getElementById('mqttPort').value = cfg.port;
@@ -235,12 +252,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Eventos de Simulación (Presets según Sección 3 de la Documentación Técnica)
     setupSimulationPresets();
   }
 
   function setupSimulationPresets() {
-    // 1. Simular Baja Tensión (185.3V)
     if (elements.simBajaTension) {
       elements.simBajaTension.addEventListener('click', () => {
         const payload = {
@@ -261,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // 2. Simular Desconexión Abrupta / Robo (FOCO_A3, 85ms)
     if (elements.simDesconexionAbrupta) {
       elements.simDesconexionAbrupta.addEventListener('click', () => {
         const payload = {
@@ -276,14 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
             estado_circuito: "ACTIVO"
           },
           severidad: "CRITICA",
-          ubicacion: "Pasillo Principal - Luminaria 3"
+          ubicacion: appState.tableros[appState.selectedTableroId]?.ubicacion || "Pasillo Principal"
         };
         window.luminariaMQTT.publish("api/evento", payload);
         closeModal(elements.simModal);
       });
     }
 
-    // 3. Simular Foco Quemado (FOCO_B1, 12.5mA)
     if (elements.simFocoQuemado) {
       elements.simFocoQuemado.addEventListener('click', () => {
         const payload = {
@@ -298,14 +311,13 @@ document.addEventListener('DOMContentLoaded', () => {
             estado_circuito: "ACTIVO"
           },
           severidad: "ADVERTENCIA",
-          ubicacion: "Laboratorio de Electrónica - Luminaria 1"
+          ubicacion: appState.tableros[appState.selectedTableroId]?.ubicacion || "Sector Canchas"
         };
         window.luminariaMQTT.publish("api/evento", payload);
         closeModal(elements.simModal);
       });
     }
 
-    // 4. Simular Telemetría Normal (220V, 450mA)
     if (elements.simTelemetriaNormal) {
       elements.simTelemetriaNormal.addEventListener('click', () => {
         const payload = {
@@ -331,30 +343,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // CALLBACKS Y PROCESAMIENTO MQTT
   // ==========================================
   function setupMqttCallbacks() {
-    // Cambio de estado de la conexión MQTT
-    window.luminariaMQTT.onStatusChangeCallback = ({ status, label, isSim }) => {
+    window.luminariaMQTT.onStatusChangeCallback = ({ status, label }) => {
       elements.mqttStatusDot.className = 'status-dot ' + status;
       elements.mqttStatusText.textContent = label;
     };
 
-    // Recepción de Logs para la Consola
     window.luminariaMQTT.onLogCallback = ({ timestamp, message, type, topic }) => {
       if (!elements.mqttConsoleLog) return;
       const logRow = document.createElement('div');
-      logRow.className = `log-entry log-type-${type}`;
+      logRow.className = `log-row log-type-${type}`;
       
       let topicTag = topic ? `<span class="log-topic">[${topic}]</span>` : '';
-      logRow.innerHTML = `<span class="log-time">[${timestamp}]</span> ${topicTag} <span class="log-payload">${escapeHtml(message)}</span>`;
+      logRow.innerHTML = `<span class="log-time">[${timestamp}]</span> ${topicTag} <span class="log-text">${escapeHtml(message)}</span>`;
       
       elements.mqttConsoleLog.prepend(logRow);
-      // Limitar a máximo 60 líneas
       if (elements.mqttConsoleLog.children.length > 60) {
         elements.mqttConsoleLog.removeChild(elements.mqttConsoleLog.lastChild);
       }
     };
 
-    // Procesamiento de Eventos JSON recibidos
-    window.luminariaMQTT.onMessageCallback = (topic, payloadJson, rawPayload) => {
+    window.luminariaMQTT.onMessageCallback = (topic, payloadJson) => {
       processIncomingEvent(payloadJson);
     };
   }
@@ -364,14 +372,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tableroId = event.id_tablero || appState.selectedTableroId;
     if (!appState.tableros[tableroId]) {
-      // Crear registro dinámico de tablero si no existe
       appState.tableros[tableroId] = {
         id: tableroId,
+        nombre: tableroId,
         ubicacion: event.ubicacion || 'Ubicación Desconocida',
+        posX: 50,
+        posY: 50,
         tension_v: 220.0,
         focos: {}
       };
-      renderTableroSelectOptions();
     }
 
     const tablero = appState.tableros[tableroId];
@@ -380,7 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let alertTitle = '';
     let soundType = 'info';
 
-    // 1. BAJA_TENSION
     if (event.tipo_evento === 'BAJA_TENSION') {
       const tension = event.datos?.tension_medida_v || 185.0;
       tablero.tension_v = tension;
@@ -388,8 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
       alertTitle = `Baja Tensión Detectada: ${tension}V (Umbral: ${event.datos?.umbral_minimo_v || 190}V)`;
       soundType = 'critical';
     }
-
-    // 2. DESCONEXION_ABRUPTA_FOCO
     else if (event.tipo_evento === 'DESCONEXION_ABRUPTA_FOCO') {
       const focoId = event.datos?.id_foco || 'FOCO_DESCONOCIDO';
       if (!tablero.focos[focoId]) {
@@ -397,11 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       tablero.focos[focoId].corriente_ma = event.datos?.corriente_actual_ma || 0.0;
       tablero.focos[focoId].estado = 'robado';
-      alertTitle = `Desconexión Abrupta / Posible Robo: ${focoId} (${event.datos?.tiempo_caida_ms || 0}ms)`;
+      alertTitle = `Desconexión Abrupta / Posible Robo en ${tablero.nombre || tableroId}`;
       soundType = 'critical';
     }
-
-    // 3. FOCO_QUEMADO
     else if (event.tipo_evento === 'FOCO_QUEMADO') {
       const focoId = event.datos?.id_foco || 'FOCO_DESCONOCIDO';
       if (!tablero.focos[focoId]) {
@@ -409,11 +413,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       tablero.focos[focoId].corriente_ma = event.datos?.corriente_medida_ma || 12.5;
       tablero.focos[focoId].estado = 'quemado';
-      alertTitle = `Foco Quemado / Falla Componente: ${focoId} (${event.datos?.corriente_medida_ma}mA)`;
+      alertTitle = `Anomalía de Consumo / Foco Quemado en ${tablero.nombre || tableroId}`;
       soundType = 'warning';
     }
-
-    // 4. RESTAURACIÓN / TELEMETRIA_NORMAL
     else if (event.tipo_evento === 'TELEMETRIA_NORMAL') {
       tablero.tension_v = event.datos?.tension_medida_v || 220.0;
       if (event.datos?.focos_restaurados) {
@@ -424,17 +426,15 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       } else {
-        // Restaurar todos
         Object.keys(tablero.focos).forEach(fId => {
           tablero.focos[fId].estado = 'ok';
           tablero.focos[fId].corriente_ma = 450.0;
         });
       }
-      alertTitle = `Telemetría Normal Restablecida: Tensión 220V`;
+      alertTitle = `Telemetría Normal Restablecida en ${tablero.nombre || tableroId}`;
       soundType = 'info';
     }
 
-    // Registrar en el historial de alertas
     const alertRecord = {
       id: 'ALR-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
       tipo_evento: event.tipo_evento,
@@ -449,118 +449,132 @@ document.addEventListener('DOMContentLoaded', () => {
 
     appState.alerts.unshift(alertRecord);
 
-    // Emitir sonido si está activado
     if (appState.soundEnabled) {
       playAlertAudioSound(soundType);
     }
 
-    // Actualizar Vistas UI
     updateTableroUI();
     renderAlerts();
     updateKPIs();
+    renderMapPins();
   }
 
   // ==========================================
-  // RENDERIZADO DE INTERFAZ (UI)
+  // RENDERIZADO Y ACTUALIZACIÓN VISTA TABLEROS
   // ==========================================
-  function renderTableroSelectOptions() {
-    if (!elements.selectTablero) return;
-    elements.selectTablero.innerHTML = '';
-    Object.keys(appState.tableros).forEach(id => {
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = `${id} (${appState.tableros[id].ubicacion})`;
-      if (id === appState.selectedTableroId) option.selected = true;
-      elements.selectTablero.appendChild(option);
-    });
-  }
-
   function updateTableroUI() {
-    const tablero = appState.tableros[appState.selectedTableroId];
-    if (!tablero) return;
-
-    // Actualizar datos del header del tablero
-    if (elements.tableroUbicacion) {
-      elements.tableroUbicacion.textContent = tablero.ubicacion;
-    }
-
-    // Actualizar Medidor de Tensión
-    const tension = tablero.tension_v;
-    if (elements.voltageGaugeNum) {
-      elements.voltageGaugeNum.textContent = tension.toFixed(1);
-      
-      // Aplicar color según umbral (190V es el umbral de alerta)
-      elements.voltageGaugeNum.className = 'gauge-val-num';
-      elements.voltageStatusTag.className = 'badge-tag';
-
-      if (tension < 190.0) {
-        elements.voltageGaugeNum.classList.add('critical');
-        elements.voltageStatusTag.textContent = 'BAJA TENSIÓN (CRÍTICA)';
-        elements.voltageStatusTag.style.background = 'rgba(239, 68, 68, 0.2)';
-        elements.voltageStatusTag.style.color = '#ef4444';
-      } else if (tension < 210.0) {
-        elements.voltageGaugeNum.classList.add('warning');
-        elements.voltageStatusTag.textContent = 'TENSIÓN BORDEM';
-        elements.voltageStatusTag.style.background = 'rgba(245, 158, 11, 0.2)';
-        elements.voltageStatusTag.style.color = '#f59e0b';
-      } else {
-        elements.voltageStatusTag.textContent = 'RED NORMAL';
-        elements.voltageStatusTag.style.background = 'rgba(16, 185, 129, 0.2)';
-        elements.voltageStatusTag.style.color = '#10b981';
-      }
-    }
-
-    if (elements.voltageGaugeFill) {
-      // Porcentaje relativo a una escala max de 260V
-      const pct = Math.min(Math.max((tension / 250.0) * 100, 0), 100);
-      elements.voltageGaugeFill.style.width = `${pct}%`;
-      elements.voltageGaugeFill.className = tension < 190.0 ? 'gauge-bar-fill critical' : 'gauge-bar-fill';
-    }
-
-    // Renderizar Grid de Focos
-    renderFocosGrid(tablero.focos);
+    renderTablerosGrid();
   }
 
-  function renderFocosGrid(focos) {
-    if (!elements.focosGridContainer) return;
-    elements.focosGridContainer.innerHTML = '';
+  function renderTablerosGrid() {
+    const container = document.getElementById('tablerosGridContainer');
+    if (!container) return;
+    container.innerHTML = '';
 
-    const focosKeys = Object.keys(focos);
-    if (focosKeys.length === 0) {
-      elements.focosGridContainer.innerHTML = `<div style="grid-column: 1/-1; color: var(--text-dim); text-align: center; padding: 1rem;">No hay luminarias registradas en este tablero.</div>`;
-      return;
-    }
+    Object.values(appState.tableros).forEach(tablero => {
+      let statusClass = 'ok';
+      let statusLabel = 'Funcionamiento Normal';
+      let statusBadgeClass = 'badge-ok';
+      let statusIcon = 'fa-check-circle';
 
-    focosKeys.forEach(focoId => {
-      const foco = focos[focoId];
-      const card = document.createElement('div');
-      card.className = `foco-card ${foco.estado}`;
-
-      let estadoText = 'Operativo';
-      let icon = 'fa-lightbulb';
-
-      if (foco.estado === 'quemado') {
-        estadoText = 'Foco Quemado';
-        icon = 'fa-exclamation-triangle';
-      } else if (foco.estado === 'robado') {
-        estadoText = 'Robo / Desconexión';
-        icon = 'fa-bolt';
-      } else if (foco.estado === 'inactivo') {
-        estadoText = 'Circuito Inactivo';
-        icon = 'fa-power-off';
+      if (tablero.tension_v < 190.0) {
+        statusClass = 'critical';
+        statusLabel = 'Baja Tensión (<190V)';
+        statusBadgeClass = 'badge-critical';
+        statusIcon = 'fa-triangle-exclamation';
+      } else if (tablero.tension_v < 210.0) {
+        statusClass = 'warning';
+        statusLabel = 'Tensión Borde (Baja)';
+        statusBadgeClass = 'badge-warning';
+        statusIcon = 'fa-exclamation-triangle';
       }
+
+      let totalFocos = Object.keys(tablero.focos || {}).length;
+      let focosOk = 0;
+      let focosRobados = 0;
+      let focosQuemados = 0;
+
+      Object.values(tablero.focos || {}).forEach(f => {
+        if (f.estado === 'ok') focosOk++;
+        else if (f.estado === 'robado') focosRobados++;
+        else if (f.estado === 'quemado') focosQuemados++;
+      });
+
+      if (focosRobados > 0) {
+        statusClass = 'critical';
+        statusLabel = `Desconexión Abrupta (${focosRobados})`;
+        statusBadgeClass = 'badge-critical';
+        statusIcon = 'fa-bolt';
+      } else if (focosQuemados > 0 && statusClass !== 'critical') {
+        statusClass = 'warning';
+        statusLabel = `Foco Quemado (${focosQuemados})`;
+        statusBadgeClass = 'badge-warning';
+        statusIcon = 'fa-exclamation-circle';
+      }
+
+      const isSelected = tablero.id === appState.selectedTableroId;
+      const pctVoltage = Math.min(Math.max((tablero.tension_v / 250.0) * 100, 0), 100);
+
+      const card = document.createElement('article');
+      card.className = `tablero-card ${statusClass} ${isSelected ? 'selected' : ''}`;
 
       card.innerHTML = `
-        <div class="foco-card-top">
-          <span class="foco-id">${foco.id}</span>
-          <i class="fas ${icon} foco-bulb-icon"></i>
+        <div class="tablero-card-header">
+          <div class="tablero-title-group">
+            <span class="tablero-tag">${tablero.id}</span>
+            <h4 class="tablero-title">${escapeHtml(tablero.nombre || tablero.id)}</h4>
+          </div>
+          <span class="tablero-status-badge ${statusBadgeClass}">
+            <i class="fas ${statusIcon}"></i> ${statusLabel}
+          </span>
         </div>
-        <div class="foco-metrics">
-          <span class="foco-current">${foco.corriente_ma.toFixed(1)} mA</span>
-          <span class="foco-status-text">${estadoText}</span>
+
+        <div class="tablero-location">
+          <i class="fas fa-location-dot"></i> ${escapeHtml(tablero.ubicacion)}
+        </div>
+
+        <div class="tablero-meter-section">
+          <div class="meter-head">
+            <span class="meter-lbl">Tensión de Red</span>
+            <span class="meter-val ${statusClass}">${tablero.tension_v.toFixed(1)} <span class="meter-unit">Volts</span></span>
+          </div>
+          <div class="meter-track">
+            <div class="meter-danger-line" title="Límite mínimo 190V"></div>
+            <div class="meter-fill ${statusClass}" style="width: ${pctVoltage}%;"></div>
+          </div>
+          <div class="meter-ticks">
+            <span>0V</span>
+            <span class="danger-tick">190V Mín.</span>
+            <span>220V Normal</span>
+          </div>
+        </div>
+
+        <div class="tablero-info-grid">
+          <div class="info-cell">
+            <span class="info-cell-lbl">Fase Eléctrica</span>
+            <span class="info-cell-val">${tablero.fase || 'L1'}</span>
+          </div>
+          <div class="info-cell">
+            <span class="info-cell-lbl">Circuito Luminarias</span>
+            <span class="info-cell-val">${focosOk} de ${totalFocos} Operativas</span>
+          </div>
+        </div>
+
+        <div class="tablero-card-actions">
+          <button class="btn btn-secondary btn-sm btn-select-tablero">
+            <i class="fas ${isSelected ? 'fa-circle-dot' : 'fa-circle'}"></i> ${isSelected ? 'Tablero Seleccionado' : 'Seleccionar Tablero'}
+          </button>
         </div>
       `;
-      elements.focosGridContainer.appendChild(card);
+
+      card.querySelector('.btn-select-tablero').addEventListener('click', () => {
+        appState.selectedTableroId = tablero.id;
+        if (elements.selectTablero) elements.selectTablero.value = tablero.id;
+        updateTableroUI();
+        renderMapPins();
+      });
+
+      container.appendChild(card);
     });
   }
 
@@ -568,20 +582,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!elements.alertsContainer) return;
     elements.alertsContainer.innerHTML = '';
 
-    // Filtrar alertas según tab de filtro
     const filtered = appState.alerts.filter(a => {
       if (appState.activeFilter === 'ALL') return true;
       return a.severidad === appState.activeFilter;
     });
 
     if (elements.alertsCountBadge) {
-      elements.alertsCountBadge.textContent = filtered.length;
+      elements.alertsCountBadge.textContent = `${filtered.length} Avisos`;
     }
 
     if (filtered.length === 0) {
       elements.alertsContainer.innerHTML = `
-        <div style="text-align: center; padding: 2rem; color: var(--text-dim);">
-          <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; color: var(--color-ok);"></i>
+        <div class="empty-alerts">
+          <i class="fas fa-check-circle"></i>
           <p>No hay alertas registradas para este filtro.</p>
         </div>
       `;
@@ -594,7 +607,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const timeFormatted = new Date(alert.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-      // Formatear detalles JSON en pares clave: valor
       let detailsHtml = '';
       if (alert.datos) {
         detailsHtml = Object.entries(alert.datos).map(([k, v]) => `
@@ -620,15 +632,87 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      // Listener para marcar como resuelta
       const btnResolve = card.querySelector('.btn-resolve');
       btnResolve.addEventListener('click', () => {
         alert.resuelta = !alert.resuelta;
         renderAlerts();
         updateKPIs();
+        renderMapPins();
       });
 
       elements.alertsContainer.appendChild(card);
+    });
+  }
+
+  function renderMapPins() {
+    if (!elements.mapPinsContainer) return;
+    elements.mapPinsContainer.innerHTML = '';
+
+    Object.values(appState.tableros).forEach(tablero => {
+      let worstSeverity = 'ok';
+
+      if (tablero.tension_v < 190.0) {
+        worstSeverity = 'critical';
+      } else if (tablero.tension_v < 210.0 && worstSeverity !== 'critical') {
+        worstSeverity = 'warning';
+      }
+
+      Object.values(tablero.focos || {}).forEach(foco => {
+        if (foco.estado === 'robado') {
+          worstSeverity = 'critical';
+        } else if (foco.estado === 'quemado' && worstSeverity !== 'critical') {
+          worstSeverity = 'warning';
+        }
+      });
+
+      const tableroAlerts = appState.alerts.filter(a => a.id_tablero === tablero.id && !a.resuelta);
+      if (tableroAlerts.some(a => a.severidad === 'CRITICA')) {
+        worstSeverity = 'critical';
+      } else if (tableroAlerts.some(a => a.severidad === 'ADVERTENCIA') && worstSeverity !== 'critical') {
+        worstSeverity = 'warning';
+      }
+
+      let pinColor = 'var(--color-ok)';
+      let pinIcon = 'fa-check';
+      if (worstSeverity === 'critical') {
+        pinColor = 'var(--color-critical)';
+        pinIcon = 'fa-triangle-exclamation';
+      } else if (worstSeverity === 'warning') {
+        pinColor = 'var(--color-warning)';
+        pinIcon = 'fa-exclamation';
+      }
+
+      const isSelected = tablero.id === appState.selectedTableroId;
+
+      const pinNode = document.createElement('div');
+      pinNode.className = `map-pin-node ${isSelected ? 'selected' : ''}`;
+      pinNode.style.left = `${tablero.posX}%`;
+      pinNode.style.top = `${tablero.posY}%`;
+      pinNode.style.setProperty('--pin-color', pinColor);
+      pinNode.title = `${tablero.nombre || tablero.id}: ${tablero.ubicacion} (Clic para seleccionar)`;
+
+      pinNode.innerHTML = `
+        <div class="map-pin-icon-wrap">
+          <i class="fas ${pinIcon}"></i>
+        </div>
+        <div class="map-pin-label">
+          <span class="map-pin-status-dot"></span>
+          <span>${escapeHtml(tablero.nombre || tablero.id)}</span>
+        </div>
+      `;
+
+      pinNode.addEventListener('click', () => {
+        appState.selectedTableroId = tablero.id;
+        if (elements.selectTablero) elements.selectTablero.value = tablero.id;
+        updateTableroUI();
+        renderMapPins();
+
+        // Cambiar a la pestaña de Tableros si hace clic en el mapa
+        const tablerosNavTab = document.querySelector('.nav-tab[data-tab="tableros"]');
+        if (tablerosNavTab) tablerosNavTab.click();
+      });
+
+      elements.mapPinsContainer.appendChild(pinNode);
     });
   }
 
@@ -636,39 +720,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeTableros = Object.values(appState.tableros);
     const selectedTablero = appState.tableros[appState.selectedTableroId];
 
-    // 1. Tensión Promedio o Actual
     if (elements.kpiTensionVal && selectedTablero) {
-      elements.kpiTensionVal.textContent = `${selectedTablero.tension_v.toFixed(1)}V`;
-      elements.kpiTensionSub.textContent = `Fase ${selectedTablero.fase} • Nominal 220V`;
+      elements.kpiTensionVal.textContent = `${selectedTablero.tension_v.toFixed(1)} V`;
+      elements.kpiTensionSub.textContent = `${selectedTablero.nombre || selectedTablero.id} • Fase ${selectedTablero.fase || 'L1'}`;
     }
 
-    // 2. Alertas Críticas no resueltas
     const criticasCount = appState.alerts.filter(a => a.severidad === 'CRITICA' && !a.resuelta).length;
     if (elements.kpiAlertasCriticas) {
-      elements.kpiAlertasCriticas.textContent = criticasCount;
+      elements.kpiAlertasCriticas.textContent = `${criticasCount} Alertas`;
     }
 
-    // 3. Advertencias no resueltas
     const advertenciasCount = appState.alerts.filter(a => a.severidad === 'ADVERTENCIA' && !a.resuelta).length;
     if (elements.kpiAdvertencias) {
-      elements.kpiAdvertencias.textContent = advertenciasCount;
+      elements.kpiAdvertencias.textContent = `${advertenciasCount} Advertencias`;
     }
-
-    // 4. Total Focos
-    let totalFocosCount = 0;
-    let focosOkCount = 0;
-    activeTableros.forEach(t => {
-      Object.values(t.focos).forEach(f => {
-        totalFocosCount++;
-        if (f.estado === 'ok') focosOkCount++;
-      });
-    });
 
     if (elements.kpiTotalFocos) {
-      elements.kpiTotalFocos.textContent = `${focosOkCount} de ${totalFocosCount} Focos`;
+      elements.kpiTotalFocos.textContent = `${activeTableros.length} Tableros`;
     }
 
-    // 5. Actualizar Banner Semáforo Municipal de Estado General
     const banner = document.getElementById('generalStatusBanner');
     const bannerIcon = document.getElementById('generalStatusIcon');
     const bannerTitle = document.getElementById('generalStatusTitle');
@@ -676,27 +746,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (banner && bannerTitle && bannerDesc) {
       if (criticasCount > 0) {
-        banner.className = 'general-status-banner red';
+        banner.className = 'status-banner red';
         if (bannerIcon) bannerIcon.className = 'fas fa-triangle-exclamation';
         bannerTitle.textContent = 'ALERTA URGENTE: REVISAR TABLERO INMEDIATAMENTE';
-        bannerDesc.textContent = `Se han detectado ${criticasCount} problema(s) crítico(s) de baja tensión o desconexión abrupta en la red.`;
+        bannerDesc.textContent = `Se detectaron ${criticasCount} problema(s) crítico(s) de caída de tensión o desconexión en la red.`;
       } else if (advertenciasCount > 0) {
-        banner.className = 'general-status-banner yellow';
+        banner.className = 'status-banner yellow';
         if (bannerIcon) bannerIcon.className = 'fas fa-triangle-exclamation';
-        bannerTitle.textContent = 'ATENCIÓN: REVISIÓN DE FOCOS REQUERIDA';
-        bannerDesc.textContent = `Se registraron ${advertenciasCount} foco(s) con anomalía de consumo que requieren reemplazo.`;
+        bannerTitle.textContent = 'ATENCIÓN: REVISIÓN DE RED REQUERIDA';
+        bannerDesc.textContent = `Se registraron ${advertenciasCount} anomalías de consumo o fallas en luminarias.`;
       } else {
-        banner.className = 'general-status-banner green';
+        banner.className = 'status-banner green';
         if (bannerIcon) bannerIcon.className = 'fas fa-check-circle';
         bannerTitle.textContent = 'FUNCIONAMIENTO NORMAL';
-        bannerDesc.textContent = 'Todos los tableros eléctricos y luminarias de la ciudad operan sin anomalías.';
+        bannerDesc.textContent = 'Todos los tableros eléctricos de la ciudad operan sin anomalías.';
       }
     }
   }
 
-  // ==========================================
-  // SINTETIZADOR DE AUDIO WEBAUDIO API (Sintético)
-  // ==========================================
   function playAlertAudioSound(type) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -709,7 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
       gain.connect(ctx.destination);
 
       if (type === 'critical') {
-        // Tono grave pulsante de alarma
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(880, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
@@ -718,22 +784,16 @@ document.addEventListener('DOMContentLoaded', () => {
         osc.start();
         osc.stop(ctx.currentTime + 0.3);
       } else if (type === 'warning') {
-        // Tono suave de advertencia
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
         gain.gain.setValueAtTime(0.2, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
         osc.start();
         osc.stop(ctx.currentTime + 0.2);
       }
-    } catch (e) {
-      // Ignorar restricciones de autoplay si no hubo interacción previa
-    }
+    } catch (e) {}
   }
 
-  // ==========================================
-  // HELPERS UTILS
-  // ==========================================
   function openModal(modal) {
     if (modal) modal.classList.add('active');
   }
@@ -749,6 +809,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Inicializar al cargar
   init();
 });
