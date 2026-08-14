@@ -1217,6 +1217,7 @@ html, body {
   .app-wrapper {
     padding: 0.85rem;
     gap: 0.85rem;
+    padding-bottom: 95px; /* Espacio para no cubrir el contenido con el menú flotante inferior */
   }
 
   .main-header {
@@ -1241,13 +1242,86 @@ html, body {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* MENÚ FLOTANTE INFERIOR MÓVIL */
   .nav-tabs {
-    padding: 0.35rem;
+    position: fixed;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 1.5rem);
+    max-width: 480px;
+    z-index: 950;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 22px;
+    padding: 0.4rem 0.45rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 20px rgba(2, 132, 199, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.2rem;
+    overflow: visible;
   }
 
   .nav-tab {
-    padding: 0.5rem 0.85rem;
-    font-size: 0.82rem;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.2rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 16px;
+    position: relative;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .nav-tab i {
+    font-size: 1.15rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+
+  .nav-tab.active {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 2px 10px rgba(2, 132, 199, 0.25);
+  }
+
+  .nav-tab.active i {
+    transform: translateY(-1px) scale(1.1);
+    color: #38bdf8;
+  }
+
+  .tab-badge {
+    position: absolute;
+    top: 2px;
+    right: 50%;
+    transform: translateX(18px);
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 0.1rem 0.35rem;
+    border-radius: 10px;
+    line-height: 1;
+    background: rgba(239, 68, 68, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+  }
+
+  .nav-tab.active .tab-badge {
+    background: #ef4444;
+    color: #ffffff;
+  }
+
+  .tab-text-extra {
+    display: none;
   }
 
   .map-card {
