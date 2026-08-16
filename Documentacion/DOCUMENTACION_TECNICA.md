@@ -1,63 +1,181 @@
-# Documentacion Tecnica — Project Luminaria
+# Documentacion Tecnica - Project Luminaria
 
-**Sistema de Monitoreo y Alertas Electricas en Tiempo Real**
-*Proyecto interescolar EPET N.º 14 × EPET N.º 20 — Municipalidad de Neuquén*
-*Version: 1.0 | Fecha: Junio 2025 / Agosto 2026*
-
----
-
-## 1. Resumen Ejecutivo y Alcance del Proyecto
-
-El sistema **Project Luminaria** surge como una solucion de ingenieria orientada al mantenimiento eficiente del alumbrado publico en la ciudad de Neuquen (cobertura en Parque Norte, Paseo de la Costa, avenidas principales y plazas). 
-
-El sistema monitorea de forma continua los tableros electricos y luminarias instaladas en campo, detectando e informando tres anomalias criticas:
-1. **Baja Tension en la Red**: Caida del voltaje por debajo de los limites operativos de seguridad (190V sobre red nominal de 220V).
-2. **Desconexion Abrupta / Robo de Luminaria**: Caida instantanea de corriente (en menos de 200 ms) en un circuito activo.
-3. **Foco Quemado o Falla de Componente**: Disminucion severa de corriente sostenida en el tiempo (por debajo del 20% del valor nominal durante mas de 10 segundos).
-
-### Division de Responsabilidades Interescolares
-- **EPET N.º 14 (Hardware y Campo)**: Diseño e instalacion de sensores electricos (transformadores de corriente SCT-013, sensores de tension ZMPT101B), acondicionamiento de señal, microcontroladores (ESP32) y transmision de datos mediante radiofrecuencia (LoRa / LoRaWAN) o WiFi.
-- **EPET N.º 20 (Software, Backend y Frontend)**: Despliegue de infraestructura de servidores, broker de mensajeria Mosquitto MQTT, API REST, base de datos relacional PostgreSQL y panel de control web (UI).
+**Sistema de Monitoreo y Alertas Electricas en Tiempo Real**  
+**EPET N. 14 x EPET N. 20 - Municipalidad de Neuquen**  
+**Version documentada:** Agosto 2026
 
 ---
 
-## 2. Arquitectura General del Sistema
+## 1. Alcance Actual
 
-El flujo completo de datos sigue la siguiente trayectoria desacoplada:
+Project Luminaria es una interfaz web estatica para monitoreo de tableros electricos de alumbrado publico. La version actual del repositorio implementa el panel de control en navegador, la integracion MQTT por WebSockets y un modo de simulacion local para pruebas sin hardware ni broker activo.
 
-```
-[Sensores de Tension y Corriente]
-             │
-             ▼
-      [Placa ESP32 / EPET 14]
-             │
-             ▼  (LoRaWAN / WiFi)
-      [Gateway / Servidor de Campo]
-             │
-             ▼  (MQTT TCP 1883)
-      [Broker Mosquitto MQTT]
-       ├───► (MQTT WS 9001) ───► [Panel Web UI / Tecnico]
-       └───► (Subscriber)   ───► [Backend API (FastAPI / Express)]
-                                        │
-                                        ▼
-                                 [PostgreSQL DB]
+El backend REST, PostgreSQL y los contenedores Docker siguen siendo parte de la arquitectura objetivo del proyecto, pero no estan implementados en el arbol actual. Cualquier documentacion de API o base de datos debe tratarse como especificacion futura hasta que esos modulos existan en el repositorio.
+
+### Responsabilidades
+
+- **EPET N. 14:** hardware de campo, sensores de tension/corriente, ESP32 y envio de eventos.
+- **EPET N. 20:** panel web, cliente MQTT, procesamiento visual de eventos y documentacion tecnica.
+
+---
+
+## 2. Estructura del Repositorio
+
+```text
+Project_Luminaria/
+|-- index.html
+|-- css/
+|   `-- styles.css
+|-- js/
+|   |-- app.js
+|   `-- mqtt-client.js
+|-- Documentacion/
+|   |-- DOCUMENTACION_TECNICA.md
+|   |-- CONTEXTO_IA.md
+|   |-- DOCUMENTACION_TECNICA_DRAFT(1).md
+|   `-- Reporte_MQTT_Pasantias_EPET20_corregido.docx
+|-- README.md
+`-- README_MQTT_UI.md
 ```
 
-### Componentes de la Arquitectura
-- **Broker Mosquitto MQTT**: Actua como el nodo central de mensajeria, desacoplando los dispositivos de campo del consumo de datos.
-- **Backend API (EPET 20)**: Servicio encargado de persistir eventos en PostgreSQL, aplicar reglas de diagnostico complejas y servir endpoints REST.
-- **Base de Datos PostgreSQL**: Almacenamiento estructurado de tableros, historial de alertas, intervenciones de mantenimiento y metricas.
-- **Panel Web (UI Frontend)**: Interfaz responsiva y liviana para monitoreo en tiempo real, operando mediante suscripciones MQTT por WebSockets.
+### Archivos principales
+
+- `index.html`: estructura de la aplicacion, cabecera, KPIs, tabs, mapa, historial, consola y modales.
+- `css/styles.css`: sistema visual responsive con tema oscuro, estados semaforo y ajustes moviles.
+- `js/app.js`: estado de tableros, renderizado de UI, procesamiento de eventos, filtros y sonidos.
+- `js/mqtt-client.js`: cliente Paho MQTT sobre WebSockets, persistencia de configuracion y fallback a simulacion.
 
 ---
 
-## 3. Especificacion de JSON y Contrato de Datos
+## 3. Arquitectura en Ejecucion
 
-Todos los mensajes transmitidos a traves del broker MQTT o enviados mediante peticiones HTTP POST responden a una estructura JSON estandarizada.
+```text
+[ESP32 / Gateway EPET 14]
+          |
+          | MQTT TCP 1883
+          v
+[Broker Mosquitto]
+          |
+          | MQTT WebSocket 9001 /mqtt
+          v
+[Navegador: index.html + Paho MQTT]
+          |
+          v
+[app.js: estado local, alertas, mapa, KPIs y consola]
+```
 
-### 3.1 Evento: Baja Tension (`BAJA_TENSION`)
+Si la libreria Paho no esta disponible o la conexion al broker falla, `mqtt-client.js` activa el modo simulacion. En ese modo, las publicaciones se procesan internamente mediante el mismo callback que usa MQTT real.
 
-Se dispara cuando el sensor de tension registra un valor inferior a 190.0 V.
+---
+
+## 4. Interfaz Implementada
+
+La UI se organiza en cuatro pestañas principales:
+
+- **Tableros Electricos:** grilla de tarjetas por tablero con tension, fase, luminarias operativas y estado semaforo.
+- **Mapa de Zonas:** mapa SVG representativo con pines interactivos por tablero.
+- **Alertas:** historial filtrable por `ALL`, `CRITICA`, `ADVERTENCIA` e `INFO`; cada alerta puede marcarse como resuelta.
+- **Consola MQTT:** registro de mensajes entrantes, salientes, simulados y errores de conexion.
+
+La cabecera incluye:
+
+- estado de conexion MQTT;
+- acceso al simulador;
+- configuracion del servidor MQTT;
+- activacion o silenciamiento del sonido de alarma.
+
+El panel superior incluye un banner general y KPIs de tension, alertas urgentes, advertencias y cantidad de tableros monitoreados.
+
+### 4.1 Mapa de Zonas (Detalle de Implementacion)
+
+El mapa se compone de un SVG decorativo y una capa de pines superpuesta:
+
+```html
+<div class="map-svg-wrapper">   <!-- position: relative; height: 240px (200px en movil) -->
+  <svg width="100%" height="100%" viewBox="0 0 800 240" preserveAspectRatio="none">...</svg>
+  <div class="map-pins-layer">  <!-- position: absolute; inset: 0 -->
+    <!-- pines renderizados por renderMapPins() -->
+  </div>
+</div>
+```
+
+Reglas clave:
+
+- La capa `.map-pins-layer` debe vivir **siempre dentro** de `.map-svg-wrapper` (que es `position: relative`). Si se mueve fuera, los pines se anclan al viewport y quedan desalineados del mapa; este anclaje es la causa de los bugs visuales en movil.
+- Cada pin se posiciona con `left: posX%` y `top: posY%` sobre la misma area que el SVG y se centra con `transform: translate(-50%, -50%)`.
+- `renderMapPins()` en `js/app.js` calcula la severidad del tablero (verde `--color-ok`, amarillo `--color-warning`, rojo `--color-critical`) y agrega un listener de click que selecciona el tablero y cambia a la pestana de tableros.
+
+Comportamiento responsive (max-width: 560px):
+
+- Altura del mapa: `240px -> 200px` para que el pin inferior no quede pegado al borde.
+- Iconos de pin reducidos a 30px y fuente de etiqueta a 0.62rem.
+- Las etiquetas limitan su ancho a `max-width: 92px`, permiten salto de linea (`white-space: normal`) y se centran para no cortarse en los bordes del mapa.
+- La leyenda `.map-legend` se oculta por debajo de 768px.
+
+---
+
+## 5. Estado Inicial de Tableros
+
+`js/app.js` inicializa cuatro tableros:
+
+| ID | Nombre | Ubicacion | Fase | Focos iniciales |
+|---|---|---|---|---|
+| `TABLERO_01` | EPET 14 / EPET 20 | Aula Taller 3 - Planta Baja | `L1` | `FOCO_A1` a `FOCO_A4`, `FOCO_B1` a `FOCO_B4` |
+| `TABLERO_02` | Parque Norte | Parque Norte - Sector Canchas | `L2` | `FOCO_C1` a `FOCO_C3` |
+| `TABLERO_03` | Paseo de la Costa | Paseo de la Costa - Rio Limay | `L3` | `FOCO_D1` a `FOCO_D2` |
+| `TABLERO_04` | Avenida Argentina | Av. Argentina y Monolito | `L1` | `FOCO_E1` |
+
+Si llega un evento para un `id_tablero` desconocido, la UI crea un tablero dinamico con ubicacion del evento o `Ubicacion Desconocida`.
+
+---
+
+## 6. Configuracion MQTT
+
+Configuracion por defecto en `js/mqtt-client.js`:
+
+```js
+{
+  host: 'localhost',
+  port: 9001,
+  path: '/mqtt',
+  clientId: 'luminaria_web_' + Math.random().toString(16).substring(2, 8),
+  topics: ['neuquen/iluminacion/#', 'api/evento'],
+  qos: 1,
+  keepAlive: 60,
+  cleanSession: true
+}
+```
+
+La configuracion modificada desde el modal de servidor se guarda en `localStorage` bajo la clave `luminaria_mqtt_config`.
+
+Configuracion minima esperada para Mosquitto:
+
+```ini
+listener 1883
+protocol mqtt
+allow_anonymous true
+
+listener 9001
+protocol websockets
+allow_anonymous true
+```
+
+---
+
+## 7. Contrato de Eventos JSON
+
+Todos los eventos deben incluir:
+
+| Campo | Tipo | Descripcion |
+|---|---|---|
+| `tipo_evento` | string | Tipo de evento reconocido por la UI |
+| `id_tablero` | string | Identificador del tablero afectado |
+| `timestamp` | string ISO 8601 | Fecha/hora del evento |
+| `datos` | object | Datos especificos del tipo de evento |
+| `severidad` | string | `CRITICA`, `ADVERTENCIA` o `INFO` |
+| `ubicacion` | string | Ubicacion textual del tablero o luminaria |
+
+### 7.1 Baja Tension
 
 ```json
 {
@@ -75,23 +193,9 @@ Se dispara cuando el sensor de tension registra un valor inferior a 190.0 V.
 }
 ```
 
-| Campo | Tipo | Descripcion |
-|---|---|---|
-| `tipo_evento` | String | Constante `"BAJA_TENSION"` |
-| `id_tablero` | String | Identificador unico del tablero de control (ej: `"TABLERO_01"`) |
-| `timestamp` | String ISO 8601 | Marca de tiempo UTC de la medicion |
-| `tension_medida_v` | Float | Voltaje real medido en voltios |
-| `tension_nominal_v` | Float | Voltaje de referencia de la red (220.0 V) |
-| `umbral_minimo_v` | Float | Límite inferior configurable (190.0 V) |
-| `fase` | String | Identificador de fase (`"L1"`, `"L2"`, `"L3"`, `"MONOFASICA"`) |
-| `severidad` | String | Nivel de severidad (`"CRITICA"`, `"ADVERTENCIA"`, `"INFO"`) |
-| `ubicacion` | String | Descripcion geografica o del recinto |
+Efecto en UI: actualiza `tension_v`, fase del tablero, registra alerta critica, cambia banner/KPIs y marca tablero/mapa en rojo.
 
----
-
-### 3.2 Evento: Desconexion Abrupta / Robo de Foco (`DESCONEXION_ABRUPTA_FOCO`)
-
-Se dispara cuando la corriente cae a 0.0 mA de forma repentina (velocidad de caida < 200 ms) mientras el circuito electrico continua activo.
+### 7.2 Desconexion Abrupta de Foco
 
 ```json
 {
@@ -110,19 +214,9 @@ Se dispara cuando la corriente cae a 0.0 mA de forma repentina (velocidad de cai
 }
 ```
 
-| Campo | Tipo | Descripcion |
-|---|---|---|
-| `id_foco` | String | Identificador unico del foco dentro del tablero (ej: `"FOCO_A3"`) |
-| `corriente_previa_ma` | Float | Consumo en mA registrado antes de la caida |
-| `corriente_actual_ma` | Float | Consumo actual registrado en mA (normalmente 0.0) |
-| `tiempo_caida_ms` | Integer | Tiempo transcurrido durante la caida de corriente en milisegundos |
-| `estado_circuito` | String | Estado del rele / alimentacion (`"ACTIVO"` o `"INACTIVO"`) |
+Efecto en UI: marca el foco como `robado`, registra alerta critica y prioriza estado rojo.
 
----
-
-### 3.3 Evento: Foco Quemado (`FOCO_QUEMADO`)
-
-Se dispara cuando la corriente medida desciende por debajo del 20% del consumo esperado durante mas de 10 segundos continuos.
+### 7.3 Foco Quemado
 
 ```json
 {
@@ -141,129 +235,68 @@ Se dispara cuando la corriente medida desciende por debajo del 20% del consumo e
 }
 ```
 
-| Campo | Tipo | Descripcion |
-|---|---|---|
-| `corriente_esperada_ma` | Float | Consumo nominal esperado para la luminaria instalada |
-| `corriente_medida_ma` | Float | Consumo real medido por el sensor |
-| `duracion_anomalia_s` | Integer | Tiempo en segundos con lectura anomala |
+Efecto en UI: marca el foco como `quemado`, registra advertencia y usa estado amarillo salvo que exista una condicion critica.
+
+### 7.4 Telemetria Normal
+
+```json
+{
+  "tipo_evento": "TELEMETRIA_NORMAL",
+  "id_tablero": "TABLERO_01",
+  "timestamp": "2026-08-14T12:00:00Z",
+  "datos": {
+    "tension_medida_v": 220.0,
+    "tension_nominal_v": 220.0,
+    "fase": "L1",
+    "focos_restaurados": ["FOCO_A3", "FOCO_B1"]
+  },
+  "severidad": "INFO",
+  "ubicacion": "Aula Taller 3 - Planta Baja"
+}
+```
+
+Efecto en UI: restaura tension y focos indicados. Si `focos_restaurados` no se envia, restaura todos los focos del tablero a `ok` con corriente nominal de 450 mA.
 
 ---
 
-## 4. Configuracion de la Infraestructura Backend y Broker
+## 8. Reglas de Estado Visual
 
-### 4.1 Broker Mosquitto MQTT (`mosquitto.conf`)
+Prioridad de severidad:
 
-Mosquitto debe configurarse con dos listeners independientes: uno en puerto nativo TCP (1883) para la comunicacion con los microcontroladores y gateways, y otro en puerto WebSockets (9001) para la comunicacion con la interfaz web.
+1. **Critico:** `tension_v < 190.0`, foco con estado `robado` o alerta no resuelta con severidad `CRITICA`.
+2. **Advertencia:** `190.0 <= tension_v < 210.0`, foco con estado `quemado` o alerta no resuelta con severidad `ADVERTENCIA`.
+3. **Normal:** tension nominal y sin fallas activas.
 
-```ini
-persistence true
-persistence_location /mosquitto/data/
-log_dest stdout
+Las alertas resueltas dejan de contarse en KPIs y en la severidad derivada del mapa, aunque el historial permanece visible.
 
-# Listener TCP para Hardware ESP32 / Gateway
-listener 1883
-protocol mqtt
-allow_anonymous true
+---
 
-# Listener WebSocket para Frontend Web UI
-listener 9001
-protocol websockets
-allow_anonymous true
-```
+## 9. Pruebas Manuales
 
-### 4.2 Base de Datos PostgreSQL (Esquema SQL)
+1. Abrir `index.html` directamente o servir el directorio con `python3 -m http.server 8080`.
+2. Verificar que la app intente conectar a `localhost:9001/mqtt`.
+3. Si no hay broker, confirmar que pasa a `Modo Simulacion Activo`.
+4. Abrir **Simulador** y ejecutar los cuatro presets: baja tension, desconexion abrupta, foco quemado y telemetria normal.
+5. Revisar que cambien las tarjetas, el mapa, el banner, los KPIs, el feed de alertas y la consola.
+6. Marcar alertas como resueltas y verificar que los contadores se actualicen.
 
-```sql
--- Tabla de tableros registrados
-CREATE TABLE IF NOT EXISTS tableros (
-  id          VARCHAR(20) PRIMARY KEY,
-  ubicacion   TEXT NOT NULL,
-  activo      BOOLEAN DEFAULT TRUE,
-  creado_en   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+Validaciones sintacticas recomendadas:
 
--- Tabla de registro de alertas y eventos
-CREATE TABLE IF NOT EXISTS alertas (
-  id            SERIAL PRIMARY KEY,
-  id_tablero    VARCHAR(20) REFERENCES tableros(id),
-  tipo_evento   VARCHAR(50)  NOT NULL,
-  severidad     VARCHAR(20)  NOT NULL,
-  payload_raw   JSONB        NOT NULL,
-  ubicacion     TEXT,
-  resuelta      BOOLEAN DEFAULT FALSE,
-  creado_en     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Insercion de tableros de prueba iniciales
-INSERT INTO tableros (id, ubicacion) 
-VALUES ('TABLERO_01', 'Aula Taller 3 - Planta Baja')
-ON CONFLICT (id) DO NOTHING;
-```
-
-### 4.3 Servicio de Contenedores (`docker-compose.yml`)
-
-```yaml
-version: "3.9"
-
-services:
-  db:
-    image: postgres:15-alpine
-    container_name: luminaria_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: epet20
-      POSTGRES_PASSWORD: epet20password
-      POSTGRES_DB: alertas_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  mosquitto:
-    image: eclipse-mosquitto:latest
-    container_name: luminaria_broker
-    restart: always
-    ports:
-      - "1883:1883"
-      - "9001:9001"
-    volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
-
-volumes:
-  postgres_data:
+```bash
+node -c js/app.js
+node -c js/mqtt-client.js
 ```
 
 ---
 
-## 5. Especificaciones de la Interfaz Web (UI)
+## 10. Cambios Documentados en Esta Version
 
-La UI fue construida sin dependencias de compilacion pesadas, garantizando una carga inmediata y facil mantenimiento.
-
-### 5.1 Componentes Principales
-- `index.html`: Maquetacion HTML5 semantica, accesible y modular.
-- `css/styles.css`: Sistema de diseño *Dark Industrial Glassmorphism*, variables CSS adaptativas y media queries para respuesta movil.
-- `js/mqtt-client.js`: Modulo encapsulado para la gestion de conexiones WebSockets Paho MQTT con reconexion y modo simulación.
-- `js/app.js`: Estado global de la aplicacion, procesamiento de eventos JSON, actualizacion de medidores y sintetizador de audio.
-
-### 5.2 Sistema Semaforo de Alertas y Mapa Geografico
-La interfaz incluye una seccion visual de mapa geografico representativo de las zonas monitoreadas en Neuquen (EPET 14/20, Parque Norte, Paseo de la Costa y Av. Argentina). Cada tablero esta representado por un nodo de semaforo interactivo que cambia de color dinamicamente segun la severidad del estado:
-- **Rojo (Critico)**: Se activa ante caidas de tension por debajo de 190V (`BAJA_TENSION`) o desconexiones abruptas/robos de luminarias (`DESCONEXION_ABRUPTA_FOCO`). Emite un pulso luminoso de advertencia.
-- **Amarillo (Advertencia)**: Se activa ante deteccion de focos quemados (`FOCO_QUEMADO`) o mediciones de tension bordem (entre 190V y 210V).
-- **Verde (Normal)**: Indica que la red electrica y todas las luminarias del tablero operan dentro de los parametros nominales (220V / 450mA).
-
-Al hacer clic sobre cualquier nodo del semaforo en el mapa, la UI cambia automaticamente el tablero seleccionado para mostrar su telemetria detallada.
-
----
-
-## 6. Procedimiento de Verificacion y Pruebas
-
-Para validar el sistema completo sin esperar la conexion fisica del hardware:
-
-1. Levantar la UI abriendo `index.html` en el navegador.
-2. Hacer clic en **Simulador EPET 14**.
-3. Seleccionar cualquiera de los presets de prueba (`Baja Tension`, `Robo`, `Foco Quemado`, `Normal`).
-4. Verificar que:
-   - El medidor de tension y la grilla de focos se actualicen dinamicamente.
-   - La alerta aparezca en el feed con su nivel de severidad correspondiente.
-   - La consola registre la trama JSON.
-   - El sintetizador WebAudio genere la señal sonora de advertencia.
+- Rediseño responsive de la interfaz, especialmente navegacion y layout movil.
+- Simplificacion de pantalla principal en pestañas.
+- Incorporacion de grilla de tableros como vista principal.
+- Persistencia de configuracion MQTT en `localStorage`.
+- Simulador con evento adicional `TELEMETRIA_NORMAL`.
+- Registro de alertas resolubles y filtros por severidad.
+- Correccion del anclaje de los pines del mapa: `#mapPinsContainer` (`.map-pins-layer`) se movio dentro de `.map-svg-wrapper` para que los pines queden fijados al mapa en todos los tamaños de pantalla.
+- Ajuste responsive del mapa en movil: etiquetas con `max-width` y salto de linea para evitar recortes en los bordes, iconos reducidos y altura de mapa ampliada.
+- Aclaracion de que backend/API/PostgreSQL no estan presentes actualmente en el repositorio.

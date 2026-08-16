@@ -19,11 +19,14 @@ El proyecto **Luminaria** es un sistema de monitoreo en tiempo real para tablero
 La interfaz web es una aplicación liviana desarrollada con **HTML5, CSS3 vanilla y JavaScript**, diseñada para ser ejecutada directamente en cualquier navegador o servidor web sin necesidad de compilación o frameworks pesados.
 
 ### Funcionalidades
-- **Panel de Telemetría Eléctrica**: Muestra el voltaje en tiempo real del tablero seleccionado con indicador gráfico de nivel y alerta automática si la tensión cae por debajo de 190V.
-- **Grilla de Luminarias**: Estado individual de cada foco (`FOCO_A1`, `FOCO_A2`, etc.), consumo en miliamperios (mA) e indicadores de falla (Foco Quemado o Robo/Desconexión).
-- **Feed de Alertas**: Registro de eventos con filtrado por severidad (`CRITICA`, `ADVERTENCIA`, `INFO`) y timestamps.
+- **Tableros Eléctricos**: Grilla de tarjetas por tablero con tensión, fase, luminarias operativas y estado semáforo.
+- **Mapa de Zonas**: Mapa SVG representativo con pines interactivos por tablero; al hacer clic selecciona el tablero y muestra su telemetría.
+- **Alertas**: Historial de eventos filtrable por severidad (`CRITICA`, `ADVERTENCIA`, `INFO`) con posibilidad de marcar alertas como resueltas.
 - **Consola de Telemetría MQTT**: Inspector de mensajes JSON recibidos y transmitidos por el broker.
 - **Simulador de Eventos Hardware**: Herramienta integrada para simular eventos de la EPET 14 directamente desde la UI sin requerir hardware físico ni broker activo.
+- **Banner y KPIs**: Estado general del sistema con tensión de red, alertas urgentes, advertencias y cantidad de tableros monitoreados.
+
+La interfaz es **100% responsive**: en pantallas móviles la navegación se agrupa en un menú flotante inferior y el mapa adapta sus pines y etiquetas para evitar recortes.
 
 ---
 
@@ -71,9 +74,11 @@ Project_Luminaria/
 │   ├── mqtt-client.js         # Cliente WebSocket MQTT para Mosquitto
 │   └── app.js                 # Lógica de UI, medidores y gestión de eventos
 ├── Documentacion/
-│   ├── DOCUMENTACION_TECNICA.md # Documentación técnica completa para desarrolladores
-│   └── CONTEXTO_IA.md         # Manual de contexto y especificaciones para asistentes de IA
-└── README.md                  # Guía rápida del proyecto
+│   ├── DOCUMENTACION_TECNICA.md   # Documentación técnica completa para desarrolladores
+│   ├── CONTEXTO_IA.md             # Manual de contexto y especificaciones para asistentes de IA
+│   ├── DOCUMENTACION_TECNICA_DRAFT(1).md # Borrador histórico de arquitectura
+│   └── Reporte_MQTT_Pasantias_EPET20_corregido.docx
+└── README.md                    # Guía rápida del proyecto
 ```
 
 ---
