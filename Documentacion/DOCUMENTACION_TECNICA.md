@@ -40,9 +40,9 @@ Project_Luminaria/
 
 ### Archivos principales
 
-- `index.html`: estructura de la aplicacion, cabecera, KPIs, tabs, mapa, historial, consola y modales.
-- `css/styles.css`: sistema visual responsive con tema oscuro, estados semaforo y ajustes moviles.
-- `js/app.js`: estado de tableros, renderizado de UI, procesamiento de eventos, filtros y sonidos.
+- `index.html`: estructura de la aplicacion, cabecera, KPIs, tabs, mapa, historial, consola y modales. Incluye un script anti-flash inline en el `<head>` que aplica el tema guardado antes de pintar la pagina.
+- `css/styles.css`: sistema visual responsive con tema oscuro por defecto y tema claro (`[data-theme="light"]`). Variables CSS centralizadas en `:root` para todos los colores. Estados semaforo y ajustes moviles.
+- `js/app.js`: estado de tableros, renderizado de UI, procesamiento de eventos, filtros, sonidos y toggle de tema claro/oscuro con persistencia en `localStorage`.
 - `js/mqtt-client.js`: cliente Paho MQTT sobre WebSockets, persistencia de configuracion y fallback a simulacion.
 
 ---
@@ -82,9 +82,37 @@ La cabecera incluye:
 - estado de conexion MQTT;
 - acceso al simulador;
 - configuracion del servidor MQTT;
-- activacion o silenciamiento del sonido de alarma.
+- activacion o silenciamiento del sonido de alarma;
+- **interruptor de tema claro/oscuro** (boton con icono `fa-moon` / `fa-sun`).
 
 El panel superior incluye un banner general y KPIs de tension, alertas urgentes, advertencias y cantidad de tableros monitoreados.
+
+### 4.0 Tema Claro / Oscuro
+
+La aplicacion soporta dos temas visuales que el usuario puede alternar desde el boton `#btnToggleTheme` en la cabecera. El modo oscuro es el predeterminado.
+
+**Mecanismo:**
+
+- El atributo `data-theme` se aplica sobre `<html>` (`<html data-theme="light">` o `<html data-theme="dark">`).
+- `styles.css` define las variables en `:root` (modo oscuro) y las redefine en el bloque `[data-theme="light"]`.
+- La preferencia se persiste en `localStorage` bajo la clave `luminaria_theme`.
+
+**Anti-flash:** un script inline al final del `<head>` de `index.html` lee `localStorage` y aplica el atributo `data-theme` antes de que el navegador pinte la pagina, evitando el flash blanco al cargar en modo claro. **No eliminar este script.**
+
+**Variables CSS que cambian entre temas:**
+
+| Categoria | Variables | Notas |
+|---|---|---|
+| Backgrounds | `--bg-dark`, `--bg-card`, `--bg-card-hover`, `--bg-input`, `--bg-terminal` | Oscuro: slate-900. Claro: blanco / slate-100. |
+| Bordes | `--border-color`, `--border-focus` | Se aclaran en modo claro. |
+| Texto | `--text-main`, `--text-muted`, `--text-dim` | Oscuro: blanco. Claro: slate-900. |
+| Acentos semitransparentes | `--color-*-bg`, `--color-*-border`, `--color-accent-bg` | Recalibrados para fondo blanco. |
+| Colores del mapa SVG | `--map-bg`, `--map-river-bg`, `--map-path`, `--map-grid`, `--map-river` | Aplicados a los `<path>` del SVG. |
+| Componentes compuestos | `--meter-track-bg`, `--mobile-nav-bg`, `--modal-overlay-bg`, `--pin-shadow`, `--pin-label-shadow`, `--modal-shadow`, `--shadow-card` | Garantizan contraste en ambos temas. |
+
+Los **colores solidos de acento** (`--color-ok`, `--color-warning`, `--color-critical`, `--color-accent`, `--color-accent-text`) **no cambian** entre temas: ya tienen buen contraste sobre fondos claros y oscuros.
+
+**Regla para componentes nuevos:** usar siempre variables CSS en lugar de colores hex hardcodeados. Si un componente nuevo necesita un color, agregarlo como variable en `:root` y redefinirlo en `[data-theme="light"]`.
 
 ### 4.1 Mapa de Zonas (Detalle de Implementacion)
 
@@ -279,6 +307,8 @@ Las alertas resueltas dejan de contarse en KPIs y en la severidad derivada del m
 4. Abrir **Simulador** y ejecutar los cuatro presets: baja tension, desconexion abrupta, foco quemado y telemetria normal.
 5. Revisar que cambien las tarjetas, el mapa, el banner, los KPIs, el feed de alertas y la consola.
 6. Marcar alertas como resueltas y verificar que los contadores se actualicen.
+7. Probar el interruptor de tema claro/oscuro: el icono debe alternar entre `fa-moon` y `fa-sun`, todos los componentes (incluido el mapa SVG) deben mantener contraste legible, y la eleccion debe persistir al recargar.
+8. Limpiar `localStorage` y recargar para confirmar que la aplicacion arranca en modo oscuro por defecto sin flash.
 
 Validaciones sintacticas recomendadas:
 
@@ -300,3 +330,4 @@ node -c js/mqtt-client.js
 - Correccion del anclaje de los pines del mapa: `#mapPinsContainer` (`.map-pins-layer`) se movio dentro de `.map-svg-wrapper` para que los pines queden fijados al mapa en todos los tamaños de pantalla.
 - Ajuste responsive del mapa en movil: etiquetas con `max-width` y salto de linea para evitar recortes en los bordes, iconos reducidos y altura de mapa ampliada.
 - Aclaracion de que backend/API/PostgreSQL no estan presentes actualmente en el repositorio.
+- **Interruptor de tema claro/oscuro** en la cabecera del header. Atributo `data-theme` aplicado sobre `<html>`, redefinicion de variables CSS en `[data-theme="light"]`, persistencia en `localStorage` clave `luminaria_theme` y script anti-flash en el `<head>` de `index.html` para evitar parpadeo al cargar. Colores hardcodeados del mapa SVG y de varios componentes migrados a variables CSS para soportar ambos temas.

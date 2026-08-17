@@ -12,6 +12,8 @@ El repositorio contiene una aplicacion web estatica hecha con HTML, CSS y JavaSc
 
 La UI consume eventos MQTT mediante Paho MQTT por WebSockets. Si no puede conectarse a Mosquitto o no esta disponible la libreria Paho, activa modo simulacion y procesa eventos localmente.
 
+La aplicacion soporta dos temas visuales (claro y oscuro) seleccionables desde el header. El modo oscuro es el predeterminado; la preferencia se persiste en `localStorage` con la clave `luminaria_theme`.
+
 ---
 
 ## 2. Mapa de Archivos
@@ -29,6 +31,7 @@ Project_Luminaria/
 |   |-- CONTEXTO_IA.md
 |   |-- DOCUMENTACION_TECNICA_DRAFT(1).md
 |   `-- Reporte_MQTT_Pasantias_EPET20_corregido.docx
+|-- CLAUDE.md
 |-- README.md
 `-- README_MQTT_UI.md
 ```
@@ -45,16 +48,17 @@ Define:
 
 - header institucional;
 - estado de conexion MQTT;
-- botones **Simulador**, **Servidor** y sonido;
+- botones **Simulador**, **Servidor**, sonido y **tema claro/oscuro** (`#btnToggleTheme`);
 - banner general de estado;
 - barra de KPIs;
 - tabs `tableros`, `mapa`, `alertas`, `consola`;
 - modal de configuracion MQTT;
-- modal de simulacion.
+- modal de simulacion;
+- **script anti-flash inline en el `<head>`** que aplica `data-theme` desde `localStorage` antes de que pinte la pagina. No eliminarlo.
 
 ### `css/styles.css`
 
-Usa variables CSS en `:root`, tema oscuro, estados semaforo y media queries responsive. Mantener el enfoque de CSS vanilla.
+Usa variables CSS en `:root` (modo oscuro por defecto) y redefine los colores en el bloque `[data-theme="light"]` para el tema claro. Estados semaforo, media queries responsive. Los `<path>` del SVG del mapa y elementos que antes tenian colores hardcodeados ahora usan variables CSS (`--map-path`, `--map-grid`, `--map-river`, `--mobile-nav-bg`, `--modal-overlay-bg`, etc.) para soportar ambos temas. Mantener el enfoque de CSS vanilla.
 
 ### `js/mqtt-client.js`
 
@@ -105,6 +109,7 @@ Funciones relevantes:
 - `updateKPIs()`
 - `playAlertAudioSound(type)`
 - `escapeHtml(str)`
+- `getStoredTheme()`, `setTheme(theme)`, `applyStoredTheme()`, `updateThemeIcon(theme)` — toggle de tema claro/oscuro
 
 ### Mapa de Zonas (estructura a respetar)
 
@@ -118,6 +123,7 @@ Funciones relevantes:
 - `#mapPinsContainer` (.map-pins-layer) usa `position: absolute` y **debe permanecer dentro** de `.map-svg-wrapper`, unico ancestro con `position: relative`. Moverlo fuera desancla los pines del mapa (bug visual en movil).
 - Los pines se generan en `renderMapPins()` con `left/top` porcentuales (`posX`/`posY` del tablero) y se centran con `translate(-50%, -50%)`.
 - En movil (max-width: 560px) las etiquetas limitan a `max-width: 92px` y permiten salto de linea; no reintroducir `white-space: nowrap` sin garantizar que no se recorten en los bordes.
+- Los `stroke` de los `<path>` del SVG usan variables CSS (`var(--map-path)`, `var(--map-grid)`, `var(--map-river)`) para adaptarse a tema claro/oscuro. No reemplazar por colores hex.
 
 ---
 
@@ -237,3 +243,4 @@ node -c js/mqtt-client.js
 
 6. Si se agrega backend, documentarlo como implementado solo despues de crear sus archivos reales.
 7. No mover `#mapPinsContainer` fuera de `.map-svg-wrapper`; el anclaje de los pines depende de ese contenedor relativo.
+8. **Tema claro/oscuro:** respetar el mecanismo basado en `data-theme` sobre `<html>`. No eliminar el script anti-flash del `<head>` de `index.html`. Al agregar componentes nuevos, usar las variables CSS existentes (no colores hex) para que funcionen en ambos temas. Si hace falta un color nuevo, definirlo como variable en `:root` y redefinirlo en `[data-theme="light"]`. La clave de `localStorage` es `luminaria_theme`.

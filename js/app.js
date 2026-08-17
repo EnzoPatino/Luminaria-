@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnOpenMqttModal: document.getElementById('btnOpenMqttModal'),
     btnOpenSimModal: document.getElementById('btnOpenSimModal'),
     btnToggleSound: document.getElementById('btnToggleSound'),
+    btnToggleTheme: document.getElementById('btnToggleTheme'),
     mqttModal: document.getElementById('mqttModal'),
     simModal: document.getElementById('simModal'),
     closeMqttModal: document.getElementById('closeMqttModal'),
@@ -128,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabNavigation();
     setupEventListeners();
     setupMqttCallbacks();
+    applyStoredTheme();
     updateTableroUI();
     renderAlerts();
     updateKPIs();
@@ -135,6 +137,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Conectar a MQTT o Modo Simulación
     window.luminariaMQTT.connect();
+  }
+
+  // ==========================================
+  // TEMA CLARO / OSCURO
+  // ==========================================
+  const THEME_STORAGE_KEY = 'luminaria_theme';
+
+  function getStoredTheme() {
+    try {
+      const t = localStorage.getItem(THEME_STORAGE_KEY);
+      return (t === 'light' || t === 'dark') ? t : 'dark';
+    } catch (e) {
+      return 'dark';
+    }
+  }
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch (e) {}
+    updateThemeIcon(theme);
+  }
+
+  function applyStoredTheme() {
+    // El atributo ya fue puesto en el <head> por el script anti-flash.
+    // Aquí sincronizamos el icono del botón.
+    const current = document.documentElement.getAttribute('data-theme') || getStoredTheme();
+    document.documentElement.setAttribute('data-theme', current);
+    updateThemeIcon(current);
+  }
+
+  function updateThemeIcon(theme) {
+    if (!elements.btnToggleTheme) return;
+    const icon = elements.btnToggleTheme.querySelector('i');
+    if (!icon) return;
+    if (theme === 'light') {
+      icon.className = 'fas fa-sun';
+      elements.btnToggleTheme.title = 'Cambiar a tema oscuro';
+    } else {
+      icon.className = 'fas fa-moon';
+      elements.btnToggleTheme.title = 'Cambiar a tema claro';
+    }
   }
 
   // ==========================================
@@ -201,10 +246,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.btnToggleSound) {
       elements.btnToggleSound.addEventListener('click', () => {
         appState.soundEnabled = !appState.soundEnabled;
-        elements.btnToggleSound.innerHTML = appState.soundEnabled 
-          ? '<i class="fas fa-volume-up"></i>' 
+        elements.btnToggleSound.innerHTML = appState.soundEnabled
+          ? '<i class="fas fa-volume-up"></i>'
           : '<i class="fas fa-volume-mute"></i>';
         elements.btnToggleSound.title = appState.soundEnabled ? 'Sonido Activado' : 'Sonido Silenciado';
+      });
+    }
+
+    // Cambiar tema claro / oscuro
+    if (elements.btnToggleTheme) {
+      elements.btnToggleTheme.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = current === 'dark' ? 'light' : 'dark';
+        setTheme(next);
       });
     }
 

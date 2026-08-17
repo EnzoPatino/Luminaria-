@@ -25,6 +25,7 @@ La interfaz web es una aplicación liviana desarrollada con **HTML5, CSS3 vanill
 - **Consola de Telemetría MQTT**: Inspector de mensajes JSON recibidos y transmitidos por el broker.
 - **Simulador de Eventos Hardware**: Herramienta integrada para simular eventos de la EPET 14 directamente desde la UI sin requerir hardware físico ni broker activo.
 - **Banner y KPIs**: Estado general del sistema con tensión de red, alertas urgentes, advertencias y cantidad de tableros monitoreados.
+- **Tema claro/oscuro**: Botón en la cabecera para alternar entre los dos temas visuales. La preferencia se persiste en `localStorage`. El modo oscuro es el predeterminado.
 
 La interfaz es **100% responsive**: en pantallas móviles la navegación se agrupa en un menú flotante inferior y el mapa adapta sus pines y etiquetas para evitar recortes.
 
@@ -69,15 +70,16 @@ allow_anonymous true
 Project_Luminaria/
 ├── index.html                 # Estructura principal de la interfaz web
 ├── css/
-│   └── styles.css             # Estilos CSS responsivos y tema dark industrial
+│   └── styles.css             # Estilos CSS responsivos con tema oscuro y claro
 ├── js/
 │   ├── mqtt-client.js         # Cliente WebSocket MQTT para Mosquitto
-│   └── app.js                 # Lógica de UI, medidores y gestión de eventos
+│   └── app.js                 # Lógica de UI, medidores, gestión de eventos y tema
 ├── Documentacion/
 │   ├── DOCUMENTACION_TECNICA.md   # Documentación técnica completa para desarrolladores
 │   ├── CONTEXTO_IA.md             # Manual de contexto y especificaciones para asistentes de IA
 │   ├── DOCUMENTACION_TECNICA_DRAFT(1).md # Borrador histórico de arquitectura
 │   └── Reporte_MQTT_Pasantias_EPET20_corregido.docx
+├── CLAUDE.md                  # Guía operativa para sesiones de Claude Code
 └── README.md                    # Guía rápida del proyecto
 ```
 
@@ -88,3 +90,5 @@ Project_Luminaria/
 Para consultar la documentación técnica completa del sistema o las especificaciones del contrato de datos, revise los archivos ubicados en el directorio `Documentacion/`:
 - **Documentación Técnica para Desarrolladores**: `Documentacion/DOCUMENTACION_TECNICA.md`
 - **Guía de Contexto y Especificaciones para IA**: `Documentacion/CONTEXTO_IA.md`
+- **Manual de Integración Frontend ↔ Mosquitto**: `README_MQTT_UI.md`
+- **Guía para Claude Code**: `CLAUDE.md`
