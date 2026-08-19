@@ -27,6 +27,9 @@
         var t = localStorage.getItem('luminaria_theme');
         if (t === 'light' || t === 'dark') {
           document.documentElement.setAttribute('data-theme', t);
+          if (t === 'light') {
+            document.documentElement.classList.add('light-mode');
+          }
         }
       } catch (e) {}
     })();
@@ -55,23 +58,31 @@
           <span id="mqttStatusText">Conectando al servidor...</span>
         </div>
 
-        <button class="btn btn-sim" id="btnOpenSimModal" title="Simular pruebas técnicas">
-          <i class="fas fa-vial"></i>
-          <span>Simulador</span>
+        <button class="header-hamburger-btn" id="btnHeaderMenu" aria-label="Abrir menú de opciones" aria-expanded="false" aria-controls="headerActions" title="Menú de opciones">
+          <i class="fas fa-bars"></i>
         </button>
 
-        <button class="btn btn-secondary" id="btnOpenMqttModal" title="Configurar conexión MQTT">
-          <i class="fas fa-network-wired"></i>
-          <span>Servidor</span>
-        </button>
+        <div class="header-actions" id="headerActions">
+          <button class="btn btn-sim" id="btnOpenSimModal" title="Simular pruebas técnicas">
+            <i class="fas fa-vial"></i>
+            <span>Simulador</span>
+          </button>
 
-        <button class="btn btn-icon" id="btnToggleSound" title="Sonido de alarma">
-          <i class="fas fa-volume-up"></i>
-        </button>
+          <button class="btn btn-secondary" id="btnOpenMqttModal" title="Configurar conexión MQTT">
+            <i class="fas fa-network-wired"></i>
+            <span>Servidor</span>
+          </button>
 
-        <button class="btn btn-icon" id="btnToggleTheme" title="Cambiar tema claro/oscuro" aria-label="Cambiar tema">
-          <i class="fas fa-moon"></i>
-        </button>
+          <button class="btn btn-icon" id="btnToggleSound" title="Sonido de alarma" aria-label="Alternar sonido de alarma">
+            <i class="fas fa-volume-up"></i>
+            <span class="btn-text-mobile" id="soundLabelMobile">Sonido: Activado</span>
+          </button>
+
+          <button class="btn btn-icon" id="btnToggleTheme" title="Cambiar tema claro/oscuro" aria-label="Cambiar tema claro/oscuro">
+            <i class="fas fa-moon"></i>
+            <span class="btn-text-mobile" id="themeLabelMobile">Modo Claro</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -262,7 +273,7 @@
   <div class="modal-overlay" id="mqttModal" role="dialog" aria-modal="true">
     <div class="modal-box">
       <div class="modal-head">
-        <h3><i class="fas fa-server" style="color: #38bdf8;"></i> Servidor MQTT Mosquitto</h3>
+        <h3><i class="fas fa-server" style="color: var(--color-accent-text);"></i> Servidor MQTT Mosquitto</h3>
         <button class="close-btn" id="closeMqttModal">&times;</button>
       </div>
 
@@ -306,7 +317,7 @@
   <div class="modal-overlay" id="simModal" role="dialog" aria-modal="true">
     <div class="modal-box">
       <div class="modal-head">
-        <h3><i class="fas fa-vial" style="color: #a78bfa;"></i> Simulador de Pruebas Técnicas</h3>
+        <h3><i class="fas fa-vial" style="color: var(--color-accent-text);"></i> Simulador de Pruebas Técnicas</h3>
         <button class="close-btn" id="closeSimModal">&times;</button>
       </div>
 

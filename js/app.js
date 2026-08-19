@@ -107,6 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnOpenSimModal: document.getElementById('btnOpenSimModal'),
     btnToggleSound: document.getElementById('btnToggleSound'),
     btnToggleTheme: document.getElementById('btnToggleTheme'),
+    btnHeaderMenu: document.getElementById('btnHeaderMenu'),
+    headerActions: document.getElementById('headerActions'),
+    soundLabelMobile: document.getElementById('soundLabelMobile'),
+    themeLabelMobile: document.getElementById('themeLabelMobile'),
     mqttModal: document.getElementById('mqttModal'),
     simModal: document.getElementById('simModal'),
     closeMqttModal: document.getElementById('closeMqttModal'),
@@ -155,6 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.toggle('light-mode', theme === 'light');
+    if (document.body) {
+      document.body.classList.toggle('light-mode', theme === 'light');
+    }
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch (e) {}
@@ -162,23 +170,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function applyStoredTheme() {
-    // El atributo ya fue puesto en el <head> por el script anti-flash.
-    // Aquí sincronizamos el icono del botón.
+    // Sincronizar tema y clase según valor guardado o atributo en html
     const current = document.documentElement.getAttribute('data-theme') || getStoredTheme();
-    document.documentElement.setAttribute('data-theme', current);
-    updateThemeIcon(current);
+    setTheme(current);
   }
 
   function updateThemeIcon(theme) {
     if (!elements.btnToggleTheme) return;
     const icon = elements.btnToggleTheme.querySelector('i');
-    if (!icon) return;
     if (theme === 'light') {
-      icon.className = 'fas fa-sun';
-      elements.btnToggleTheme.title = 'Cambiar a tema oscuro';
+      if (icon) icon.className = 'fas fa-sun';
+      elements.btnToggleTheme.title = 'Cambiar a modo oscuro';
+      elements.btnToggleTheme.setAttribute('aria-label', 'Cambiar a modo oscuro');
+      if (elements.themeLabelMobile) elements.themeLabelMobile.textContent = 'Modo: Claro (Tocar para Oscuro)';
     } else {
-      icon.className = 'fas fa-moon';
-      elements.btnToggleTheme.title = 'Cambiar a tema claro';
+      if (icon) icon.className = 'fas fa-moon';
+      elements.btnToggleTheme.title = 'Cambiar a modo claro';
+      elements.btnToggleTheme.setAttribute('aria-label', 'Cambiar a modo claro');
+      if (elements.themeLabelMobile) elements.themeLabelMobile.textContent = 'Modo: Oscuro (Tocar para Claro)';
     }
   }
 
@@ -246,10 +255,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.btnToggleSound) {
       elements.btnToggleSound.addEventListener('click', () => {
         appState.soundEnabled = !appState.soundEnabled;
-        elements.btnToggleSound.innerHTML = appState.soundEnabled
-          ? '<i class="fas fa-volume-up"></i>'
-          : '<i class="fas fa-volume-mute"></i>';
+        const soundIcon = elements.btnToggleSound.querySelector('i');
+        if (soundIcon) {
+          soundIcon.className = appState.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        }
+        if (elements.soundLabelMobile) {
+          elements.soundLabelMobile.textContent = appState.soundEnabled ? 'Sonido: Activado' : 'Sonido: Silenciado';
+        }
         elements.btnToggleSound.title = appState.soundEnabled ? 'Sonido Activado' : 'Sonido Silenciado';
+        elements.btnToggleSound.setAttribute('aria-label', appState.soundEnabled ? 'Silenciar sonido de alarma' : 'Activar sonido de alarma');
       });
     }
 
@@ -259,6 +273,57 @@ document.addEventListener('DOMContentLoaded', () => {
         const current = document.documentElement.getAttribute('data-theme') || 'dark';
         const next = current === 'dark' ? 'light' : 'dark';
         setTheme(next);
+      });
+    }
+
+    // Menú Hamburguesa en Mobile
+    function toggleHeaderMenu(forceState) {
+      if (!elements.btnHeaderMenu || !elements.headerActions) return;
+      const isOpen = typeof forceState === 'boolean' ? forceState : !elements.headerActions.classList.contains('is-open');
+      elements.headerActions.classList.toggle('is-open', isOpen);
+      elements.btnHeaderMenu.classList.toggle('active', isOpen);
+      elements.btnHeaderMenu.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      const icon = elements.btnHeaderMenu.querySelector('i');
+      if (icon) {
+        icon.className = isOpen ? 'fas fa-xmark' : 'fas fa-bars';
+      }
+    }
+
+    function closeHeaderMenu() {
+      toggleHeaderMenu(false);
+    }
+
+    if (elements.btnHeaderMenu) {
+      elements.btnHeaderMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleHeaderMenu();
+      });
+    }
+
+    // Cerrar el menú desplegable al hacer clic afuera
+    document.addEventListener('click', (e) => {
+      if (elements.headerActions && elements.headerActions.classList.contains('is-open')) {
+        if (!elements.headerActions.contains(e.target) && e.target !== elements.btnHeaderMenu && !elements.btnHeaderMenu.contains(e.target)) {
+          closeHeaderMenu();
+        }
+      }
+    });
+
+    // Cerrar menú con tecla Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeHeaderMenu();
+      }
+    });
+
+    // Al hacer clic en una opción del menú en mobile, cerrarlo suavemente
+    if (elements.headerActions) {
+      elements.headerActions.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (window.innerWidth <= 768) {
+            setTimeout(closeHeaderMenu, 150);
+          }
+        });
       });
     }
 
