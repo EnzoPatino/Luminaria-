@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-# Project Luminaria — Sistema de Monitoreo y Alertas Eléctricas
+# Proyecto Luminaria — Sistema de Monitoreo y Alertas Eléctricas
 
 **Proyecto Interescolar EPET N.º 14 × EPET N.º 20 — Municipalidad de Neuquén**
 
-Aplicación web estática (HTML + CSS + JavaScript vanilla) para monitoreo en tiempo real de tableros de iluminación pública. Consume eventos MQTT desde un broker Mosquitto (vía WebSockets) o funciona en **modo simulación** cuando no hay broker disponible.
+Aplicación web para monitoreo en tiempo real de tableros de iluminación pública. El frontend es una aplicación estática (HTML + CSS + JavaScript vanilla) que consume eventos MQTT desde un broker Mosquitto (vía WebSockets) o funciona en **modo simulación**. El backend está implementado en Node.js + Express para gestión de datos y persistencia.
 
 > Toda la documentación oficial del proyecto ya está en `Documentacion/CONTEXTO_IA.md` y `Documentacion/DOCUMENTACION_TECNICA.md`. Este `CLAUDE.md` es un resumen operativo para sesiones de Claude Code.
 
@@ -16,7 +16,7 @@ Aplicación web estática (HTML + CSS + JavaScript vanilla) para monitoreo en ti
 
 ## 1. Comandos Comunes
 
-### Ejecutar la app localmente
+### Ejecutar el Frontend localmente
 
 ```bash
 # Opción A: abrir index.html directamente en el navegador
@@ -25,7 +25,14 @@ python3 -m http.server 8080
 # Luego ir a http://localhost:8080
 ```
 
-No hay `package.json`, no hay toolchain de build, no hay frameworks. La app es 100% estática.
+### Ejecutar el Backend (Node.js)
+
+```bash
+cd backend
+npm install
+npm start    # Modo producción
+npm run dev   # Modo desarrollo (con --watch)
+```
 
 ### Validar sintaxis JavaScript (si tenés Node)
 
@@ -46,6 +53,8 @@ docker compose up -d mosquitto
 
 ## 2. Arquitectura (Big Picture)
 
+### Frontend (Static App)
+
 ```
 index.html ──► carga css/styles.css + lib Paho MQTT (CDN)
             ──► script anti-flash inline (lee localStorage y aplica data-theme en <html>)
@@ -53,22 +62,29 @@ index.html ──► carga css/styles.css + lib Paho MQTT (CDN)
             ──► carga js/app.js (lógica de UI, todo dentro de DOMContentLoaded)
 ```
 
-### Responsabilidades por archivo
+**Responsabilidades por archivo:**
 
 - **`index.html`** — Estructura DOM: header institucional, banner de estado, barra de KPIs, 4 tabs (`tableros`, `mapa`, `alertas`, `consola`), modal de config MQTT, modal de simulación. El header incluye un botón `#btnToggleTheme` (icono luna/sol) que alterna el tema. Algunos IDs hidden existen solo por retrocompatibilidad (`#selectTablero`, `#voltageGaugeNum`, etc.).
 - **`js/mqtt-client.js`** — Clase `LuminariaMQTTClient` instanciada como `window.luminariaMQTT`. Maneja conexión Paho, suscripción a topics, persistencia en `localStorage` bajo la clave `luminaria_mqtt_config`, y notifica vía 3 callbacks: `onStatusChangeCallback`, `onMessageCallback`, `onLogCallback`. Si Paho no está disponible o la conexión falla, activa **modo simulación** y los `publish()` se procesan internamente como mensajes recibidos.
 - **`js/app.js`** — Toda la lógica de UI. Mantiene un objeto `appState` (no global, vive dentro del `DOMContentLoaded`) con `tableros`, `alerts`, `activeFilter`, `soundEnabled`, `selectedTableroId`. Renderiza grilla de tableros, mapa de pines SVG, lista de alertas, KPIs, banner y consola. Procesa eventos MQTT entrantes con `processIncomingEvent()`. Maneja el toggle de tema claro/oscuro con persistencia en `localStorage` clave `luminaria_theme`.
 - **`css/styles.css`** — Tema oscuro industrial por defecto (`:root`) y tema claro (`[data-theme="light"]`). Variables CSS en `:root` para todos los colores. Estados semáforo (`ok`, `warning`, `critical`). Responsive con media queries (menú flotante en móvil, mapa de 200px en `max-width: 560px`).
 
-### Flujo de un evento
+### Backend (Node.js + Express)
 
-1. Hardware (ESP32) publica JSON en `neuquen/iluminacion/#` o `api/evento`.
-2. Mosquitto lo entrega vía WebSocket al cliente Paho en el navegador.
-3. `mqtt-client.js` parsea y llama `onMessageCallback(topic, payloadJson)`.
-4. `app.js#processIncomingEvent()` actualiza `appState.tableros[id]`, agrega a `appState.alerts`, dispara sonido, y re-renderiza: grilla + mapa + KPIs + banner.
-5. La UI refleja el cambio inmediatamente.
+```
+server.js ──► app.js ──► routes/index.js ──► [healthRoutes, etc.] ──► controllers/ [healthController, etc.]
+```
 
-En **modo simulación** el usuario abre el modal "Simulador" y dispara uno de los 4 presets, que construyen el mismo JSON y lo inyectan por `window.luminariaMQTT.publish()`, que en simulación llama internamente al callback de mensaje.
+**Responsabilidades por directorio:**
+
+- **`backend/server.js`** — Punto de entrada y bootstrapping del servidor.
+- **`backend/src/app.js`** — Configuración de Express, middlewares globales y montaje de rutas (`/api`).
+- **`backend/src/config/`** — Gestión de variables de entorno y configuración global.
+- **`backend/src/routes/`** — Definición de endpoints y enrutamiento.
+- **`backend/src/controllers/`** — Lógica de control de peticiones y respuestas HTTP.
+- **`backend/src/services/`** — Lógica de negocio y acceso a datos (capa de servicio).
+- **`backend/src/middlewares/`** — Middlewares transversales (ej. `errorHandler`).
+- **`backend/src/models/`** — Definición de modelos de datos.
 
 ---
 
@@ -167,7 +183,7 @@ El usuario puede sobreescribir vía modal (botón "Servidor"). La config se guar
 
 ## 7. Reglas de modificación
 
-1. **No introducir frameworks ni toolchains de build** (sin React/Vue/Tailwind/npm) salvo pedido explícito. El estilo actual es vanilla ejecutable desde `index.html`.
+1. **No introducir frameworks ni toolchains de build en el frontend** (sin React/Vue/Tailwind/npm) salvo pedido explícito. El estilo actual es vanilla ejecutable desde `index.html`.
 2. **No cambiar nombres de claves JSON** del contrato de eventos — ya coordinados con hardware.
 3. **Preservar modo simulación.**
 4. **Preservar `escapeHtml()`** (o equivalente) al renderizar datos externos.
@@ -176,12 +192,3 @@ El usuario puede sobreescribir vía modal (botón "Servidor"). La config se guar
 7. **Usar variables CSS** en lugar de colores hardcodeados cuando agregues componentes nuevos, para que el tema claro funcione automáticamente.
 8. Si se agrega un backend real, documentarlo en `Documentacion/` **solo después de crear sus archivos** — la UI hoy es 100% cliente.
 9. Validar sintaxis antes de entregar: `node -c js/app.js && node -c js/mqtt-client.js`.
-
----
-
-## 8. Archivos importantes para contexto adicional
-
-- `Documentacion/CONTEXTO_IA.md` — Manual detallado para asistentes de IA (leer primero si hay dudas).
-- `Documentacion/DOCUMENTACION_TECNICA.md` — Documentación técnica completa para desarrolladores.
-- `README.md` — Guía rápida del proyecto y guía de Mosquitto.
-- `README_MQTT_UI.md` — Integración frontend ↔ Mosquitto, con ejemplos JSON de payload.
