@@ -1333,24 +1333,42 @@ html, body {
 
 @media (max-width: 768px) {
   .app-wrapper {
-    padding: 0.85rem;
-    gap: 0.85rem;
-    padding-bottom: 95px; /* Espacio para no cubrir el contenido con el menú flotante inferior */
+    padding: 0.7rem;
+    gap: 0.7rem;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
 
   .main-header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.85rem 1rem;
-    gap: 0.75rem;
+    flex-direction: row;
+    align-items: center;
+    padding: 0.55rem 0.7rem;
+    gap: 0.5rem;
   }
 
   .header-brand {
     justify-content: flex-start;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .brand-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    font-size: 1rem;
+  }
+
+  .brand-text h1 {
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .brand-text p {
+    display: none;
   }
 
   .header-toolbar {
-    width: 100%;
+    width: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1359,14 +1377,13 @@ html, body {
   }
 
   .mqtt-status-pill {
-    flex: 1;
-    justify-content: flex-start;
-    padding: 0.45rem 0.75rem;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
+    flex: 0 0 auto;
+    padding: 0.45rem;
+    gap: 0;
+  }
+
+  .mqtt-status-pill #mqttStatusText {
+    display: none;
   }
 
   /* BOTÓN HAMBURGUESA EN MÓVIL */
@@ -1374,8 +1391,8 @@ html, body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
     background: var(--bg-card-hover);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
@@ -1448,31 +1465,71 @@ html, body {
   }
 
   .status-banner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.65rem;
-    padding: 0.9rem 1.1rem;
+    gap: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .banner-icon {
+    font-size: 1rem;
+  }
+
+  .banner-tag,
+  .banner-info p {
+    display: none;
+  }
+
+  .banner-info h2 {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.2;
   }
 
   .kpi-bar {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.45rem;
   }
 
-  /* MENÚ FLOTANTE INFERIOR MÓVIL - NO TOCAR SU COMPORTAMIENTO */
+  .kpi-box {
+    min-width: 0;
+    padding: 0.55rem 0.4rem;
+    justify-content: center;
+    gap: 0.35rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .kpi-icon-wrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+  }
+
+  .kpi-name {
+    font-size: 0.58rem;
+    letter-spacing: 0;
+  }
+
+  .kpi-num {
+    font-size: 1rem;
+    margin-top: 0;
+  }
+
+  /* Barra de navegación inferior móvil */
   .nav-tabs {
     position: fixed;
-    bottom: max(12px, env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 1.5rem);
-    max-width: 480px;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
     z-index: 950;
     background: var(--mobile-nav-bg);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--mobile-nav-border);
-    border-radius: 22px;
-    padding: 0.4rem 0.45rem;
+    border-radius: 14px 14px 0 0;
+    padding: 0.35rem 0.45rem calc(0.35rem + env(safe-area-inset-bottom));
     box-shadow: var(--mobile-nav-shadow);
     display: flex;
     justify-content: space-between;
@@ -1487,8 +1544,9 @@ html, body {
     justify-content: center;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.5rem 0.2rem;
-    font-size: 0.72rem;
+    min-height: 52px;
+    padding: 0.35rem 0.2rem;
+    font-size: 0.68rem;
     font-weight: 600;
     border-radius: 16px;
     position: relative;
@@ -1498,7 +1556,7 @@ html, body {
   }
 
   .nav-tab i {
-    font-size: 1.15rem;
+    font-size: 1rem;
     transition: transform 0.2s ease, color 0.2s ease;
   }
 
@@ -1547,14 +1605,61 @@ html, body {
   .map-legend {
     display: none;
   }
+
+  .tablero-card {
+    padding: 0.8rem;
+    gap: 0.6rem;
+  }
+
+  .tablero-title {
+    font-size: 1rem;
+  }
+
+  .tablero-status-badge {
+    padding: 0.2rem 0.45rem;
+    font-size: 0.65rem;
+  }
+
+  .tablero-location {
+    font-size: 0.75rem;
+  }
+
+  .tablero-meter-section {
+    padding: 0.55rem 0.65rem;
+    gap: 0.35rem;
+  }
+
+  .meter-val {
+    font-size: 1.15rem;
+  }
+
+  .meter-track {
+    height: 7px;
+  }
+
+  .meter-ticks {
+    display: none;
+  }
+
+  .tablero-info-grid {
+    padding: 0.5rem;
+  }
+
+  .info-cell-lbl {
+    font-size: 0.62rem;
+  }
+
+  .info-cell-val {
+    font-size: 0.75rem;
+  }
+
+  .btn-select-tablero {
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 560px) {
   .tableros-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .kpi-bar {
     grid-template-columns: 1fr;
   }
 

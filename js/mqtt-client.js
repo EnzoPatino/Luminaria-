@@ -1,6 +1,6 @@
 /**
  * Project Luminaria - Cliente MQTT para Mosquitto (WebSocket)
- * EPET 14 × EPET 20 — Municipalidad de Neuquén
+ * Municipalidad de Neuquén
  * Manejador de comunicación MQTT con fallback a modo simulación
  */
 

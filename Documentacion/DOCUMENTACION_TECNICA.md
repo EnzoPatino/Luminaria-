@@ -1,7 +1,7 @@
 # Documentacion Tecnica - Project Luminaria
 
 **Sistema de Monitoreo y Alertas Electricas en Tiempo Real**  
-**EPET N. 14 x EPET N. 20 - Municipalidad de Neuquen**  
+**Municipalidad de Neuquen**
 **Version documentada:** Agosto 2026
 
 ---
@@ -11,13 +11,6 @@
 Project Luminaria es una interfaz web estatica para monitoreo de tableros electricos de alumbrado publico. La version actual del repositorio implementa el panel de control en navegador, la integracion MQTT por WebSockets y un modo de simulacion local para pruebas sin hardware ni broker activo.
 
 El backend REST, PostgreSQL y los contenedores Docker siguen siendo parte de la arquitectura objetivo del proyecto, pero no estan implementados en el arbol actual. Cualquier documentacion de API o base de datos debe tratarse como especificacion futura hasta que esos modulos existan en el repositorio.
-
-### Responsabilidades
-
-- **EPET N. 14:** hardware de campo, sensores de tension/corriente, ESP32 y envio de eventos.
-- **EPET N. 20:** panel web, cliente MQTT, procesamiento visual de eventos y documentacion tecnica.
-
----
 
 ## 2. Estructura del Repositorio
 
@@ -33,7 +26,7 @@ Project_Luminaria/
 |   |-- DOCUMENTACION_TECNICA.md
 |   |-- CONTEXTO_IA.md
 |   |-- DOCUMENTACION_TECNICA_DRAFT(1).md
-|   `-- Reporte_MQTT_Pasantias_EPET20_corregido.docx
+|   `-- Reporte_MQTT_Pasantias_corregido.docx
 |-- README.md
 `-- README_MQTT_UI.md
 ```
@@ -50,7 +43,7 @@ Project_Luminaria/
 ## 3. Arquitectura en Ejecucion
 
 ```text
-[ESP32 / Gateway EPET 14]
+[ESP32 / Gateway]
           |
           | MQTT TCP 1883
           v
@@ -85,7 +78,7 @@ La cabecera incluye:
 - activacion o silenciamiento del sonido de alarma;
 - **interruptor de tema claro/oscuro** (boton con icono `fa-moon` / `fa-sun`).
 
-El panel superior incluye un banner general y KPIs de tension, alertas urgentes, advertencias y cantidad de tableros monitoreados.
+El panel superior incluye un banner general y KPIs de alertas, advertencias y cantidad de tableros monitoreados.
 
 ### 4.0 Tema Claro / Oscuro
 
@@ -148,7 +141,7 @@ Comportamiento responsive (max-width: 560px):
 
 | ID | Nombre | Ubicacion | Fase | Focos iniciales |
 |---|---|---|---|---|
-| `TABLERO_01` | EPET 14 / EPET 20 | Aula Taller 3 - Planta Baja | `L1` | `FOCO_A1` a `FOCO_A4`, `FOCO_B1` a `FOCO_B4` |
+| `TABLERO_01` | Centro / Palacio Municipal | Centro / Palacio Municipal | `L1` | `FOCO_A1` a `FOCO_A4`, `FOCO_B1` a `FOCO_B4` |
 | `TABLERO_02` | Parque Norte | Parque Norte - Sector Canchas | `L2` | `FOCO_C1` a `FOCO_C3` |
 | `TABLERO_03` | Paseo de la Costa | Paseo de la Costa - Rio Limay | `L3` | `FOCO_D1` a `FOCO_D2` |
 | `TABLERO_04` | Avenida Argentina | Av. Argentina y Monolito | `L1` | `FOCO_E1` |
@@ -217,7 +210,7 @@ Todos los eventos deben incluir:
     "fase": "L1"
   },
   "severidad": "CRITICA",
-  "ubicacion": "Aula Taller 3 - Planta Baja"
+  "ubicacion": "Centro / Palacio Municipal"
 }
 ```
 
@@ -279,7 +272,7 @@ Efecto en UI: marca el foco como `quemado`, registra advertencia y usa estado am
     "focos_restaurados": ["FOCO_A3", "FOCO_B1"]
   },
   "severidad": "INFO",
-  "ubicacion": "Aula Taller 3 - Planta Baja"
+  "ubicacion": "Centro / Palacio Municipal"
 }
 ```
 

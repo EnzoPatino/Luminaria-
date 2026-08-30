@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Proyecto Luminaria — Sistema de Monitoreo y Alertas Eléctricas
 
-**Proyecto Interescolar EPET N.º 14 × EPET N.º 20 — Municipalidad de Neuquén**
+**Municipalidad de Neuquén**
 
 Aplicación web para monitoreo en tiempo real de tableros de iluminación pública. El frontend es una aplicación estática (HTML + CSS + JavaScript vanilla) que consume eventos MQTT desde un broker Mosquitto (vía WebSockets) o funciona en **modo simulación**. El backend está implementado en Node.js + Express para gestión de datos y persistencia.
 
@@ -90,7 +90,7 @@ server.js ──► app.js ──► routes/index.js ──► [healthRoutes, et
 
 ## 3. Contrato JSON (no romper)
 
-El hardware publica estos 4 tipos de evento. Los nombres de campo ya están coordinados con el firmware de EPET 14 — **no renombrar**.
+El hardware publica estos 4 tipos de evento. Los nombres de campo están coordinados con el firmware — **no renombrar**.
 
 | `tipo_evento` | Severidad | Efecto en UI |
 |---|---|---|
@@ -110,8 +110,8 @@ Payloads completos de ejemplo en `Documentacion/CONTEXTO_IA.md` (sección 5) y `
 ```js
 {
   id: 'TABLERO_01',
-  nombre: 'EPET 14 / EPET 20',
-  ubicacion: 'Aula Taller 3 - Planta Baja',
+  nombre: 'Centro / Palacio Municipal',
+  ubicacion: 'Centro / Palacio Municipal',
   posX: 20,            // % horizontal para el pin en el mapa
   posY: 45,            // % vertical para el pin en el mapa
   tension_v: 220.0,
@@ -124,7 +124,7 @@ Payloads completos de ejemplo en `Documentacion/CONTEXTO_IA.md` (sección 5) y `
 }
 ```
 
-Tableros iniciales hardcodeados: `TABLERO_01` (EPET 14/20, fase L1), `TABLERO_02` (Parque Norte, L2), `TABLERO_03` (Paseo de la Costa, L3), `TABLERO_04` (Av. Argentina, L1). Si un evento llega con un `id_tablero` desconocido, `processIncomingEvent()` lo crea automáticamente con `posX: 50, posY: 50`.
+Tableros iniciales hardcodeados: `TABLERO_01` (Centro / Palacio Municipal, fase L1), `TABLERO_02` (Parque Norte, L2), `TABLERO_03` (Paseo de la Costa, L3), `TABLERO_04` (Av. Argentina, L1). Si un evento llega con un `id_tablero` desconocido, `processIncomingEvent()` lo crea automáticamente con `posX: 50, posY: 50`.
 
 ---
 

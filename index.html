@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Municipalidad de Neuquén — Monitoreo de Tableros Eléctricos (Project Luminaria)</title>
-  <meta name="description" content="Sistema de Monitoreo Inteligente de Tableros de Alumbrado Público. Municipalidad de Neuquén x EPET N.º 14 x EPET N.º 20.">
+  <meta name="description" content="Sistema de Monitoreo Inteligente de Tableros de Alumbrado Público de la Municipalidad de Neuquén.">
 
   <!-- Fuentes de Google: Outfit y JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,7 +48,7 @@
         </div>
         <div class="brand-text">
           <h1>MUNICIPALIDAD DE NEUQUÉN</h1>
-          <p>Sistema de Alumbrado Público <span class="school-tag">EPET 14 x EPET 20</span></p>
+          <p>Sistema de Alumbrado Público</p>
         </div>
       </div>
 
@@ -105,20 +105,10 @@
          ========================================== -->
     <section class="kpi-bar">
       <div class="kpi-box">
-        <div class="kpi-icon-wrap blue"><i class="fas fa-bolt"></i></div>
-        <div class="kpi-data">
-          <span class="kpi-name">Tensión de Red</span>
-          <span class="kpi-num" id="kpiTensionVal">220.0 V</span>
-          <span class="kpi-detail" id="kpiTensionSub">Fase L1 • Nominal 220V</span>
-        </div>
-      </div>
-
-      <div class="kpi-box">
         <div class="kpi-icon-wrap red"><i class="fas fa-triangle-exclamation"></i></div>
         <div class="kpi-data">
-          <span class="kpi-name">Alertas Urgentes</span>
-          <span class="kpi-num" id="kpiAlertasCriticas">0 Alertas</span>
-          <span class="kpi-detail">Baja Tensión / Desconexión</span>
+          <span class="kpi-name">Alertas</span>
+          <span class="kpi-num" id="kpiAlertasCriticas">0</span>
         </div>
       </div>
 
@@ -126,17 +116,15 @@
         <div class="kpi-icon-wrap yellow"><i class="fas fa-lightbulb"></i></div>
         <div class="kpi-data">
           <span class="kpi-name">Advertencias</span>
-          <span class="kpi-num" id="kpiAdvertencias">0 Advertencias</span>
-          <span class="kpi-detail">Focos Quemados / Falla</span>
+          <span class="kpi-num" id="kpiAdvertencias">0</span>
         </div>
       </div>
 
       <div class="kpi-box">
         <div class="kpi-icon-wrap green"><i class="fas fa-cubes"></i></div>
         <div class="kpi-data">
-          <span class="kpi-name">Tableros Monitoreados</span>
-          <span class="kpi-num" id="kpiTotalFocos">4 Tableros</span>
-          <span class="kpi-detail">Circuito Municipal Activo</span>
+          <span class="kpi-name">Tableros</span>
+          <span class="kpi-num" id="kpiTotalTableros">4</span>
         </div>
       </div>
     </section>

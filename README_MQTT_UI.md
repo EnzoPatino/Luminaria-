@@ -1,6 +1,6 @@
 # Manual de Integracion Frontend y Mosquitto MQTT
 
-**Project Luminaria — EPET N.º 14 × EPET N.º 20**
+**Project Luminaria — Municipalidad de Neuquén**
 
 ---
 
@@ -82,7 +82,7 @@ Se emite cuando la tension en la red de 220V cae por debajo del umbral de 190V.
     "fase": "L1"
   },
   "severidad": "CRITICA",
-  "ubicacion": "Aula Taller 3 - Planta Baja"
+  "ubicacion": "Centro / Palacio Municipal"
 }
 ```
 

@@ -30,7 +30,7 @@ Project_Luminaria/
 |   |-- DOCUMENTACION_TECNICA.md
 |   |-- CONTEXTO_IA.md
 |   |-- DOCUMENTACION_TECNICA_DRAFT(1).md
-|   `-- Reporte_MQTT_Pasantias_EPET20_corregido.docx
+|   `-- Reporte_MQTT_Pasantias_corregido.docx
 |-- CLAUDE.md
 |-- README.md
 `-- README_MQTT_UI.md
@@ -131,7 +131,7 @@ Funciones relevantes:
 
 La UI inicia con:
 
-- `TABLERO_01`: EPET 14 / EPET 20, Aula Taller 3 - Planta Baja, fase `L1`.
+- `TABLERO_01`: Centro / Palacio Municipal, fase `L1`.
 - `TABLERO_02`: Parque Norte, Parque Norte - Sector Canchas, fase `L2`.
 - `TABLERO_03`: Paseo de la Costa, Paseo de la Costa - Rio Limay, fase `L3`.
 - `TABLERO_04`: Avenida Argentina, Av. Argentina y Monolito, fase `L1`.
@@ -156,7 +156,7 @@ Los focos usan ids como `FOCO_A1`, `FOCO_B1`, `FOCO_C1`, etc. El estado de foco 
     "fase": "L1"
   },
   "severidad": "CRITICA",
-  "ubicacion": "Aula Taller 3 - Planta Baja"
+  "ubicacion": "Centro / Palacio Municipal"
 }
 ```
 
@@ -212,7 +212,7 @@ Los focos usan ids como `FOCO_A1`, `FOCO_B1`, `FOCO_C1`, etc. El estado de foco 
     "focos_restaurados": ["FOCO_A3", "FOCO_B1"]
   },
   "severidad": "INFO",
-  "ubicacion": "Aula Taller 3 - Planta Baja"
+  "ubicacion": "Centro / Palacio Municipal"
 }
 ```
 

@@ -1,6 +1,6 @@
 /**
  * Project Luminaria - Lógica Principal de UI y Gestión de Eventos por Tableros
- * EPET 14 x EPET 20 — Municipalidad de Neuquén
+ * Municipalidad de Neuquén
  * Monitoreo centralizado por Tableros Eléctricos
  */
 
@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tableros: {
       'TABLERO_01': {
         id: 'TABLERO_01',
-        nombre: 'EPET 14 / EPET 20',
-        ubicacion: 'Aula Taller 3 - Planta Baja',
+        nombre: 'Centro / Palacio Municipal',
+        ubicacion: 'Centro / Palacio Municipal',
         posX: 20,
         posY: 45,
         tension_v: 220.0,
@@ -83,11 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const elements = {
     mqttStatusDot: document.getElementById('mqttStatusDot'),
     mqttStatusText: document.getElementById('mqttStatusText'),
-    kpiTensionVal: document.getElementById('kpiTensionVal'),
-    kpiTensionSub: document.getElementById('kpiTensionSub'),
     kpiAlertasCriticas: document.getElementById('kpiAlertasCriticas'),
     kpiAdvertencias: document.getElementById('kpiAdvertencias'),
-    kpiTotalFocos: document.getElementById('kpiTotalFocos'),
+    kpiTotalTableros: document.getElementById('kpiTotalTableros'),
 
     mapPinsContainer: document.getElementById('mapPinsContainer'),
     selectTablero: document.getElementById('selectTablero'),
@@ -388,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fase: "L1"
           },
           severidad: "CRITICA",
-          ubicacion: appState.tableros[appState.selectedTableroId]?.ubicacion || "Aula Taller 3 - Planta Baja"
+          ubicacion: appState.tableros[appState.selectedTableroId]?.ubicacion || "Centro / Palacio Municipal"
         };
         window.luminariaMQTT.publish("api/evento", payload);
         closeModal(elements.simModal);
@@ -450,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
             focos_restaurados: ["FOCO_A3", "FOCO_B1"]
           },
           severidad: "INFO",
-          ubicacion: appState.tableros[appState.selectedTableroId]?.ubicacion || "Aula Taller 3"
+          ubicacion: appState.tableros[appState.selectedTableroId]?.ubicacion || "Centro / Palacio Municipal"
         };
         window.luminariaMQTT.publish("api/evento", payload);
         closeModal(elements.simModal);
@@ -837,25 +835,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateKPIs() {
     const activeTableros = Object.values(appState.tableros);
-    const selectedTablero = appState.tableros[appState.selectedTableroId];
-
-    if (elements.kpiTensionVal && selectedTablero) {
-      elements.kpiTensionVal.textContent = `${selectedTablero.tension_v.toFixed(1)} V`;
-      elements.kpiTensionSub.textContent = `${selectedTablero.nombre || selectedTablero.id} • Fase ${selectedTablero.fase || 'L1'}`;
-    }
-
     const criticasCount = appState.alerts.filter(a => a.severidad === 'CRITICA' && !a.resuelta).length;
     if (elements.kpiAlertasCriticas) {
-      elements.kpiAlertasCriticas.textContent = `${criticasCount} Alertas`;
+      elements.kpiAlertasCriticas.textContent = criticasCount;
     }
 
     const advertenciasCount = appState.alerts.filter(a => a.severidad === 'ADVERTENCIA' && !a.resuelta).length;
     if (elements.kpiAdvertencias) {
-      elements.kpiAdvertencias.textContent = `${advertenciasCount} Advertencias`;
+      elements.kpiAdvertencias.textContent = advertenciasCount;
     }
 
-    if (elements.kpiTotalFocos) {
-      elements.kpiTotalFocos.textContent = `${activeTableros.length} Tableros`;
+    if (elements.kpiTotalTableros) {
+      elements.kpiTotalTableros.textContent = activeTableros.length;
     }
 
     const banner = document.getElementById('generalStatusBanner');

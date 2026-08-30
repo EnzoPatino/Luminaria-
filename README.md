@@ -1,18 +1,12 @@
 # Project Luminaria - Sistema de Monitoreo y Alertas Eléctricas
 
-**Proyecto Interescolar EPET N.º 14 × EPET N.º 20 — Municipalidad de Neuquén**
+**Municipalidad de Neuquén**
 
 ---
 
 ## 1. Introducción
 
 El proyecto **Luminaria** es un sistema de monitoreo en tiempo real para tableros de iluminación pública en la ciudad de Neuquén (Parque Norte, Paseo de la Costa, avenidas y plazas). El objetivo principal es detectar anomalias eléctricas (bajas de tensión, focos quemados y desconexiones o robos de luminarias) y notificar al personal técnico de mantenimiento de forma inmediata.
-
-### División de Responsabilidades
-- **EPET N.º 14**: Desarrollo de hardware de campo, sensores de corriente/tensión, microcontroladores (ESP32) y comunicación por radiofrecuencia (LoRa/WiFi).
-- **EPET N.º 20**: Desarrollo de software, broker MQTT, API REST de backend, base de datos PostgreSQL y panel de control web (UI).
-
----
 
 ## 2. Componentes de la Interfaz Web (UI)
 
@@ -23,8 +17,8 @@ La interfaz web es una aplicación liviana desarrollada con **HTML5, CSS3 vanill
 - **Mapa de Zonas**: Mapa SVG representativo con pines interactivos por tablero; al hacer clic selecciona el tablero y muestra su telemetría.
 - **Alertas**: Historial de eventos filtrable por severidad (`CRITICA`, `ADVERTENCIA`, `INFO`) con posibilidad de marcar alertas como resueltas.
 - **Consola de Telemetría MQTT**: Inspector de mensajes JSON recibidos y transmitidos por el broker.
-- **Simulador de Eventos Hardware**: Herramienta integrada para simular eventos de la EPET 14 directamente desde la UI sin requerir hardware físico ni broker activo.
-- **Banner y KPIs**: Estado general del sistema con tensión de red, alertas urgentes, advertencias y cantidad de tableros monitoreados.
+- **Simulador de Eventos Hardware**: Herramienta integrada para simular eventos directamente desde la UI sin requerir hardware físico ni broker activo.
+- **Banner y KPIs**: Estado general del sistema con alertas, advertencias y cantidad de tableros monitoreados.
 - **Tema claro/oscuro**: Botón en la cabecera para alternar entre los dos temas visuales. La preferencia se persiste en `localStorage`. El modo oscuro es el predeterminado.
 
 La interfaz es **100% responsive**: en pantallas móviles la navegación se agrupa en un menú flotante inferior y el mapa adapta sus pines y etiquetas para evitar recortes.
@@ -78,7 +72,7 @@ Project_Luminaria/
 │   ├── DOCUMENTACION_TECNICA.md   # Documentación técnica completa para desarrolladores
 │   ├── CONTEXTO_IA.md             # Manual de contexto y especificaciones para asistentes de IA
 │   ├── DOCUMENTACION_TECNICA_DRAFT(1).md # Borrador histórico de arquitectura
-│   └── Reporte_MQTT_Pasantias_EPET20_corregido.docx
+│   └── Reporte_MQTT_Pasantias_corregido.docx
 ├── CLAUDE.md                  # Guía operativa para sesiones de Claude Code
 └── README.md                    # Guía rápida del proyecto
 ```
