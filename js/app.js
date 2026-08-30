@@ -76,7 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     alerts: [],
     activeFilter: 'ALL',
-    soundEnabled: true
+    soundEnabled: true,
+    expandedTableroId: null
   };
 
   // Referencias a elementos DOM
@@ -225,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.selectTablero) {
       elements.selectTablero.addEventListener('change', (e) => {
         appState.selectedTableroId = e.target.value;
+        appState.expandedTableroId = null;
         updateTableroUI();
         renderMapPins();
       });
@@ -570,10 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
       playAlertAudioSound(soundType);
     }
 
-    updateTableroUI();
-    renderAlerts();
-    updateKPIs();
-    renderMapPins();
+    refreshAllViews();
   }
 
   // ==========================================
@@ -581,6 +580,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   function updateTableroUI() {
     renderTablerosGrid();
+  }
+
+  function refreshAllViews() {
+    updateTableroUI();
+    renderAlerts();
+    updateKPIs();
+    renderMapPins();
   }
 
   function renderTablerosGrid() {
@@ -630,7 +636,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const isSelected = tablero.id === appState.selectedTableroId;
+      const isExpanded = tablero.id === appState.expandedTableroId;
       const pctVoltage = Math.min(Math.max((tablero.tension_v / 250.0) * 100, 0), 100);
+
+      const focosArr = Object.values(tablero.focos || {});
+      const avgCorriente = totalFocos > 0
+        ? focosArr.reduce((sum, f) => sum + (Number(f.corriente_ma) || 0), 0) / totalFocos
+        : 0;
+
+      let focosListHtml = '';
+      if (totalFocos === 0) {
+        focosListHtml = '<div class="foco-row-empty">Sin focos registrados en este tablero.</div>';
+      } else {
+        focosListHtml = focosArr.map(f => {
+          const estado = f.estado || 'ok';
+          const estadoLabel = estado === 'robado' ? 'Robado' : (estado === 'quemado' ? 'Quemado' : 'Operativo');
+          return `
+          <div class="foco-row ${estado}">
+            <span class="foco-row-id">${escapeHtml(f.id)}</span>
+            <span class="foco-row-current">${(Number(f.corriente_ma) || 0).toFixed(1)} mA</span>
+            <span class="foco-state-badge ${estado}">${estadoLabel}</span>
+          </div>`;
+        }).join('');
+      }
 
       const card = document.createElement('article');
       card.className = `tablero-card ${statusClass} ${isSelected ? 'selected' : ''}`;
@@ -638,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.innerHTML = `
         <div class="tablero-card-header">
           <div class="tablero-title-group">
-            <span class="tablero-tag">${tablero.id}</span>
+            <span class="tablero-tag">${escapeHtml(tablero.id)}</span>
             <h4 class="tablero-title">${escapeHtml(tablero.nombre || tablero.id)}</h4>
           </div>
           <span class="tablero-status-badge ${statusBadgeClass}">
@@ -653,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="tablero-meter-section">
           <div class="meter-head">
             <span class="meter-lbl">Tensión de Red</span>
-            <span class="meter-val ${statusClass}">${tablero.tension_v.toFixed(1)} <span class="meter-unit">Volts</span></span>
+            <span class="meter-val ${statusClass}">${fmtVoltage(tablero.tension_v)} <span class="meter-unit">Volts</span></span>
           </div>
           <div class="meter-track">
             <div class="meter-danger-line" title="Límite mínimo 190V"></div>
@@ -669,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="tablero-info-grid">
           <div class="info-cell">
             <span class="info-cell-lbl">Fase Eléctrica</span>
-            <span class="info-cell-val">${tablero.fase || 'L1'}</span>
+            <span class="info-cell-val">${escapeHtml(tablero.fase || 'L1')}</span>
           </div>
           <div class="info-cell">
             <span class="info-cell-lbl">Circuito Luminarias</span>
@@ -680,13 +708,56 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="tablero-card-actions">
           <button class="btn btn-secondary btn-sm btn-select-tablero">
             <i class="fas ${isSelected ? 'fa-circle-dot' : 'fa-circle'}"></i> ${isSelected ? 'Tablero Seleccionado' : 'Seleccionar Tablero'}
+            ${isSelected ? `<i class="fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} btn-select-chevron"></i>` : ''}
           </button>
         </div>
+
+        ${isSelected ? `
+        <div class="tablero-expand ${isExpanded ? 'open' : ''}">
+          <div class="tablero-expand-inner">
+            <div class="expand-stats-grid">
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Tensión Nominal</span>
+                <span class="expand-stat-val">${fmtVoltage(tablero.tension_nominal_v || 220.0)} V</span>
+              </div>
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Corriente Promedio</span>
+                <span class="expand-stat-val">${avgCorriente.toFixed(1)} mA</span>
+              </div>
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Operativos</span>
+                <span class="expand-stat-val ok">${focosOk}</span>
+              </div>
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Robados</span>
+                <span class="expand-stat-val critical">${focosRobados}</span>
+              </div>
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Quemados</span>
+                <span class="expand-stat-val warning">${focosQuemados}</span>
+              </div>
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Ubicación Mapa</span>
+                <span class="expand-stat-val">X ${tablero.posX}% · Y ${tablero.posY}%</span>
+              </div>
+            </div>
+
+            <div class="focos-list">
+              <div class="focos-list-title"><i class="fas fa-lightbulb"></i> Focos del Circuito (${totalFocos})</div>
+              ${focosListHtml}
+            </div>
+          </div>
+        </div>` : ''}
       `;
 
       card.querySelector('.btn-select-tablero').addEventListener('click', () => {
-        appState.selectedTableroId = tablero.id;
-        if (elements.selectTablero) elements.selectTablero.value = tablero.id;
+        if (tablero.id !== appState.selectedTableroId) {
+          appState.selectedTableroId = tablero.id;
+          appState.expandedTableroId = tablero.id;
+          if (elements.selectTablero) elements.selectTablero.value = tablero.id;
+        } else {
+          appState.expandedTableroId = (appState.expandedTableroId === tablero.id) ? null : tablero.id;
+        }
         updateTableroUI();
         renderMapPins();
       });
@@ -728,8 +799,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (alert.datos) {
         detailsHtml = Object.entries(alert.datos).map(([k, v]) => `
           <div class="alert-detail-item">
-            <span class="alert-detail-key">${k}:</span>
-            <span class="alert-detail-val">${v}</span>
+            <span class="alert-detail-key">${escapeHtml(k)}:</span>
+            <span class="alert-detail-val">${escapeHtml(safeText(v))}</span>
           </div>
         `).join('');
       }
@@ -820,6 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       pinNode.addEventListener('click', () => {
         appState.selectedTableroId = tablero.id;
+        appState.expandedTableroId = tablero.id;
         if (elements.selectTablero) elements.selectTablero.value = tablero.id;
         updateTableroUI();
         renderMapPins();
@@ -874,11 +946,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let audioCtx = null;
+
   function playAlertAudioSound(type) {
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      if (!audioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        audioCtx = new AudioCtx();
+      }
+      const ctx = audioCtx;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
@@ -917,6 +994,19 @@ document.addEventListener('DOMContentLoaded', () => {
     return str.replace(/[&<>"']/g, function(m) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
     });
+  }
+
+  function fmtVoltage(v, decimals = 1) {
+    const n = Number(v);
+    if (!isFinite(n)) return '--';
+    return n.toFixed(decimals);
+  }
+
+  function safeText(v) {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
   }
 
   init();
