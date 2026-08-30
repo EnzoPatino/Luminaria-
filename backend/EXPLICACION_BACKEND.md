@@ -1,47 +1,82 @@
 # Arquitectura del Backend - Luminaria Monitoring System
 
-¡Hola! Como tu desarrollador backend, te explico lo que hizo Claude (el asistente anterior) para dejar lista la base de nuestro servidor.
+¡Hola! Como tu compañero de desarrollo backend, te explico cómo funcionará nuestro servidor basado **exclusivamente en el protocolo MQTT**.
 
-Básicamente, Claude estructuró un proyecto estándar y escalable usando **Node.js** y **Express**. Esta estructura es ideal para mantener el código ordenado a medida que el proyecto crezca.
+En este proyecto **NO utilizaremos HTTP ni APIs REST tradicionales**. Toda la comunicación entre los dispositivos de hardware (ESP32 / tableros de las escuelas técnicas), el backend y la interfaz de usuario se realiza de forma bidireccional y en tiempo real a través de un **Broker MQTT (Eclipse Mosquitto)**.
 
-## ¿Qué hizo exactamente?
+---
 
-1. **Inicializó el proyecto (`package.json`)**:
-   - Definió el proyecto como `luminaria-backend`.
-   - Instaló dependencias clave: `express` (el framework para el servidor), `cors` (para permitir que el frontend se comunique con el backend sin problemas de seguridad de origen cruzado) y `dotenv` (para manejar variables de entorno como puertos o contraseñas).
+## 📡 ¿Por qué es 100% MQTT?
 
-2. **Punto de entrada (`server.js`)**:
-   - Creó el archivo principal que levanta el servidor. Se encarga de cargar las variables de entorno, importar la aplicación y ponerla a escuchar en el puerto especificado (por defecto 3000).
-   - Añadió un manejador de errores global (`unhandledRejection`) para que si algo falla críticamente, el servidor se apague de forma segura.
+1. **Modelo Publicación / Suscripción (Pub/Sub)**:
+   - Los dispositivos y el frontend no hacen peticiones de consulta continua (polling) por HTTP; simplemente se suscriben a *topics*.
+   - Cuando ocurre un evento (alarma de robo, foco quemado, baja tensión o telemetría periódica), el emisor publica un mensaje JSON y todos los suscriptores interesados lo reciben instantáneamente.
+2. **Eficiencia y Tiempo Real**:
+   - MQTT tiene una sobrecarga de red mínima (ideal para microcontroladores y conexiones móviles/IoT).
+   - Latencia prácticamente nula para alertas críticas de seguridad eléctrica.
 
-3. **Configuración de la App (`src/app.js`)**:
-   - Aquí configuró Express. Añadió los *middlewares* necesarios para entender formato JSON (`express.json()`) y configuró el CORS.
-   - Centralizó todas las rutas bajo el prefijo `/api`.
-   - Añadió un manejador de errores personalizado al final de las rutas (`errorHandler`).
+---
 
-4. **Arquitectura de carpetas (dentro de `src/`)**:
-   Claude armó una estructura basada en el patrón Modelo-Vista-Controlador (MVC) y capas de servicio:
-   - **`config/`**: Para guardar configuraciones globales (variables, conexiones a bases de datos).
-   - **`controllers/`**: Aquí irá la lógica de qué hacer cuando llega una petición HTTP.
-   - **`middlewares/`**: Funciones que se ejecutan antes del controlador (ej. verificar si un usuario está autenticado).
-   - **`models/`**: Donde definiremos los esquemas de la base de datos (ej. cómo es una "Luminaria").
-   - **`routes/`**: Donde se definen las URLs (endpoints). Ya dejó listo un `healthRoutes.js` (probablemente un `/api/health`) para comprobar que el servidor está vivo.
-   - **`services/`**: Aquí pondremos la lógica de negocio pesada, separándola de los controladores para que el código sea más reutilizable.
+## 🏗️ Arquitectura del Backend con MQTT
 
-En resumen, dejó los cimientos perfectos para que ahora podamos empezar a programar la lógica real (crear luminarias, actualizarlas, conectarnos a la base de datos) sin preocuparnos por configurar el servidor desde cero. ¡Estamos listos para picar código!
+El backend actuará como un **servicio consumidor y procesador MQTT (Node.js + librería `mqtt`)**, conectándose directamente al broker Mosquitto:
 
-## Próximos pasos y División de Tareas
+```
+[ Hardware IoT / ESP32 ] 
+          │ (Publica telemetría y alarmas por TCP 1883)
+          ▼
+   [ Broker Mosquitto ] ◄──► [ Frontend Web (WebSockets 9001) ]
+          ▲
+          │ (Suscribe y Publica eventos procesados)
+[ Backend Node.js (Servicio MQTT) ]
+          │
+          ▼
+ [ Base de Datos (Persistencia / Historial) ]
+```
 
-Como somos un equipo de 2 desarrolladores backend, podemos dividirnos el trabajo de la siguiente manera para avanzar en paralelo:
+### Estructura de carpetas propuesta para el backend MQTT:
 
-### Desarrollador 1 (El otro desarrollador - Especialista en Datos y Lógica Core)
-- **Base de Datos y Modelos**: Integrar el ORM/ODM (ej. Mongoose para MongoDB o Prisma/Sequelize para SQL) en `config/` y crear los esquemas en `models/` (ej: `Luminaria.js`, `Usuario.js`).
-- **Scripts de Prueba (Seeds)**: Crear un script para poblar la base de datos con datos falsos de luminarias, para que el frontend y nosotros podamos probar la API rápidamente.
-- **Servicios de Negocio**: Implementar la lógica compleja en `services/` (por ejemplo, los algoritmos de asignación o cálculos de estado).
+- **`config/`**:
+  - `mqtt.js`: Configuración de conexión al Broker (host, puerto, credenciales, `clientId`, opciones de reconexión).
+  - `database.js`: Conexión a la base de datos (MongoDB / PostgreSQL / SQLite).
+- **`services/`**:
+  - `mqttClient.js`: Inicialización del cliente MQTT, manejo de reconexiones automáticas y suscripción a topics (`neuquen/iluminacion/#`, `api/evento`).
+  - `eventProcessorService.js`: Lógica de negocio para procesar cada tipo de evento recibido (`BAJA_TENSION`, `DESCONEXION_ABRUPTA_FOCO`, `FOCO_QUEMADO`, `TELEMETRIA_NORMAL`).
+  - `alertService.js`: Lógica para clasificar severidades, registrar incidencias y, si corresponde, publicar topics de notificación/mando.
+- **`models/`**:
+  - Modelos de datos para persistencia: `Tablero.js`, `Foco.js`, `Alerta.js`, `Medicion.js`.
+- **`subscribers/` (o `handlers/`)**:
+  - Manejadores específicos para cada patrón de topic recibido.
+- **`server.js`**:
+  - Punto de entrada que levanta la conexión a la base de datos y activa el cliente MQTT para comenzar a escuchar mensajes.
 
-### Desarrollador 2 (Tú - Endpoints, Seguridad y Arquitectura)
-- **Controladores y Rutas (CRUD)**: Desarrollar las rutas en `routes/` y las funciones en `controllers/` para manejar las peticiones HTTP (listar, crear, actualizar, eliminar luminarias).
-- **Validaciones y Seguridad**: Crear interceptores en `middlewares/` para validar los datos de entrada e implementar el sistema de login y tokens JWT para proteger las rutas.
-- **Documentación de la API**: Configurar Swagger u otra herramienta para documentar los endpoints. Esto es vital para que el equipo de frontend sepa cómo conectarse.
+---
 
-¡Con esta división de tareas podemos atacar distintos frentes sin generar conflictos en el código del otro!
+## 📋 Contrato de Eventos MQTT
+
+El backend escuchará y validará los payloads JSON definidos para el proyecto:
+
+| `tipo_evento` | Severidad | Acción del Backend |
+|---|---|---|
+| `BAJA_TENSION` | `CRITICA` | Registra alerta si `tension_medida_v < 190.0` y actualiza estado del tablero a crítico. |
+| `DESCONEXION_ABRUPTA_FOCO` | `CRITICA` | Marca el foco como `robado`, genera registro de incidente de seguridad. |
+| `FOCO_QUEMADO` | `ADVERTENCIA` | Marca el foco como `quemado` y registra orden de mantenimiento preventivo. |
+| `TELEMETRIA_NORMAL` | `INFO` | Actualiza lecturas de tensión, restaura estados de focos y guarda histórico de telemetría. |
+
+---
+
+## 🤝 Próximos pasos y División de Tareas (2 Desarrolladores)
+
+### 🧑‍💻 Desarrollador 1 (Modelos, Base de Datos y Lógica de Negocio)
+- **Base de Datos y Esquemas**: Configurar la conexión a la BD y crear los esquemas para `Tableros`, `Focos`, `Alertas` e `Historial`.
+- **Validadores de Contrato JSON**: Crear esquemas de validación (usando librerías como Joi o Zod) para asegurar que los mensajes recibidos por MQTT cumplan exactamente con el formato requerido antes de guardarlos.
+- **Servicio de Persistencia**: Implementar las funciones de base de datos que guardan las mediciones y actualizan el estado de cada tablero/foco en tiempo real.
+
+### 🧑‍💻 Desarrollador 2 (Tú - Infraestructura MQTT, Suscripciones y Pipeline de Eventos)
+- **Conexión MQTT (`mqttClient.js`)**: Instalar la librería `mqtt` en Node.js, configurar la conexión robusta con Mosquitto, manejo de eventos de conexión (`connect`, `reconnect`, `error`, `offline`) y suscripción a los topics.
+- **Router / Dispatcher de Mensajes**: Implementar el enrutador que recibe el mensaje binario/string del broker, lo parsea a JSON y lo deriva al manejador correspondiente según el `topic` o `tipo_evento`.
+- **Simulador / Publicador de Pruebas**: Crear un script en Node.js que publique eventos de prueba a Mosquitto para probar todo el pipeline sin depender del hardware real.
+
+---
+
+¡Con esta arquitectura 100% MQTT el backend queda totalmente enfocado en el procesamiento de eventos en tiempo real!
