@@ -1,38 +1,37 @@
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
-const errorHandler = require('./middlewares/errorHandler');
+const { closePool } = require('./config/database');
 
 const app = express();
 
-// Middlewares base
+app.disable('x-powered-by');
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
 
-// Request logger (dev-friendly, sin dependencias externas)
-app.use((req, res, next) => {
-  const startedAt = Date.now();
-  res.on('finish', () => {
-    const durationMs = Date.now() - startedAt;
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs}ms`);
+app.get('/', (req, res) => {
+  res.json({
+    name: 'luminaria-backend',
+    status: 'ok',
   });
-  next();
 });
 
-// Routes
 app.use('/api', routes);
 
-// 404 para rutas inexistentes
-app.use((req, res) => {
-  res.status(404).json({
+app.use((err, req, res, next) => {
+  console.error('[API]', err);
+  res.status(err.status || 500).json({
     status: 'error',
-    statusCode: 404,
-    message: `Ruta no encontrada: ${req.method} ${req.originalUrl}`
+    message: err.message || 'Error interno del servidor.',
   });
 });
 
-// Error Handling (debe ir siempre al final)
-app.use(errorHandler);
+process.once('SIGINT', async () => {
+  await closePool();
+});
+
+process.once('SIGTERM', async () => {
+  await closePool();
+});
 
 module.exports = app;

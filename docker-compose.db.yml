@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: luminaria_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: luminaria
+      POSTGRES_USER: luminaria
+      POSTGRES_PASSWORD: luminaria_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - luminaria_pgdata:/var/lib/postgresql/data
+
+volumes:
+  luminaria_pgdata:
