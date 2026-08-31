@@ -77,8 +77,31 @@ document.addEventListener('DOMContentLoaded', () => {
     alerts: [],
     activeFilter: 'ALL',
     soundEnabled: true,
-    expandedTableroId: null
+    expandedTableroId: null,
+    sensor: {
+      apiKey: 'ClaveUnicaParaSensoresToken123',
+      temperatura: 23.0,
+      humedad: 40.0,
+      lastUpdate: '22:35:00',
+      history: [
+        { time: '22:30:00', temp: 22.4, hum: 42.0 },
+        { time: '22:31:00', temp: 22.6, hum: 41.5 },
+        { time: '22:32:00', temp: 22.8, hum: 41.0 },
+        { time: '22:33:00', temp: 23.0, hum: 40.5 },
+        { time: '22:34:00', temp: 23.1, hum: 40.2 },
+        { time: '22:35:00', temp: 23.0, hum: 40.0 }
+      ],
+      maxHistoryPoints: 15,
+      ranges: {
+        temp: { min: 18.0, max: 35.0, unit: '°C' },
+        hum: { min: 30.0, max: 70.0, unit: '%' }
+      }
+    }
   };
+
+  // Instancias de Chart.js
+  let sensorLineChartInstance = null;
+  let sensorBarChartInstance = null;
 
   // Referencias a elementos DOM
   const elements = {
@@ -122,7 +145,20 @@ document.addEventListener('DOMContentLoaded', () => {
     simBajaTension: document.getElementById('simBajaTension'),
     simDesconexionAbrupta: document.getElementById('simDesconexionAbrupta'),
     simFocoQuemado: document.getElementById('simFocoQuemado'),
-    simTelemetriaNormal: document.getElementById('simTelemetriaNormal')
+    simTelemetriaNormal: document.getElementById('simTelemetriaNormal'),
+
+    // Elementos de la sección Sensores
+    btnSimulateSensorMsg: document.getElementById('btnSimulateSensorMsg'),
+    sensorCurrentTemp: document.getElementById('sensorCurrentTemp'),
+    sensorCurrentHum: document.getElementById('sensorCurrentHum'),
+    sensorApiKey: document.getElementById('sensorApiKey'),
+    sensorLastUpdate: document.getElementById('sensorLastUpdate'),
+    sensorTempBadge: document.getElementById('sensorTempBadge'),
+    sensorHumBadge: document.getElementById('sensorHumBadge'),
+    sensorTempCard: document.getElementById('sensorTempCard'),
+    sensorHumCard: document.getElementById('sensorHumCard'),
+    simSensorNormal: document.getElementById('simSensorNormal'),
+    simSensorAlerta: document.getElementById('simSensorAlerta')
   };
 
   // ==========================================
@@ -137,6 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAlerts();
     updateKPIs();
     renderMapPins();
+    initSensorCharts();
+    updateSensorUI();
 
     // Conectar a MQTT o Modo Simulación
     window.luminariaMQTT.connect();
@@ -166,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch (e) {}
     updateThemeIcon(theme);
+    updateSensorChartsTheme();
   }
 
   function applyStoredTheme() {
@@ -213,6 +252,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetPane = document.getElementById(targetPaneId);
         if (targetPane) {
           targetPane.classList.add('active');
+        }
+
+        if (targetTab === 'sensores') {
+          setTimeout(() => {
+            if (sensorLineChartInstance) sensorLineChartInstance.resize();
+            if (sensorBarChartInstance) sensorBarChartInstance.resize();
+          }, 50);
         }
       });
     });
@@ -371,6 +417,20 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Botón de lectura demo en la pestaña de sensores
+    if (elements.btnSimulateSensorMsg) {
+      elements.btnSimulateSensorMsg.addEventListener('click', () => {
+        const randTemp = (22.0 + (Math.random() * 3 - 1.5)).toFixed(1);
+        const randHum = (40.0 + (Math.random() * 6 - 3)).toFixed(1);
+        const payload = {
+          ApiKey: appState.sensor.apiKey,
+          Tem: randTemp,
+          Hum: randHum
+        };
+        window.luminariaMQTT.publish('sensores/ambiente', payload);
+      });
+    }
+
     setupSimulationPresets();
   }
 
@@ -456,6 +516,30 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal(elements.simModal);
       });
     }
+
+    if (elements.simSensorNormal) {
+      elements.simSensorNormal.addEventListener('click', () => {
+        const payload = {
+          ApiKey: "ClaveUnicaParaSensoresToken123",
+          Tem: "23.0",
+          Hum: "40.0"
+        };
+        window.luminariaMQTT.publish("sensores/ambiente", payload);
+        closeModal(elements.simModal);
+      });
+    }
+
+    if (elements.simSensorAlerta) {
+      elements.simSensorAlerta.addEventListener('click', () => {
+        const payload = {
+          ApiKey: "ClaveUnicaParaSensoresToken123",
+          Tem: "39.5",
+          Hum: "82.0"
+        };
+        window.luminariaMQTT.publish("sensores/ambiente", payload);
+        closeModal(elements.simModal);
+      });
+    }
   }
 
   // ==========================================
@@ -487,7 +571,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function processIncomingEvent(event) {
-    if (!event || !event.tipo_evento) return;
+    if (!event) return;
+
+    // 1. Detectar si es un mensaje de telemetría de sensor ambiental
+    // Formato broker: {"ApiKey":"ClaveUnicaParaSensoresToken123","Tem":"23.0","Hum":"40.0"}
+    if (isSensorTelemetryEvent(event)) {
+      processSensorTelemetry(event);
+      return;
+    }
+
+    // 2. Eventos estándar de tableros eléctricos
+    if (!event.tipo_evento) return;
 
     const tableroId = event.id_tablero || appState.selectedTableroId;
     if (!appState.tableros[tableroId]) {
@@ -1007,6 +1101,419 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof v === 'string') return v;
     if (typeof v === 'object') return JSON.stringify(v);
     return String(v);
+  }
+
+  // ==========================================
+  // TELEMETRÍA DE SENSORES Y GESTIÓN DE GRÁFICOS
+  // ==========================================
+  function isSensorTelemetryEvent(event) {
+    if (!event || typeof event !== 'object') return false;
+    return (
+      event.Tem !== undefined ||
+      event.Hum !== undefined ||
+      (event.ApiKey !== undefined && (event.Tem !== undefined || event.Hum !== undefined)) ||
+      (event.tipo_evento === 'TELEMETRIA_SENSOR')
+    );
+  }
+
+  function processSensorTelemetry(event) {
+    const rawTem = event.Tem !== undefined ? event.Tem : (event.tem !== undefined ? event.tem : (event.temperatura || event.temp));
+    const rawHum = event.Hum !== undefined ? event.Hum : (event.hum !== undefined ? event.hum : (event.humedad || event.hum));
+    const apiKey = event.ApiKey || event.apiKey || appState.sensor.apiKey;
+
+    const tempVal = parseFloat(rawTem);
+    const humVal = parseFloat(rawHum);
+
+    if (!isNaN(tempVal)) {
+      appState.sensor.temperatura = Number(tempVal.toFixed(1));
+    }
+    if (!isNaN(humVal)) {
+      appState.sensor.humedad = Number(humVal.toFixed(1));
+    }
+    if (apiKey) {
+      appState.sensor.apiKey = String(apiKey);
+    }
+
+    const nowTime = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    appState.sensor.lastUpdate = nowTime;
+
+    // Añadir al historial para el gráfico de líneas
+    appState.sensor.history.push({
+      time: nowTime,
+      temp: appState.sensor.temperatura,
+      hum: appState.sensor.humedad
+    });
+
+    if (appState.sensor.history.length > appState.sensor.maxHistoryPoints) {
+      appState.sensor.history.shift();
+    }
+
+    // Verificar si está dentro de los rangos aceptables
+    const tempInRange = appState.sensor.temperatura >= appState.sensor.ranges.temp.min && appState.sensor.temperatura <= appState.sensor.ranges.temp.max;
+    const humInRange = appState.sensor.humedad >= appState.sensor.ranges.hum.min && appState.sensor.humedad <= appState.sensor.ranges.hum.max;
+
+    // Sonido sutil de advertencia si hay anomalía ambiental
+    if ((!tempInRange || !humInRange) && appState.soundEnabled) {
+      playAlertAudioSound('warning');
+    }
+
+    updateSensorUI();
+  }
+
+  function getChartThemeColors() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light' || document.documentElement.classList.contains('light-mode');
+    return {
+      textColor: isLight ? '#3a5778' : '#bcd2e8',
+      textDim: isLight ? '#607e9f' : '#7da5c9',
+      gridColor: isLight ? 'rgba(208, 225, 242, 0.7)' : 'rgba(26, 60, 102, 0.5)',
+      tooltipBg: isLight ? '#ffffff' : '#0d2544',
+      tooltipBorder: isLight ? '#d0e1f2' : '#1a3c66',
+      tooltipText: isLight ? '#0d2544' : '#f8fafc'
+    };
+  }
+
+  function initSensorCharts() {
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js no disponible para renderizar gráficos de sensores.');
+      return;
+    }
+
+    const theme = getChartThemeColors();
+    const ctxLine = document.getElementById('sensorLineChart');
+    const ctxBar = document.getElementById('sensorBarChart');
+
+    // 1. Gráfico de Líneas (Historial de Temperatura y Humedad)
+    if (ctxLine) {
+      sensorLineChartInstance = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+          labels: appState.sensor.history.map(h => h.time),
+          datasets: [
+            {
+              label: 'Temperatura (°C)',
+              data: appState.sensor.history.map(h => h.temp),
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.12)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              fill: true,
+              pointBackgroundColor: '#f59e0b',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 1.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              yAxisID: 'yTemp'
+            },
+            {
+              label: 'Humedad (%)',
+              data: appState.sensor.history.map(h => h.hum),
+              borderColor: '#0284c7',
+              backgroundColor: 'rgba(2, 132, 199, 0.12)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              fill: true,
+              pointBackgroundColor: '#0284c7',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 1.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              yAxisID: 'yHum'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipText,
+              bodyColor: theme.tooltipText,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: theme.gridColor },
+              ticks: { color: theme.textDim, font: { family: 'JetBrains Mono', size: 11 } }
+            },
+            yTemp: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              min: 0,
+              max: 50,
+              title: {
+                display: true,
+                text: 'Temperatura (°C)',
+                color: '#f59e0b',
+                font: { weight: 'bold', size: 11 }
+              },
+              grid: { color: theme.gridColor },
+              ticks: { color: theme.textDim, font: { family: 'JetBrains Mono', size: 11 } }
+            },
+            yHum: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              min: 0,
+              max: 100,
+              title: {
+                display: true,
+                text: 'Humedad (%)',
+                color: '#0284c7',
+                font: { weight: 'bold', size: 11 }
+              },
+              grid: { drawOnChartArea: false },
+              ticks: { color: theme.textDim, font: { family: 'JetBrains Mono', size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Gráfico de Barras (2 Barras: Temperatura y Humedad con Rangos Aceptables)
+    if (ctxBar) {
+      const temp = appState.sensor.temperatura;
+      const hum = appState.sensor.humedad;
+      const tempInRange = temp >= appState.sensor.ranges.temp.min && temp <= appState.sensor.ranges.temp.max;
+      const humInRange = hum >= appState.sensor.ranges.hum.min && hum <= appState.sensor.ranges.hum.max;
+
+      sensorBarChartInstance = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: ['Temperatura (°C)', 'Humedad (%)'],
+          datasets: [
+            {
+              label: 'Valor Actual Medido',
+              data: [temp, hum],
+              backgroundColor: [
+                tempInRange ? '#10b981' : (temp > 35 ? '#ef4444' : '#f59e0b'),
+                humInRange ? '#0284c7' : (hum > 70 ? '#ef4444' : '#f59e0b')
+              ],
+              borderColor: [
+                tempInRange ? '#059669' : '#dc2626',
+                humInRange ? '#0369a1' : '#dc2626'
+              ],
+              borderWidth: 1.5,
+              borderRadius: 8,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            },
+            {
+              label: 'Mínimo Aceptable',
+              data: [appState.sensor.ranges.temp.min, appState.sensor.ranges.hum.min],
+              backgroundColor: 'rgba(79, 179, 224, 0.25)',
+              borderColor: 'rgba(79, 179, 224, 0.8)',
+              borderWidth: 1.5,
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            },
+            {
+              label: 'Máximo Aceptable',
+              data: [appState.sensor.ranges.temp.max, appState.sensor.ranges.hum.max],
+              backgroundColor: 'rgba(216, 180, 92, 0.25)',
+              borderColor: 'rgba(216, 180, 92, 0.8)',
+              borderWidth: 1.5,
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: theme.textColor,
+                font: { family: 'Outfit', size: 12, weight: 'bold' },
+                boxWidth: 14,
+                padding: 12
+              }
+            },
+            tooltip: {
+              backgroundColor: theme.tooltipBg,
+              titleColor: theme.tooltipText,
+              bodyColor: theme.tooltipText,
+              borderColor: theme.tooltipBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                afterBody: function(items) {
+                  const idx = items[0].dataIndex;
+                  if (idx === 0) {
+                    const val = appState.sensor.temperatura;
+                    const ok = val >= 18 && val <= 35;
+                    return `\nRango admisible: 18.0°C a 35.0°C\nEstado: ${ok ? '✅ En Rango Aceptable' : '⚠️ Fuera de Rango Aceptable'}`;
+                  } else {
+                    const val = appState.sensor.humedad;
+                    const ok = val >= 30 && val <= 70;
+                    return `\nRango admisible: 30.0% a 70.0%\nEstado: ${ok ? '✅ En Rango Aceptable' : '⚠️ Fuera de Rango Aceptable'}`;
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: theme.gridColor },
+              ticks: { color: theme.textColor, font: { family: 'Outfit', size: 13, weight: 'bold' } }
+            },
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: theme.gridColor },
+              ticks: {
+                color: theme.textDim,
+                font: { family: 'JetBrains Mono', size: 11 }
+              },
+              title: {
+                display: true,
+                text: 'Escala Medida (°C / %)',
+                color: theme.textColor,
+                font: { weight: 'bold', size: 11 }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  function updateSensorUI() {
+    const temp = appState.sensor.temperatura;
+    const hum = appState.sensor.humedad;
+
+    if (elements.sensorCurrentTemp) {
+      elements.sensorCurrentTemp.textContent = temp.toFixed(1);
+    }
+    if (elements.sensorCurrentHum) {
+      elements.sensorCurrentHum.textContent = hum.toFixed(1);
+    }
+    if (elements.sensorApiKey) {
+      elements.sensorApiKey.textContent = appState.sensor.apiKey;
+    }
+    if (elements.sensorLastUpdate) {
+      elements.sensorLastUpdate.textContent = appState.sensor.lastUpdate;
+    }
+
+    // Badges de rango aceptable
+    const tempMin = appState.sensor.ranges.temp.min;
+    const tempMax = appState.sensor.ranges.temp.max;
+    if (elements.sensorTempBadge) {
+      if (temp < tempMin) {
+        elements.sensorTempBadge.className = 'sensor-range-badge badge-warning';
+        elements.sensorTempBadge.textContent = `Baja Temp (<${tempMin}°C)`;
+      } else if (temp > tempMax) {
+        elements.sensorTempBadge.className = 'sensor-range-badge badge-critical';
+        elements.sensorTempBadge.textContent = `Alta Temp (>${tempMax}°C)`;
+      } else {
+        elements.sensorTempBadge.className = 'sensor-range-badge badge-ok';
+        elements.sensorTempBadge.textContent = 'Rango Aceptable';
+      }
+    }
+
+    const humMin = appState.sensor.ranges.hum.min;
+    const humMax = appState.sensor.ranges.hum.max;
+    if (elements.sensorHumBadge) {
+      if (hum < humMin) {
+        elements.sensorHumBadge.className = 'sensor-range-badge badge-warning';
+        elements.sensorHumBadge.textContent = `Baja Humedad (<${humMin}%)`;
+      } else if (hum > humMax) {
+        elements.sensorHumBadge.className = 'sensor-range-badge badge-critical';
+        elements.sensorHumBadge.textContent = `Alta Humedad (>${humMax}%)`;
+      } else {
+        elements.sensorHumBadge.className = 'sensor-range-badge badge-ok';
+        elements.sensorHumBadge.textContent = 'Rango Aceptable';
+      }
+    }
+
+    // Actualizar Gráfico de Líneas
+    if (sensorLineChartInstance) {
+      sensorLineChartInstance.data.labels = appState.sensor.history.map(h => h.time);
+      sensorLineChartInstance.data.datasets[0].data = appState.sensor.history.map(h => h.temp);
+      sensorLineChartInstance.data.datasets[1].data = appState.sensor.history.map(h => h.hum);
+      sensorLineChartInstance.update();
+    }
+
+    // Actualizar Gráfico de Barras
+    if (sensorBarChartInstance) {
+      const tempInRange = temp >= tempMin && temp <= tempMax;
+      const humInRange = hum >= humMin && hum <= humMax;
+
+      sensorBarChartInstance.data.datasets[0].data = [temp, hum];
+      sensorBarChartInstance.data.datasets[0].backgroundColor = [
+        tempInRange ? '#10b981' : (temp > tempMax ? '#ef4444' : '#f59e0b'),
+        humInRange ? '#0284c7' : (hum > humMax ? '#ef4444' : '#f59e0b')
+      ];
+      sensorBarChartInstance.data.datasets[0].borderColor = [
+        tempInRange ? '#059669' : '#dc2626',
+        humInRange ? '#0369a1' : '#dc2626'
+      ];
+      sensorBarChartInstance.update();
+    }
+  }
+
+  function updateSensorChartsTheme() {
+    const theme = getChartThemeColors();
+
+    if (sensorLineChartInstance) {
+      sensorLineChartInstance.options.plugins.tooltip.backgroundColor = theme.tooltipBg;
+      sensorLineChartInstance.options.plugins.tooltip.titleColor = theme.tooltipText;
+      sensorLineChartInstance.options.plugins.tooltip.bodyColor = theme.tooltipText;
+      sensorLineChartInstance.options.plugins.tooltip.borderColor = theme.tooltipBorder;
+
+      if (sensorLineChartInstance.options.scales.x) {
+        sensorLineChartInstance.options.scales.x.grid.color = theme.gridColor;
+        sensorLineChartInstance.options.scales.x.ticks.color = theme.textDim;
+      }
+      if (sensorLineChartInstance.options.scales.yTemp) {
+        sensorLineChartInstance.options.scales.yTemp.grid.color = theme.gridColor;
+        sensorLineChartInstance.options.scales.yTemp.ticks.color = theme.textDim;
+      }
+      if (sensorLineChartInstance.options.scales.yHum) {
+        sensorLineChartInstance.options.scales.yHum.ticks.color = theme.textDim;
+      }
+      sensorLineChartInstance.update();
+    }
+
+    if (sensorBarChartInstance) {
+      sensorBarChartInstance.options.plugins.legend.labels.color = theme.textColor;
+      sensorBarChartInstance.options.plugins.tooltip.backgroundColor = theme.tooltipBg;
+      sensorBarChartInstance.options.plugins.tooltip.titleColor = theme.tooltipText;
+      sensorBarChartInstance.options.plugins.tooltip.bodyColor = theme.tooltipText;
+      sensorBarChartInstance.options.plugins.tooltip.borderColor = theme.tooltipBorder;
+
+      if (sensorBarChartInstance.options.scales.x) {
+        sensorBarChartInstance.options.scales.x.grid.color = theme.gridColor;
+        sensorBarChartInstance.options.scales.x.ticks.color = theme.textColor;
+      }
+      if (sensorBarChartInstance.options.scales.y) {
+        sensorBarChartInstance.options.scales.y.grid.color = theme.gridColor;
+        sensorBarChartInstance.options.scales.y.ticks.color = theme.textDim;
+        sensorBarChartInstance.options.scales.y.title.color = theme.textColor;
+      }
+      sensorBarChartInstance.update();
+    }
   }
 
   init();

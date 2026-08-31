@@ -20,6 +20,9 @@
   <!-- Librería MQTT Paho para WebSockets -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
+  <!-- Librería Chart.js para Gráficos Ligeros y Accesibles -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <!-- Anti-flash: aplica el tema guardado antes de que renderice la página -->
   <script>
     (function() {
@@ -158,6 +161,10 @@
         <span>Alertas<span class="tab-text-extra"> (Historial)</span></span>
         <span class="tab-badge" id="alertsCountBadge">0 Avisos</span>
       </button>
+      <button class="nav-tab" data-tab="sensores" role="tab" aria-selected="false">
+        <i class="fas fa-chart-line"></i>
+        <span>Sensores<span class="tab-text-extra"> (Telemetría)</span></span>
+      </button>
       <button class="nav-tab" data-tab="consola" role="tab" aria-selected="false">
         <i class="fas fa-terminal"></i>
         <span>Consola<span class="tab-text-extra"> MQTT</span></span>
@@ -235,6 +242,133 @@
         </div>
       </section>
 
+      <!-- PESTAÑA: TELEMETRÍA DE SENSORES (HUMEDAD Y TEMPERATURA) -->
+      <section class="tab-pane" id="tabSensores" role="tabpanel">
+        <div class="pane-header">
+          <div class="pane-title">
+            <i class="fas fa-chart-line"></i>
+            <h3>Telemetría de Sensores Ambientales</h3>
+          </div>
+          <div class="sensor-header-actions">
+            <span class="sensor-live-pill" id="sensorLivePill">
+              <span class="status-dot connected" id="sensorStatusDot"></span>
+              <span id="sensorStatusText">Sensor Activo</span>
+            </span>
+            <button class="btn btn-secondary btn-sm" id="btnSimulateSensorMsg" title="Generar lectura demo de sensor">
+              <i class="fas fa-satellite-dish"></i> Enviar Lectura Demo
+            </button>
+          </div>
+        </div>
+
+        <!-- NOTA INFORMATIVA DE LA MUESTRA / DEMOSTRACIÓN -->
+        <div class="sensor-demo-note">
+          <i class="fas fa-circle-info"></i>
+          <div>
+            <strong>Demostración de Telemetría:</strong> Visualizando datos ambientales en tiempo real del sensor de prueba (formato JSON: <code>ApiKey</code>, <code>Tem</code>, <code>Hum</code>). En la versión productiva futura, esta sección se adaptará a la medición de tensión eléctrica y parámetros de red.
+          </div>
+        </div>
+
+        <!-- TARJETAS DE ESTADO ACTUAL DEL SENSOR -->
+        <div class="sensor-kpi-grid">
+          <div class="sensor-kpi-card" id="sensorTempCard">
+            <div class="sensor-kpi-top">
+              <div class="sensor-kpi-icon temp"><i class="fas fa-temperature-half"></i></div>
+              <span class="sensor-range-badge badge-ok" id="sensorTempBadge">Rango Aceptable</span>
+            </div>
+            <div class="sensor-kpi-data">
+              <span class="sensor-kpi-label">Temperatura Medida</span>
+              <div class="sensor-kpi-value-row">
+                <span class="sensor-kpi-value" id="sensorCurrentTemp">23.0</span>
+                <span class="sensor-kpi-unit">°C</span>
+              </div>
+              <div class="sensor-kpi-meta">
+                <span>Rango Aceptable: <strong>18.0°C — 35.0°C</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sensor-kpi-card" id="sensorHumCard">
+            <div class="sensor-kpi-top">
+              <div class="sensor-kpi-icon hum"><i class="fas fa-droplet"></i></div>
+              <span class="sensor-range-badge badge-ok" id="sensorHumBadge">Rango Aceptable</span>
+            </div>
+            <div class="sensor-kpi-data">
+              <span class="sensor-kpi-label">Humedad Relativa</span>
+              <div class="sensor-kpi-value-row">
+                <span class="sensor-kpi-value" id="sensorCurrentHum">40.0</span>
+                <span class="sensor-kpi-unit">%</span>
+              </div>
+              <div class="sensor-kpi-meta">
+                <span>Rango Aceptable: <strong>30.0% — 70.0%</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sensor-kpi-card sensor-device-card">
+            <div class="sensor-kpi-top">
+              <div class="sensor-kpi-icon device"><i class="fas fa-key"></i></div>
+              <span class="sensor-token-badge" id="sensorTokenBadge">ESP32 / DHT</span>
+            </div>
+            <div class="sensor-kpi-data">
+              <span class="sensor-kpi-label">ApiKey / Identificador</span>
+              <div class="sensor-kpi-key" id="sensorApiKey" title="Token de autenticación del sensor">ClaveUnicaParaSensoresToken123</div>
+              <div class="sensor-kpi-meta">
+                <span>Última lectura: <strong id="sensorLastUpdate">--:--:--</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GRILLA DE GRÁFICOS -->
+        <div class="sensor-charts-grid">
+          <!-- GRÁFICO 1: LÍNEAS (HISTORIAL TEMPERATURA Y HUMEDAD) -->
+          <div class="sensor-chart-card">
+            <div class="sensor-chart-header">
+              <div class="sensor-chart-title">
+                <i class="fas fa-chart-line" style="color: var(--color-accent-text);"></i>
+                <div>
+                  <h4>1. Historial en Tiempo Real (Líneas)</h4>
+                  <p>Evolución cronológica de Temperatura (°C) y Humedad (%) recibidas del broker</p>
+                </div>
+              </div>
+              <div class="sensor-chart-legend-custom">
+                <span class="legend-indicator temp-dot"></span> <span class="legend-text">Temp (°C)</span>
+                <span class="legend-indicator hum-dot"></span> <span class="legend-text">Hum (%)</span>
+              </div>
+            </div>
+            <div class="sensor-chart-body">
+              <canvas id="sensorLineChart" height="260" role="img" aria-label="Gráfico de líneas con historial de temperatura y humedad"></canvas>
+            </div>
+          </div>
+
+          <!-- GRÁFICO 2: BARRAS (2 BARRAS CON RANGO ACEPTABLE) -->
+          <div class="sensor-chart-card">
+            <div class="sensor-chart-header">
+              <div class="sensor-chart-title">
+                <i class="fas fa-chart-simple" style="color: var(--color-gold);"></i>
+                <div>
+                  <h4>2. Valores Actuales vs. Rango Aceptable (Barras)</h4>
+                  <p>Comparativa directa de Temperatura y Humedad con sus límites admisibles</p>
+                </div>
+              </div>
+            </div>
+            <div class="sensor-chart-body">
+              <canvas id="sensorBarChart" height="260" role="img" aria-label="Gráfico de barras mostrando temperatura y humedad con su rango aceptable"></canvas>
+            </div>
+            <div class="sensor-ranges-footer">
+              <div class="range-info-pill">
+                <span class="range-pill-color temp"></span>
+                <span><strong>Temp. Aceptable:</strong> 18°C a 35°C (Alerta si &lt;18°C o &gt;35°C)</span>
+              </div>
+              <div class="range-info-pill">
+                <span class="range-pill-color hum"></span>
+                <span><strong>Hum. Aceptable:</strong> 30% a 70% (Alerta si &lt;30% o &gt;70%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- PESTAÑA 4: CONSOLA MQTT -->
       <section class="tab-pane" id="tabConsola" role="tabpanel">
         <div class="pane-header">
@@ -290,7 +424,7 @@
 
         <div class="form-field">
           <label for="mqttTopic">Topics Suscriptos</label>
-          <input type="text" id="mqttTopic" class="form-input" value="neuquen/iluminacion/#, api/evento">
+          <input type="text" id="mqttTopic" class="form-input" value="neuquen/iluminacion/#, api/evento, sensores/#">
         </div>
 
         <div class="modal-footer">
@@ -340,8 +474,24 @@
 
         <button class="sim-option" id="simTelemetriaNormal">
           <div class="sim-option-content">
-            <h4 style="color: #10b981;"><i class="fas fa-circle-check"></i> Restablecimiento Normal</h4>
+            <h4 style="color: #10b981;"><i class="fas fa-circle-check"></i> Restablecimiento Normal Tableros</h4>
             <p>Red retorna a 220 Volts con tableros operando normalmente.</p>
+          </div>
+          <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <button class="sim-option" id="simSensorNormal">
+          <div class="sim-option-content">
+            <h4 style="color: #0284c7;"><i class="fas fa-satellite-dish"></i> Sensor Ambiente Normal (23°C / 40%)</h4>
+            <p>Envía JSON <code>{"ApiKey":"...","Tem":"23.0","Hum":"40.0"}</code> en rango aceptable.</p>
+          </div>
+          <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <button class="sim-option" id="simSensorAlerta">
+          <div class="sim-option-content">
+            <h4 style="color: #f59e0b;"><i class="fas fa-fire-flame-curved"></i> Sensor Fuera de Rango (39.5°C / 82%)</h4>
+            <p>Envía JSON con alta temperatura y humedad por encima del rango seguro.</p>
           </div>
           <i class="fas fa-chevron-right"></i>
         </button>
