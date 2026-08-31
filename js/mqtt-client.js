@@ -16,7 +16,7 @@ class LuminariaMQTTClient {
       port: 9001,          // Puerto estándar de Mosquitto con WebSockets activado
       path: '/mqtt',
       clientId: 'luminaria_web_' + Math.random().toString(16).substring(2, 8),
-      topics: ['neuquen/iluminacion/#', 'api/evento'],
+      topics: ['neuquen/iluminacion/#', 'api/evento', 'sensores/#'],
       qos: 1,
       keepAlive: 60,
       cleanSession: true,
