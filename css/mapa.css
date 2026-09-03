@@ -1,0 +1,107 @@
+/* ============================================ */
+/* MAPA DE ZONAS Y SEMÁFORO                      */
+/* ============================================ */
+.map-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.map-legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.2rem;
+}
+.legend-dot.red { background-color: var(--color-critical); }
+.legend-dot.yellow { background-color: var(--color-warning); }
+.legend-dot.green { background-color: var(--color-ok); }
+
+.map-svg-wrapper {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.map-pins-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map-pin-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  z-index: 5;
+}
+
+.map-pin-node:hover {
+  transform: translate(-50%, -55%) scale(1.08);
+  z-index: 10;
+}
+
+.map-pin-node.selected .map-pin-icon-wrap {
+  box-shadow: 0 0 0 3px var(--pin-color, var(--color-ok));
+}
+
+.map-pin-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--pin-color, var(--color-ok));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pin-color, var(--color-ok));
+  font-size: 0.9rem;
+  box-shadow: var(--pin-shadow);
+}
+
+.map-pin-label {
+  margin-top: 0.3rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  box-shadow: var(--pin-label-shadow);
+}
+
+.map-pin-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pin-color, var(--color-ok));
+}
+
