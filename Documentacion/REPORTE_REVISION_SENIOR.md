@@ -64,13 +64,13 @@ La bitácora oficial está en `Documentacion/MATRIZ_DE_TAREAS_POR_NIVEL.md` → 
 | ID | Estado | Descripción |
 |---|---|---|
 | `BB-01` | ✅ ELIMINADO | `app.use()` con objeto → crash al arrancar |
-| `BB-02` | ✅ ELIMINADO | Sin handler 404 JSON |
-| `BB-03` | ✅ ELIMINADO | Sin apagado graceful / `uncaughtException` |
-| `BB-04` | ✅ ELIMINADO | Sin request logger ni trazabilidad |
-| `BB-05` | ✅ ELIMINADO | Log de health apuntaba a `/health` (ruta inexistente) |
-| `BB-06` | 📌 REPORTADO | CORS abierto a cualquier origen |
-| `BB-07` | 📌 REPORTADO | Sin rate limiting ni límites de payload |
-| `BB-08` | 📌 REPORTADO | `stack` de errores expuesto en respuesta JSON (dev) |
+| `BB-02` | ✅ ELIMINADO | Middleware 404 JSON estandarizado para rutas no encontradas |
+| `BB-03` | ✅ ELIMINADO | Apagado graceful (`SIGINT`/`SIGTERM`/`uncaughtException`) en `server.js` |
+| `BB-04` | ✅ ELIMINADO | Request logger inline activo (`MÉTODO URL STATUS DURACIÓN`) |
+| `BB-05` | ✅ ELIMINADO | Log de health apuntaba a `/health` (ruta corregida a `/api/health`) |
+| `BB-06` | ✅ ELIMINADO | CORS restringido con lista blanca de orígenes autorizados (`CORS_ORIGIN`) |
+| `BB-07` | ✅ ELIMINADO | Rate limiting por IP (`express-rate-limit`, 100 req/min) y límite de body 1MB |
+| `BB-08` | ✅ ELIMINADO | Manejador de errores centralizado sin exposición de `stack` en producción |
 
 ---
 

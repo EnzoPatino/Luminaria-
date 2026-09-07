@@ -253,11 +253,11 @@ Total del Proyecto: 131 Story Points
 | **BB-03** | ✅ **ELIMINADO** | 🟡 | `server.js` no manejaba `SIGTERM/SIGINT` ni `uncaughtException` → cierres sucios y pérdida de conexiones/eventos. | `backend/server.js` | `shutdown(signal)` con `server.close()` + timeout de fuerza `unref()`. Verificado: SIGTERM → exit 0. |
 | **BB-04** | ✅ **ELIMINADO** | 🟡 | Sin request logger: sin trazabilidad de requests (`MÉTODO URL STATUS DURACIÓN`). Complementa `BE-09`. | `backend/src/app.js` | Logger inline sin dependencias. Verificado en logs. |
 | **BB-05** | ✅ **ELIMINADO** | 🟢 | Log de inicio mostraba `http://localhost:PORT/health` pero la ruta real es `/api/health`. | `backend/server.js` | Mensaje corregido. |
-| **BB-06** | 📌 **REPORTADO** | 🔴 | CORS abierto (`app.use(cors())` acepta cualquier origen). Bloqueante para producción: expone la API a cualquier sitio. | `backend/src/app.js`, `.env` | Implementar `cors({ origin: allowList })` desde variables de entorno. Enlazado a `SEC-01`. |
-| **BB-07** | 📌 **REPORTADO** | 🔴 | Sin rate limiting por IP ni límites de payload/body. Un ESP32 fallido o atacante puede saturar el server. | `backend/src/app.js` | Agregar `express-rate-limit` + límite de body; `express.json({ limit })`. Enlazado a `SEC-01` / `SEC-02`. |
-| **BB-08** | 📌 **REPORTADO** | 🟢 | `errorHandler` expone `err.stack` en la respuesta JSON cuando `NODE_ENV !== 'production'`. Aceptable en dev, riesgo si se despliega sin fijar el entorno. | `backend/src/middlewares/errorHandler.js` | Mantener `NODE_ENV=production` en prod; opcional: loguear stack en consola y devolver `null` siempre. |
+| **BB-06** | ✅ **ELIMINADO** | 🔴 | CORS abierto (`app.use(cors())` aceptaba cualquier origen). | `backend/src/app.js`, `backend/.env.example` | Lista blanca dinámica configurable por `CORS_ORIGIN` con orígenes locales permitidos en dev. |
+| **BB-07** | ✅ **ELIMINADO** | 🔴 | Sin rate limiting por IP ni límites de payload/body. | `backend/src/app.js`, `backend/package.json` | `express-rate-limit` (100 req/min por IP) + límite de payload JSON 1MB. |
+| **BB-08** | ✅ **ELIMINADO** | 🟢 | Manejo de errores sin control de entorno. | `backend/src/app.js` | Handler centralizado que oculta `stack` fuera de development y responde JSON uniforme. |
 
 ### Métricas de la Bitácora
 - **Total bugs backend registrados:** 8
-- **Eliminados (✅):** 5 · **Reportados abiertos (📌):** 3
-- **Bloqueantes pendientes:** `BB-06` (CORS) + `BB-07` (ratelimit/payload) → pasan a producción si no se resuelven.
+- **Eliminados (✅):** 8 · **Reportados abiertos (📌):** 0
+- **Bloqueantes pendientes:** Ninguno (todos resueltos).
