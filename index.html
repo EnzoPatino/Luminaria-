@@ -262,12 +262,12 @@
         </div>
       </section>
 
-      <!-- PESTAÑA: TELEMETRÍA DE SENSORES (HUMEDAD Y TEMPERATURA) -->
+      <!-- PESTAÑA: TELEMETRÍA DE SENSORES Y CONSUMO ELÉCTRICO -->
       <section class="tab-pane" id="tabSensores" role="tabpanel">
         <div class="pane-header">
           <div class="pane-title">
-            <i class="fas fa-chart-line"></i>
-            <h3>Telemetría de Sensores Ambientales</h3>
+            <i class="fas fa-bolt-lightning"></i>
+            <h3>Telemetría de Sensores y Consumo Eléctrico</h3>
           </div>
           <div class="sensor-header-actions">
             <span class="sensor-live-pill" id="sensorLivePill">
@@ -275,21 +275,47 @@
               <span id="sensorStatusText">Sensor Activo</span>
             </span>
             <button class="btn btn-secondary btn-sm" id="btnSimulateSensorMsg" title="Generar lectura demo de sensor">
-              <i class="fas fa-satellite-dish"></i> Enviar Lectura Demo
+              <i class="fas fa-satellite-dish"></i> Lectura Demo
+            </button>
+            <button class="btn btn-sim btn-sm" id="btnSimAmpNormal" title="Simular consumo normal (3.5 A)">
+              <i class="fas fa-bolt"></i> Normal (3.5A)
+            </button>
+            <button class="btn btn-sim btn-sm" id="btnSimAmpAlto" title="Simular sobrecorriente (12.5 A)">
+              <i class="fas fa-triangle-exclamation"></i> Sobrecorriente (12.5A)
+            </button>
+            <button class="btn btn-sim btn-sm" id="btnSimAmpCero" title="Simular falta de consumo (0.0 A)">
+              <i class="fas fa-power-off"></i> Sin Consumo (0.0A)
             </button>
           </div>
         </div>
 
-        <!-- NOTA INFORMATIVA DE LA MUESTRA / DEMOSTRACIÓN -->
+        <!-- NOTA INFORMATIVA DE TELEMETRÍA Y CONSUMO -->
         <div class="sensor-demo-note">
           <i class="fas fa-circle-info"></i>
           <div>
-            <strong>Demostración de Telemetría:</strong> Visualizando datos ambientales en tiempo real del sensor de prueba (formato JSON: <code>ApiKey</code>, <code>Tem</code>, <code>Hum</code>). En la versión productiva futura, esta sección se adaptará a la medición de tensión eléctrica y parámetros de red.
+            <strong>Monitoreo de Telemetría y Consumo Eléctrico:</strong> Visualización en tiempo real de temperatura ambiental (°C) y consumo eléctrico en Amperios (A) transmitido mediante broker MQTT o simulación local (JSON: <code>ApiKey</code>, <code>Tem</code>, <code>Amp</code>).
           </div>
         </div>
 
-        <!-- TARJETAS DE ESTADO ACTUAL DEL SENSOR -->
+        <!-- TARJETAS DE ESTADO ACTUAL DEL SENSOR Y CONSUMO -->
         <div class="sensor-kpi-grid">
+          <div class="sensor-kpi-card" id="sensorAmpCard">
+            <div class="sensor-kpi-top">
+              <div class="sensor-kpi-icon amp"><i class="fas fa-bolt"></i></div>
+              <span class="sensor-range-badge badge-ok" id="sensorAmpBadge">Consumo Normal</span>
+            </div>
+            <div class="sensor-kpi-data">
+              <span class="sensor-kpi-label">Consumo Eléctrico</span>
+              <div class="sensor-kpi-value-row">
+                <span class="sensor-kpi-value" id="sensorCurrentAmp">3.6</span>
+                <span class="sensor-kpi-unit">A</span>
+              </div>
+              <div class="sensor-kpi-meta">
+                <span>Rango Normal: <strong>1.0 A — 10.0 A</strong></span>
+              </div>
+            </div>
+          </div>
+
           <div class="sensor-kpi-card" id="sensorTempCard">
             <div class="sensor-kpi-top">
               <div class="sensor-kpi-icon temp"><i class="fas fa-temperature-half"></i></div>
@@ -310,7 +336,7 @@
           <div class="sensor-kpi-card sensor-device-card">
             <div class="sensor-kpi-top">
               <div class="sensor-kpi-icon device"><i class="fas fa-key"></i></div>
-              <span class="sensor-token-badge" id="sensorTokenBadge">ESP32 / DHT</span>
+              <span class="sensor-token-badge" id="sensorTokenBadge">ESP32 / Sensor</span>
             </div>
             <div class="sensor-kpi-data">
               <span class="sensor-kpi-label">ApiKey / Identificador</span>
@@ -324,40 +350,45 @@
 
         <!-- GRILLA DE GRÁFICOS -->
         <div class="sensor-charts-grid">
-          <!-- GRÁFICO 1: LÍNEAS (HISTORIAL TEMPERATURA) -->
+          <!-- GRÁFICO 1: LÍNEAS (HISTORIAL TEMPERATURA Y CONSUMO) -->
           <div class="sensor-chart-card">
             <div class="sensor-chart-header">
               <div class="sensor-chart-title">
                 <i class="fas fa-chart-line" style="color: var(--color-accent-text);"></i>
                 <div>
                   <h4>1. Historial en Tiempo Real (Líneas)</h4>
-                  <p>Evolución cronológica de Temperatura (°C) recibida del broker</p>
+                  <p>Evolución de Temperatura (°C) y Consumo Eléctrico (A)</p>
                 </div>
               </div>
               <div class="sensor-chart-legend-custom">
                 <span class="legend-indicator temp-dot"></span> <span class="legend-text">Temp (°C)</span>
+                <span class="legend-indicator amp-dot"></span> <span class="legend-text">Consumo (A)</span>
               </div>
             </div>
             <div class="sensor-chart-body">
-              <canvas id="sensorLineChart" height="260" role="img" aria-label="Gráfico de líneas con historial de temperatura"></canvas>
+              <canvas id="sensorLineChart" height="260" role="img" aria-label="Gráfico de líneas con historial de temperatura y consumo eléctrico"></canvas>
             </div>
           </div>
 
-          <!-- GRÁFICO 2: BARRAS (TEMPERATURA CON RANGO ACEPTABLE) -->
+          <!-- GRÁFICO 2: BARRAS (VALORES ACTUALES VS RANGO ACEPTABLE) -->
           <div class="sensor-chart-card">
             <div class="sensor-chart-header">
               <div class="sensor-chart-title">
                 <i class="fas fa-chart-simple" style="color: var(--color-gold);"></i>
                 <div>
-                  <h4>2. Valores Actuales vs. Rango Aceptable (Barras)</h4>
-                  <p>Comparativa directa de Temperatura con sus límites admisibles</p>
+                  <h4>2. Comparativa de Parámetros vs. Rangos Normales</h4>
+                  <p>Mediciones actuales de Temperatura (°C) y Consumo (A) contra sus límites admisibles</p>
                 </div>
               </div>
             </div>
             <div class="sensor-chart-body">
-              <canvas id="sensorBarChart" height="260" role="img" aria-label="Gráfico de barras mostrando temperatura con su rango aceptable"></canvas>
+              <canvas id="sensorBarChart" height="260" role="img" aria-label="Gráfico de barras mostrando parámetros con sus rangos aceptables"></canvas>
             </div>
             <div class="sensor-ranges-footer">
+              <div class="range-info-pill">
+                <span class="range-pill-color amp"></span>
+                <span><strong>Consumo Normal:</strong> 1.0 A a 10.0 A (Alerta si &lt;1.0 A o &gt;10.0 A)</span>
+              </div>
               <div class="range-info-pill">
                 <span class="range-pill-color temp"></span>
                 <span><strong>Temp. Aceptable:</strong> 18°C a 35°C (Alerta si &lt;18°C o &gt;35°C)</span>

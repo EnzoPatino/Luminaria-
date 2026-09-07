@@ -83,19 +83,21 @@ document.addEventListener("DOMContentLoaded", () => {
       apiKey: "ClaveUnicaParaSensoresToken123",
       temperatura: 23.0,
       humedad: 40.0,
+      corriente_a: 3.6,
       lastUpdate: "22:35:00",
       history: [
-        { time: "22:30:00", temp: 22.4, hum: 42.0 },
-        { time: "22:31:00", temp: 22.6, hum: 41.5 },
-        { time: "22:32:00", temp: 22.8, hum: 41.0 },
-        { time: "22:33:00", temp: 23.0, hum: 40.5 },
-        { time: "22:34:00", temp: 23.1, hum: 40.2 },
-        { time: "22:35:00", temp: 23.0, hum: 40.0 },
+        { time: "22:30:00", temp: 22.4, hum: 42.0, amp: 3.5 },
+        { time: "22:31:00", temp: 22.6, hum: 41.5, amp: 3.5 },
+        { time: "22:32:00", temp: 22.8, hum: 41.0, amp: 3.6 },
+        { time: "22:33:00", temp: 23.0, hum: 40.5, amp: 3.6 },
+        { time: "22:34:00", temp: 23.1, hum: 40.2, amp: 3.7 },
+        { time: "22:35:00", temp: 23.0, hum: 40.0, amp: 3.6 },
       ],
       maxHistoryPoints: 15,
       ranges: {
         temp: { min: 18.0, max: 35.0, unit: "°C" },
         hum: { min: 30.0, max: 70.0, unit: "%" },
+        amp: { min: 1.0, max: 10.0, unit: "A" },
       },
     },
   };
@@ -152,14 +154,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Elementos de la sección Sensores
     btnSimulateSensorMsg: document.getElementById("btnSimulateSensorMsg"),
+    btnSimAmpNormal: document.getElementById("btnSimAmpNormal"),
+    btnSimAmpAlto: document.getElementById("btnSimAmpAlto"),
+    btnSimAmpCero: document.getElementById("btnSimAmpCero"),
     sensorCurrentTemp: document.getElementById("sensorCurrentTemp"),
     sensorCurrentHum: document.getElementById("sensorCurrentHum"),
+    sensorCurrentAmp: document.getElementById("sensorCurrentAmp"),
     sensorApiKey: document.getElementById("sensorApiKey"),
     sensorLastUpdate: document.getElementById("sensorLastUpdate"),
     sensorTempBadge: document.getElementById("sensorTempBadge"),
     sensorHumBadge: document.getElementById("sensorHumBadge"),
+    sensorAmpBadge: document.getElementById("sensorAmpBadge"),
     sensorTempCard: document.getElementById("sensorTempCard"),
     sensorHumCard: document.getElementById("sensorHumCard"),
+    sensorAmpCard: document.getElementById("sensorAmpCard"),
     simSensorNormal: document.getElementById("simSensorNormal"),
     simSensorAlerta: document.getElementById("simSensorAlerta"),
   };
@@ -548,10 +556,48 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.btnSimulateSensorMsg.addEventListener("click", () => {
         const randTemp = (22.0 + (Math.random() * 3 - 1.5)).toFixed(1);
         const randHum = (40.0 + (Math.random() * 6 - 3)).toFixed(1);
+        const randAmp = (3.5 + (Math.random() * 0.8 - 0.4)).toFixed(1);
         const payload = {
           ApiKey: appState.sensor.apiKey,
           Tem: randTemp,
           Hum: randHum,
+          Amp: randAmp,
+        };
+        window.luminariaMQTT.publish("sensores/ambiente", payload);
+      });
+    }
+
+    if (elements.btnSimAmpNormal) {
+      elements.btnSimAmpNormal.addEventListener("click", () => {
+        const payload = {
+          ApiKey: appState.sensor.apiKey,
+          Tem: "23.0",
+          Hum: "40.0",
+          Amp: "3.5",
+        };
+        window.luminariaMQTT.publish("sensores/ambiente", payload);
+      });
+    }
+
+    if (elements.btnSimAmpAlto) {
+      elements.btnSimAmpAlto.addEventListener("click", () => {
+        const payload = {
+          ApiKey: appState.sensor.apiKey,
+          Tem: "26.5",
+          Hum: "40.0",
+          Amp: "12.5",
+        };
+        window.luminariaMQTT.publish("sensores/ambiente", payload);
+      });
+    }
+
+    if (elements.btnSimAmpCero) {
+      elements.btnSimAmpCero.addEventListener("click", () => {
+        const payload = {
+          ApiKey: appState.sensor.apiKey,
+          Tem: "23.0",
+          Hum: "40.0",
+          Amp: "0.0",
         };
         window.luminariaMQTT.publish("sensores/ambiente", payload);
       });
@@ -1306,8 +1352,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return (
       event.Tem !== undefined ||
       event.Hum !== undefined ||
+      event.Amp !== undefined ||
+      event.amp !== undefined ||
+      event.corriente !== undefined ||
       (event.ApiKey !== undefined &&
-        (event.Tem !== undefined || event.Hum !== undefined)) ||
+        (event.Tem !== undefined || event.Hum !== undefined || event.Amp !== undefined)) ||
       event.tipo_evento === "TELEMETRIA_SENSOR"
     );
   }
@@ -1325,16 +1374,28 @@ document.addEventListener("DOMContentLoaded", () => {
         : event.hum !== undefined
           ? event.hum
           : event.humedad || event.hum;
+    const rawAmp =
+      event.Amp !== undefined
+        ? event.Amp
+        : event.amp !== undefined
+          ? event.amp
+          : event.corriente_a !== undefined
+            ? event.corriente_a
+            : event.corriente;
     const apiKey = event.ApiKey || event.apiKey || appState.sensor.apiKey;
 
     const tempVal = parseFloat(rawTem);
     const humVal = parseFloat(rawHum);
+    const ampVal = parseFloat(rawAmp);
 
     if (!isNaN(tempVal)) {
       appState.sensor.temperatura = Number(tempVal.toFixed(1));
     }
     if (!isNaN(humVal)) {
       appState.sensor.humedad = Number(humVal.toFixed(1));
+    }
+    if (!isNaN(ampVal)) {
+      appState.sensor.corriente_a = Number(ampVal.toFixed(1));
     }
     if (apiKey) {
       appState.sensor.apiKey = String(apiKey);
@@ -1347,11 +1408,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     appState.sensor.lastUpdate = nowTime;
 
-    // Añadir al historial para el gráfico de líneas
+    // Añadir al historial para los gráficos
     appState.sensor.history.push({
       time: nowTime,
       temp: appState.sensor.temperatura,
       hum: appState.sensor.humedad,
+      amp: appState.sensor.corriente_a,
     });
 
     if (appState.sensor.history.length > appState.sensor.maxHistoryPoints) {
@@ -1362,12 +1424,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const tempInRange =
       appState.sensor.temperatura >= appState.sensor.ranges.temp.min &&
       appState.sensor.temperatura <= appState.sensor.ranges.temp.max;
-    const humInRange =
-      appState.sensor.humedad >= appState.sensor.ranges.hum.min &&
-      appState.sensor.humedad <= appState.sensor.ranges.hum.max;
+    const ampInRange =
+      appState.sensor.corriente_a >= appState.sensor.ranges.amp.min &&
+      appState.sensor.corriente_a <= appState.sensor.ranges.amp.max;
 
-    // Sonido sutil de advertencia si hay anomalía ambiental
-    if ((!tempInRange || !humInRange) && appState.soundEnabled) {
+    // Sonido sutil de advertencia si hay anomalía
+    if ((!tempInRange || !ampInRange) && appState.soundEnabled) {
       playAlertAudioSound("warning");
     }
 
@@ -1402,7 +1464,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const ctxLine = document.getElementById("sensorLineChart");
     const ctxBar = document.getElementById("sensorBarChart");
 
-    // 1. Gráfico de Líneas (Historial de Temperatura)
+    // 1. Gráfico de Líneas (Historial de Temperatura y Consumo)
     if (ctxLine) {
       sensorLineChartInstance = new Chart(ctxLine, {
         type: "line",
@@ -1423,6 +1485,21 @@ document.addEventListener("DOMContentLoaded", () => {
               pointRadius: 4,
               pointHoverRadius: 6,
               yAxisID: "yTemp",
+            },
+            {
+              label: "Consumo (A)",
+              data: appState.sensor.history.map((h) => h.amp !== undefined ? h.amp : 3.6),
+              borderColor: "#3b82f6",
+              backgroundColor: "rgba(59, 130, 246, 0.12)",
+              borderWidth: 2.5,
+              tension: 0.35,
+              fill: true,
+              pointBackgroundColor: "#3b82f6",
+              pointBorderColor: "#ffffff",
+              pointBorderWidth: 1.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              yAxisID: "yAmp",
             },
           ],
         },
@@ -1446,7 +1523,8 @@ document.addEventListener("DOMContentLoaded", () => {
               padding: 10,
               callbacks: {
                 label: function (context) {
-                  return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`;
+                  const unit = context.dataset.label.includes("Temp") ? "°C" : " A";
+                  return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}${unit}`;
                 },
               },
             },
@@ -1477,30 +1555,56 @@ document.addEventListener("DOMContentLoaded", () => {
                 font: { family: "JetBrains Mono", size: 11 },
               },
             },
+            yAmp: {
+              type: "linear",
+              display: true,
+              position: "right",
+              min: 0,
+              max: 20,
+              title: {
+                display: true,
+                text: "Consumo (A)",
+                color: "#3b82f6",
+                font: { weight: "bold", size: 11 },
+              },
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: theme.textDim,
+                font: { family: "JetBrains Mono", size: 11 },
+              },
+            },
           },
         },
       });
     }
 
-    // 2. Gráfico de Barras (Temperatura vs Rango Aceptable)
+    // 2. Gráfico de Barras (Consumo y Temperatura vs Rangos Aceptables)
     if (ctxBar) {
       const temp = appState.sensor.temperatura;
+      const amp = appState.sensor.corriente_a;
       const tempInRange =
         temp >= appState.sensor.ranges.temp.min &&
         temp <= appState.sensor.ranges.temp.max;
+      const ampInRange =
+        amp >= appState.sensor.ranges.amp.min &&
+        amp <= appState.sensor.ranges.amp.max;
 
       sensorBarChartInstance = new Chart(ctxBar, {
         type: "bar",
         data: {
-          labels: ["Temperatura (°C)"],
+          labels: ["Consumo (A)", "Temperatura (°C)"],
           datasets: [
             {
               label: "Valor Actual Medido",
-              data: [temp],
+              data: [amp, temp],
               backgroundColor: [
+                ampInRange ? "#3b82f6" : amp > 10 ? "#ef4444" : "#f59e0b",
                 tempInRange ? "#10b981" : temp > 35 ? "#ef4444" : "#f59e0b",
               ],
-              borderColor: [tempInRange ? "#059669" : "#dc2626"],
+              borderColor: [
+                ampInRange ? "#1d4ed8" : "#dc2626",
+                tempInRange ? "#059669" : "#dc2626",
+              ],
               borderWidth: 1.5,
               borderRadius: 8,
               barPercentage: 0.5,
@@ -1508,7 +1612,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             {
               label: "Mínimo Aceptable",
-              data: [appState.sensor.ranges.temp.min],
+              data: [appState.sensor.ranges.amp.min, appState.sensor.ranges.temp.min],
               backgroundColor: "rgba(79, 179, 224, 0.25)",
               borderColor: "rgba(79, 179, 224, 0.8)",
               borderWidth: 1.5,
@@ -1518,7 +1622,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             {
               label: "Máximo Aceptable",
-              data: [appState.sensor.ranges.temp.max],
+              data: [appState.sensor.ranges.amp.max, appState.sensor.ranges.temp.max],
               backgroundColor: "rgba(216, 180, 92, 0.25)",
               borderColor: "rgba(216, 180, 92, 0.8)",
               borderWidth: 1.5,
@@ -1551,9 +1655,11 @@ document.addEventListener("DOMContentLoaded", () => {
               padding: 10,
               callbacks: {
                 afterBody: function (items) {
-                  const val = appState.sensor.temperatura;
-                  const ok = val >= 18 && val <= 35;
-                  return `\nRango admisible: 18.0°C a 35.0°C\nEstado: ${ok ? "✅ En Rango Aceptable" : "⚠️ Fuera de Rango Aceptable"}`;
+                  const ampVal = appState.sensor.corriente_a;
+                  const tempVal = appState.sensor.temperatura;
+                  const ampOk = ampVal >= 1.0 && ampVal <= 10.0;
+                  const tempOk = tempVal >= 18 && tempVal <= 35;
+                  return `\nConsumo (1.0A - 10.0A): ${ampOk ? "✅ Normal" : "⚠️ Fuera de Rango"}\nTemp (18°C - 35°C): ${tempOk ? "✅ Normal" : "⚠️ Fuera de Rango"}`;
                 },
               },
             },
@@ -1576,7 +1682,7 @@ document.addEventListener("DOMContentLoaded", () => {
               },
               title: {
                 display: true,
-                text: "Temperatura (°C)",
+                text: "Valor Medido",
                 color: theme.textColor,
                 font: { weight: "bold", size: 11 },
               },
@@ -1590,12 +1696,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateSensorUI() {
     const temp = appState.sensor.temperatura;
     const hum = appState.sensor.humedad;
+    const amp = appState.sensor.corriente_a;
 
     if (elements.sensorCurrentTemp) {
       elements.sensorCurrentTemp.textContent = temp.toFixed(1);
     }
     if (elements.sensorCurrentHum) {
       elements.sensorCurrentHum.textContent = hum.toFixed(1);
+    }
+    if (elements.sensorCurrentAmp) {
+      elements.sensorCurrentAmp.textContent = amp.toFixed(1);
     }
     if (elements.sensorApiKey) {
       elements.sensorApiKey.textContent = appState.sensor.apiKey;
@@ -1605,6 +1715,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Badges de rango aceptable
+    const ampMin = appState.sensor.ranges.amp.min;
+    const ampMax = appState.sensor.ranges.amp.max;
+    if (elements.sensorAmpBadge) {
+      if (amp < ampMin) {
+        elements.sensorAmpBadge.className = "sensor-range-badge badge-warning";
+        elements.sensorAmpBadge.textContent = `Sin Consumo (<${ampMin}A)`;
+      } else if (amp > ampMax) {
+        elements.sensorAmpBadge.className = "sensor-range-badge badge-critical";
+        elements.sensorAmpBadge.textContent = `Sobrecorriente (>${ampMax}A)`;
+      } else {
+        elements.sensorAmpBadge.className = "sensor-range-badge badge-ok";
+        elements.sensorAmpBadge.textContent = "Consumo Normal";
+      }
+    }
+
     const tempMin = appState.sensor.ranges.temp.min;
     const tempMax = appState.sensor.ranges.temp.max;
     if (elements.sensorTempBadge) {
@@ -1643,18 +1768,23 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       sensorLineChartInstance.data.datasets[0].data =
         appState.sensor.history.map((h) => h.temp);
+      sensorLineChartInstance.data.datasets[1].data =
+        appState.sensor.history.map((h) => h.amp !== undefined ? h.amp : 3.6);
       sensorLineChartInstance.update();
     }
 
     // Actualizar Gráfico de Barras
     if (sensorBarChartInstance) {
       const tempInRange = temp >= tempMin && temp <= tempMax;
+      const ampInRange = amp >= ampMin && amp <= ampMax;
 
-      sensorBarChartInstance.data.datasets[0].data = [temp];
+      sensorBarChartInstance.data.datasets[0].data = [amp, temp];
       sensorBarChartInstance.data.datasets[0].backgroundColor = [
+        ampInRange ? "#3b82f6" : amp > ampMax ? "#ef4444" : "#f59e0b",
         tempInRange ? "#10b981" : temp > tempMax ? "#ef4444" : "#f59e0b",
       ];
       sensorBarChartInstance.data.datasets[0].borderColor = [
+        ampInRange ? "#1d4ed8" : "#dc2626",
         tempInRange ? "#059669" : "#dc2626",
       ];
       sensorBarChartInstance.update();
@@ -1682,6 +1812,10 @@ document.addEventListener("DOMContentLoaded", () => {
         sensorLineChartInstance.options.scales.yTemp.grid.color =
           theme.gridColor;
         sensorLineChartInstance.options.scales.yTemp.ticks.color =
+          theme.textDim;
+      }
+      if (sensorLineChartInstance.options.scales.yAmp) {
+        sensorLineChartInstance.options.scales.yAmp.ticks.color =
           theme.textDim;
       }
       sensorLineChartInstance.update();

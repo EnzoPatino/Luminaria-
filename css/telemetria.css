@@ -100,6 +100,12 @@
   background: rgba(245, 158, 11, 0.1);
 }
 
+.sensor-kpi-icon.amp {
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+}
+
 .sensor-kpi-icon.hum {
   color: #0284c7;
   border-color: rgba(2, 132, 199, 0.35);
@@ -265,6 +271,11 @@
   box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
 }
 
+.legend-indicator.amp-dot {
+  background-color: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+}
+
 .legend-indicator.hum-dot {
   background-color: #0284c7;
   box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
@@ -314,6 +325,10 @@
 
 .range-pill-color.temp {
   background: #f59e0b;
+}
+
+.range-pill-color.amp {
+  background: #3b82f6;
 }
 
 .range-pill-color.hum {
