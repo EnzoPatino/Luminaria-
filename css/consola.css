@@ -1,0 +1,45 @@
+/* ============================================ */
+/* CONSOLA MQTT                                  */
+/* ============================================ */
+.terminal-body {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  max-height: 480px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: var(--shadow-card);
+}
+
+.log-row {
+  display: flex;
+  gap: 0.65rem;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.log-time {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.log-topic {
+  color: var(--color-accent-text);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.log-text {
+  color: var(--text-main);
+}
+
+.log-type-sim, .log-type-simulated { color: var(--color-warning); }
+.log-type-err, .log-type-error { color: var(--color-critical); }
+.log-type-incoming { color: var(--color-accent-text); }
+.log-type-outgoing { color: #a78bfa; }
+
