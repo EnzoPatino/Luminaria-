@@ -1182,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctxLine = document.getElementById('sensorLineChart');
     const ctxBar = document.getElementById('sensorBarChart');
 
-    // 1. Gráfico de Líneas (Historial de Temperatura y Humedad)
+    // 1. Gráfico de Líneas (Historial de Temperatura)
     if (ctxLine) {
       sensorLineChartInstance = new Chart(ctxLine, {
         type: 'line',
@@ -1203,21 +1203,6 @@ document.addEventListener('DOMContentLoaded', () => {
               pointRadius: 4,
               pointHoverRadius: 6,
               yAxisID: 'yTemp'
-            },
-            {
-              label: 'Humedad (%)',
-              data: appState.sensor.history.map(h => h.hum),
-              borderColor: '#0284c7',
-              backgroundColor: 'rgba(2, 132, 199, 0.12)',
-              borderWidth: 2.5,
-              tension: 0.35,
-              fill: true,
-              pointBackgroundColor: '#0284c7',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 1.5,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              yAxisID: 'yHum'
             }
           ]
         },
@@ -1265,74 +1250,55 @@ document.addEventListener('DOMContentLoaded', () => {
               },
               grid: { color: theme.gridColor },
               ticks: { color: theme.textDim, font: { family: 'JetBrains Mono', size: 11 } }
-            },
-            yHum: {
-              type: 'linear',
-              display: true,
-              position: 'right',
-              min: 0,
-              max: 100,
-              title: {
-                display: true,
-                text: 'Humedad (%)',
-                color: '#0284c7',
-                font: { weight: 'bold', size: 11 }
-              },
-              grid: { drawOnChartArea: false },
-              ticks: { color: theme.textDim, font: { family: 'JetBrains Mono', size: 11 } }
             }
           }
         }
       });
     }
 
-    // 2. Gráfico de Barras (2 Barras: Temperatura y Humedad con Rangos Aceptables)
+    // 2. Gráfico de Barras (Temperatura vs Rango Aceptable)
     if (ctxBar) {
       const temp = appState.sensor.temperatura;
-      const hum = appState.sensor.humedad;
       const tempInRange = temp >= appState.sensor.ranges.temp.min && temp <= appState.sensor.ranges.temp.max;
-      const humInRange = hum >= appState.sensor.ranges.hum.min && hum <= appState.sensor.ranges.hum.max;
 
       sensorBarChartInstance = new Chart(ctxBar, {
         type: 'bar',
         data: {
-          labels: ['Temperatura (°C)', 'Humedad (%)'],
+          labels: ['Temperatura (°C)'],
           datasets: [
             {
               label: 'Valor Actual Medido',
-              data: [temp, hum],
+              data: [temp],
               backgroundColor: [
-                tempInRange ? '#10b981' : (temp > 35 ? '#ef4444' : '#f59e0b'),
-                humInRange ? '#0284c7' : (hum > 70 ? '#ef4444' : '#f59e0b')
+                tempInRange ? '#10b981' : (temp > 35 ? '#ef4444' : '#f59e0b')
               ],
               borderColor: [
-                tempInRange ? '#059669' : '#dc2626',
-                humInRange ? '#0369a1' : '#dc2626'
+                tempInRange ? '#059669' : '#dc2626'
               ],
               borderWidth: 1.5,
               borderRadius: 8,
-              barPercentage: 0.65,
-              categoryPercentage: 0.65
+              barPercentage: 0.5,
+              categoryPercentage: 0.5
             },
             {
               label: 'Mínimo Aceptable',
-              data: [appState.sensor.ranges.temp.min, appState.sensor.ranges.hum.min],
+              data: [appState.sensor.ranges.temp.min],
               backgroundColor: 'rgba(79, 179, 224, 0.25)',
               borderColor: 'rgba(79, 179, 224, 0.8)',
               borderWidth: 1.5,
               borderRadius: 6,
-              barPercentage: 0.65,
-              categoryPercentage: 0.65
+              barPercentage: 0.5,
+              categoryPercentage: 0.5
             },
             {
               label: 'Máximo Aceptable',
-              data: [appState.sensor.ranges.temp.max, appState.sensor.ranges.hum.max],
+              data: [appState.sensor.ranges.temp.max],
               backgroundColor: 'rgba(216, 180, 92, 0.25)',
               borderColor: 'rgba(216, 180, 92, 0.8)',
               borderWidth: 1.5,
               borderRadius: 6,
-              barPercentage: 0.65,
-              categoryPercentage: 0.65
+              barPercentage: 0.5,
+              categoryPercentage: 0.5
             }
           ]
         },
@@ -1359,16 +1325,9 @@ document.addEventListener('DOMContentLoaded', () => {
               padding: 10,
               callbacks: {
                 afterBody: function(items) {
-                  const idx = items[0].dataIndex;
-                  if (idx === 0) {
-                    const val = appState.sensor.temperatura;
-                    const ok = val >= 18 && val <= 35;
-                    return `\nRango admisible: 18.0°C a 35.0°C\nEstado: ${ok ? '✅ En Rango Aceptable' : '⚠️ Fuera de Rango Aceptable'}`;
-                  } else {
-                    const val = appState.sensor.humedad;
-                    const ok = val >= 30 && val <= 70;
-                    return `\nRango admisible: 30.0% a 70.0%\nEstado: ${ok ? '✅ En Rango Aceptable' : '⚠️ Fuera de Rango Aceptable'}`;
-                  }
+                  const val = appState.sensor.temperatura;
+                  const ok = val >= 18 && val <= 35;
+                  return `\nRango admisible: 18.0°C a 35.0°C\nEstado: ${ok ? '✅ En Rango Aceptable' : '⚠️ Fuera de Rango Aceptable'}`;
                 }
               }
             }
@@ -1380,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             y: {
               min: 0,
-              max: 100,
+              max: 50,
               grid: { color: theme.gridColor },
               ticks: {
                 color: theme.textDim,
@@ -1388,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', () => {
               },
               title: {
                 display: true,
-                text: 'Escala Medida (°C / %)',
+                text: 'Temperatura (°C)',
                 color: theme.textColor,
                 font: { weight: 'bold', size: 11 }
               }
@@ -1451,23 +1410,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sensorLineChartInstance) {
       sensorLineChartInstance.data.labels = appState.sensor.history.map(h => h.time);
       sensorLineChartInstance.data.datasets[0].data = appState.sensor.history.map(h => h.temp);
-      sensorLineChartInstance.data.datasets[1].data = appState.sensor.history.map(h => h.hum);
       sensorLineChartInstance.update();
     }
 
     // Actualizar Gráfico de Barras
     if (sensorBarChartInstance) {
       const tempInRange = temp >= tempMin && temp <= tempMax;
-      const humInRange = hum >= humMin && hum <= humMax;
 
-      sensorBarChartInstance.data.datasets[0].data = [temp, hum];
+      sensorBarChartInstance.data.datasets[0].data = [temp];
       sensorBarChartInstance.data.datasets[0].backgroundColor = [
-        tempInRange ? '#10b981' : (temp > tempMax ? '#ef4444' : '#f59e0b'),
-        humInRange ? '#0284c7' : (hum > humMax ? '#ef4444' : '#f59e0b')
+        tempInRange ? '#10b981' : (temp > tempMax ? '#ef4444' : '#f59e0b')
       ];
       sensorBarChartInstance.data.datasets[0].borderColor = [
-        tempInRange ? '#059669' : '#dc2626',
-        humInRange ? '#0369a1' : '#dc2626'
+        tempInRange ? '#059669' : '#dc2626'
       ];
       sensorBarChartInstance.update();
     }
@@ -1489,9 +1444,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (sensorLineChartInstance.options.scales.yTemp) {
         sensorLineChartInstance.options.scales.yTemp.grid.color = theme.gridColor;
         sensorLineChartInstance.options.scales.yTemp.ticks.color = theme.textDim;
-      }
-      if (sensorLineChartInstance.options.scales.yHum) {
-        sensorLineChartInstance.options.scales.yHum.ticks.color = theme.textDim;
       }
       sensorLineChartInstance.update();
     }

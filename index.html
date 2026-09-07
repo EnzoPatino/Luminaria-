@@ -293,23 +293,6 @@
             </div>
           </div>
 
-          <div class="sensor-kpi-card" id="sensorHumCard">
-            <div class="sensor-kpi-top">
-              <div class="sensor-kpi-icon hum"><i class="fas fa-droplet"></i></div>
-              <span class="sensor-range-badge badge-ok" id="sensorHumBadge">Rango Aceptable</span>
-            </div>
-            <div class="sensor-kpi-data">
-              <span class="sensor-kpi-label">Humedad Relativa</span>
-              <div class="sensor-kpi-value-row">
-                <span class="sensor-kpi-value" id="sensorCurrentHum">40.0</span>
-                <span class="sensor-kpi-unit">%</span>
-              </div>
-              <div class="sensor-kpi-meta">
-                <span>Rango Aceptable: <strong>30.0% — 70.0%</strong></span>
-              </div>
-            </div>
-          </div>
-
           <div class="sensor-kpi-card sensor-device-card">
             <div class="sensor-kpi-top">
               <div class="sensor-kpi-icon device"><i class="fas fa-key"></i></div>
@@ -327,48 +310,43 @@
 
         <!-- GRILLA DE GRÁFICOS -->
         <div class="sensor-charts-grid">
-          <!-- GRÁFICO 1: LÍNEAS (HISTORIAL TEMPERATURA Y HUMEDAD) -->
+          <!-- GRÁFICO 1: LÍNEAS (HISTORIAL TEMPERATURA) -->
           <div class="sensor-chart-card">
             <div class="sensor-chart-header">
               <div class="sensor-chart-title">
                 <i class="fas fa-chart-line" style="color: var(--color-accent-text);"></i>
                 <div>
                   <h4>1. Historial en Tiempo Real (Líneas)</h4>
-                  <p>Evolución cronológica de Temperatura (°C) y Humedad (%) recibidas del broker</p>
+                  <p>Evolución cronológica de Temperatura (°C) recibida del broker</p>
                 </div>
               </div>
               <div class="sensor-chart-legend-custom">
                 <span class="legend-indicator temp-dot"></span> <span class="legend-text">Temp (°C)</span>
-                <span class="legend-indicator hum-dot"></span> <span class="legend-text">Hum (%)</span>
               </div>
             </div>
             <div class="sensor-chart-body">
-              <canvas id="sensorLineChart" height="260" role="img" aria-label="Gráfico de líneas con historial de temperatura y humedad"></canvas>
+              <canvas id="sensorLineChart" height="260" role="img" aria-label="Gráfico de líneas con historial de temperatura"></canvas>
             </div>
           </div>
 
-          <!-- GRÁFICO 2: BARRAS (2 BARRAS CON RANGO ACEPTABLE) -->
+          <!-- GRÁFICO 2: BARRAS (TEMPERATURA CON RANGO ACEPTABLE) -->
           <div class="sensor-chart-card">
             <div class="sensor-chart-header">
               <div class="sensor-chart-title">
                 <i class="fas fa-chart-simple" style="color: var(--color-gold);"></i>
                 <div>
                   <h4>2. Valores Actuales vs. Rango Aceptable (Barras)</h4>
-                  <p>Comparativa directa de Temperatura y Humedad con sus límites admisibles</p>
+                  <p>Comparativa directa de Temperatura con sus límites admisibles</p>
                 </div>
               </div>
             </div>
             <div class="sensor-chart-body">
-              <canvas id="sensorBarChart" height="260" role="img" aria-label="Gráfico de barras mostrando temperatura y humedad con su rango aceptable"></canvas>
+              <canvas id="sensorBarChart" height="260" role="img" aria-label="Gráfico de barras mostrando temperatura con su rango aceptable"></canvas>
             </div>
             <div class="sensor-ranges-footer">
               <div class="range-info-pill">
                 <span class="range-pill-color temp"></span>
                 <span><strong>Temp. Aceptable:</strong> 18°C a 35°C (Alerta si &lt;18°C o &gt;35°C)</span>
-              </div>
-              <div class="range-info-pill">
-                <span class="range-pill-color hum"></span>
-                <span><strong>Hum. Aceptable:</strong> 30% a 70% (Alerta si &lt;30% o &gt;70%)</span>
               </div>
             </div>
           </div>
