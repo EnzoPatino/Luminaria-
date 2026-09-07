@@ -1,8 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
----
+# Manual del Desarrollador — Guía Operativa
 
 # Proyecto Luminaria — Sistema de Monitoreo y Alertas Eléctricas
 
@@ -10,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Aplicación web para monitoreo en tiempo real de tableros de iluminación pública. El frontend es una aplicación estática (HTML + CSS + JavaScript vanilla) que consume eventos MQTT desde un broker Mosquitto (vía WebSockets) o funciona en **modo simulación**. El backend está implementado en Node.js + Express para gestión de datos y persistencia.
 
-> Toda la documentación oficial del proyecto ya está en `Documentacion/CONTEXTO_IA.md` y `Documentacion/DOCUMENTACION_TECNICA.md`. Este `CLAUDE.md` es un resumen operativo para sesiones de Claude Code.
+> La documentación detallada de arquitectura se encuentra en `Documentacion/CONTEXTO_TECNICO.md` y `Documentacion/DOCUMENTACION_TECNICA.md`. Este documento resume las guías operativas de desarrollo.
 
 ---
 
@@ -101,7 +97,7 @@ El hardware publica estos 4 tipos de evento. Los nombres de campo están coordin
 
 Estados válidos de foco: `ok`, `robado`, `quemado`. Tensión nominal siempre `220.0V`, umbral mínimo `190.0V`.
 
-Payloads completos de ejemplo en `Documentacion/CONTEXTO_IA.md` (sección 5) y `README_MQTT_UI.md` (sección 4). Replicarlos exactamente al añadir un nuevo tipo de evento.
+Payloads completos de ejemplo en `Documentacion/CONTEXTO_TECNICO.md` (sección 5) y `README_MQTT_UI.md` (sección 4). Replicarlos exactamente al añadir un nuevo tipo de evento.
 
 ---
 

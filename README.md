@@ -70,10 +70,10 @@ Project_Luminaria/
 │   └── app.js                 # Lógica de UI, medidores, gestión de eventos y tema
 ├── Documentacion/
 │   ├── DOCUMENTACION_TECNICA.md   # Documentación técnica completa para desarrolladores
-│   ├── CONTEXTO_IA.md             # Manual de contexto y especificaciones para asistentes de IA
+│   ├── CONTEXTO_TECNICO.md        # Manual de contexto y especificaciones técnicas
 │   ├── DOCUMENTACION_TECNICA_DRAFT(1).md # Borrador histórico de arquitectura
 │   └── Reporte_MQTT_Pasantias_corregido.docx
-├── CLAUDE.md                  # Guía operativa para sesiones de Claude Code
+├── MANUAL_DESARROLLADOR.md    # Guía operativa para desarrolladores
 └── README.md                    # Guía rápida del proyecto
 ```
 
@@ -83,6 +83,6 @@ Project_Luminaria/
 
 Para consultar la documentación técnica completa del sistema o las especificaciones del contrato de datos, revise los archivos ubicados en el directorio `Documentacion/`:
 - **Documentación Técnica para Desarrolladores**: `Documentacion/DOCUMENTACION_TECNICA.md`
-- **Guía de Contexto y Especificaciones para IA**: `Documentacion/CONTEXTO_IA.md`
+- **Guía de Contexto y Especificaciones Técnicas**: `Documentacion/CONTEXTO_TECNICO.md`
 - **Manual de Integración Frontend ↔ Mosquitto**: `README_MQTT_UI.md`
-- **Guía para Claude Code**: `CLAUDE.md`
+- **Manual Operativo del Desarrollador**: `MANUAL_DESARROLLADOR.md`

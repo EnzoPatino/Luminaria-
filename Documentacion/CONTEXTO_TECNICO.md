@@ -1,18 +1,18 @@
-# Contexto Tecnico para Asistentes de IA
+# Contexto Técnico del Proyecto
 
-**Project Luminaria - Sistema de Monitoreo y Alertas Electricas**  
-**Directorio:** `Documentacion/CONTEXTO_IA.md`  
+**Project Luminaria - Sistema de Monitoreo y Alertas Eléctricas**  
+**Directorio:** `Documentacion/CONTEXTO_TECNICO.md`  
 **Actualizado:** Agosto 2026
 
 ---
 
 ## 1. Estado Real del Proyecto
 
-El repositorio contiene una aplicacion web estatica hecha con HTML, CSS y JavaScript vanilla. No hay backend, base de datos, Docker Compose ni API REST implementados actualmente.
+El repositorio contiene una aplicación web estática hecha con HTML, CSS y JavaScript vanilla. No hay backend, base de datos, Docker Compose ni API REST implementados actualmente.
 
-La UI consume eventos MQTT mediante Paho MQTT por WebSockets. Si no puede conectarse a Mosquitto o no esta disponible la libreria Paho, activa modo simulacion y procesa eventos localmente.
+La UI consume eventos MQTT mediante Paho MQTT por WebSockets. Si no puede conectarse a Mosquitto o no está disponible la librería Paho, activa modo simulación y procesa eventos localmente.
 
-La aplicacion soporta dos temas visuales (claro y oscuro) seleccionables desde el header. El modo oscuro es el predeterminado; la preferencia se persiste en `localStorage` con la clave `luminaria_theme`.
+La aplicación soporta dos temas visuales (claro y oscuro) seleccionables desde el header. El modo oscuro es el predeterminado; la preferencia se persiste en `localStorage` con la clave `luminaria_theme`.
 
 ---
 
@@ -28,10 +28,10 @@ Project_Luminaria/
 |   `-- mqtt-client.js
 |-- Documentacion/
 |   |-- DOCUMENTACION_TECNICA.md
-|   |-- CONTEXTO_IA.md
+|   |-- CONTEXTO_TECNICO.md
 |   |-- DOCUMENTACION_TECNICA_DRAFT(1).md
 |   `-- Reporte_MQTT_Pasantias_corregido.docx
-|-- CLAUDE.md
+|-- MANUAL_DESARROLLADOR.md
 |-- README.md
 `-- README_MQTT_UI.md
 ```
