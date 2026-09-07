@@ -72,7 +72,7 @@ El backend escuchará y validará los payloads JSON definidos para el proyecto:
 - **Validadores de Contrato JSON**: Crear esquemas de validación (usando librerías como Joi o Zod) para asegurar que los mensajes recibidos por MQTT cumplan exactamente con el formato requerido antes de guardarlos.
 - **Servicio de Persistencia**: Implementar las funciones de base de datos que guardan las mediciones y actualizan el estado de cada tablero/foco en tiempo real.
 
-### 🧑‍💻 Desarrollador 2 (Tú - Infraestructura MQTT, Suscripciones y Pipeline de Eventos)
+### 🧑‍💻 Desarrollador 2 (Infraestructura MQTT, Suscripciones y Pipeline de Eventos)
 - **Conexión MQTT (`mqttClient.js`)**: Instalar la librería `mqtt` en Node.js, configurar la conexión robusta con Mosquitto, manejo de eventos de conexión (`connect`, `reconnect`, `error`, `offline`) y suscripción a los topics.
 - **Router / Dispatcher de Mensajes**: Implementar el enrutador que recibe el mensaje binario/string del broker, lo parsea a JSON y lo deriva al manejador correspondiente según el `topic` o `tipo_evento`.
 - **Simulador / Publicador de Pruebas**: Crear un script en Node.js que publique eventos de prueba a Mosquitto para probar todo el pipeline sin depender del hardware real.
