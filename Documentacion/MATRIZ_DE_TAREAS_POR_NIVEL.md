@@ -56,7 +56,7 @@ Para priorizar eficientemente el trabajo de los equipos (**Frontend**, **Backend
 | **FE-04** | Frontend | Exportación CSV/JSON y Filtros Avanzados en Consola MQTT | 🟢 **LEVE** | 2 SP | 🟢 Herramienta de diagnóstico secundario para el desarrollador/técnico. |
 | **BE-05** | Backend | API Histórica de Telemetría para Gráficas de Consumo | 🟢 **LEVE** | 5 SP | 🟢 Requerido solo para reportes estadísticos a futuro. |
 | **FE-07** | Frontend | Validación Sintáctica Automática (`node -c js/app.js`) | 🟢 **LEVE** | 1 SP | 🟢 Previene errores de sintaxis antes de subir cambios al repositorio. |
-| **FE-10** | Frontend | Documentación de Código JSDoc y Guía de Onboarding para Desarrolladores | 🟢 **LEVE** | 2 SP | 🟢 Sin documentación interna, nuevos desarrolladores tardan días en entender la arquitectura. El archivo CLAUDE.md es para IA, no para humanos. |
+| **FE-10** | Frontend | Documentación de Código JSDoc y Guía de Onboarding para Desarrolladores | 🟢 **LEVE** | 2 SP | 🟢 Sin documentación técnica detallada, los nuevos desarrolladores tardan más tiempo en comprender la arquitectura del sistema. |
 | **FE-11** | Frontend | Dashboard de Analíticas de Uso Básico (Páginas vistas, Eventos por hora) | 🟢 **LEVE** | 2 SP | 🟢 Sin métricas de uso no se puede priorizar mejoras ni justificar inversiones a la Municipalidad con datos reales. |
 | **FE-12** | Frontend | PWA / Service Worker para Funcionalidad Offline Básica | 🟢 **LEVE** | 3 SP | 🟢 En zonas con conectividad intermitente (ej: parques, costaneras), una PWA podría mostrar el último estado conocido de los tableros sin conexión. |
 

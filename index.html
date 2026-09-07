@@ -23,7 +23,7 @@
   <!-- Librería Chart.js para Gráficos Ligeros y Accesibles -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Anti-flash: aplica el tema guardado antes de que renderice la página -->
+  <!-- Anti-flash: aplica el tema y rol guardado antes de que renderice la página -->
   <script>
     (function() {
       try {
@@ -33,6 +33,12 @@
           if (t === 'light') {
             document.documentElement.classList.add('light-mode');
           }
+        }
+        var r = localStorage.getItem('luminaria_user_role');
+        if (r === 'tecnico' || r === 'supervisor') {
+          document.documentElement.setAttribute('data-role', r);
+        } else {
+          document.documentElement.setAttribute('data-role', 'supervisor');
         }
       } catch (e) {}
     })();
@@ -47,7 +53,7 @@
     <header class="main-header">
       <div class="header-brand">
         <div class="brand-logo" title="Municipalidad de Neuquén">
-          <i class="fas fa-bolt"></i>
+          <img src="Img/8eXZqn71_400x400.jpg" alt="Logo de la Municipalidad de Neuquén" class="brand-logo-img">
         </div>
         <div class="brand-text">
           <h1>MUNICIPALIDAD DE NEUQUÉN</h1>
@@ -66,12 +72,20 @@
         </button>
 
         <div class="header-actions" id="headerActions">
-          <button class="btn btn-sim" id="btnOpenSimModal" title="Simular pruebas técnicas">
+          <div class="role-selector-wrap" title="Seleccionar vista de usuario (Supervisor / Técnico)">
+            <i class="fas fa-user-shield role-icon" id="roleIcon"></i>
+            <select id="roleSelector" class="role-select" aria-label="Seleccionar modo de vista de usuario">
+              <option value="supervisor">Vista Supervisor</option>
+              <option value="tecnico">Vista Técnico</option>
+            </select>
+          </div>
+
+          <button class="btn btn-sim" id="btnOpenSimModal" data-role-restricted="supervisor" title="Simular pruebas técnicas">
             <i class="fas fa-vial"></i>
             <span>Simulador</span>
           </button>
 
-          <button class="btn btn-secondary" id="btnOpenMqttModal" title="Configurar conexión MQTT">
+          <button class="btn btn-secondary" id="btnOpenMqttModal" data-role-restricted="supervisor" title="Configurar conexión MQTT">
             <i class="fas fa-network-wired"></i>
             <span>Servidor</span>
           </button>
@@ -165,7 +179,7 @@
         <i class="fas fa-chart-line"></i>
         <span>Sensores<span class="tab-text-extra"> (Telemetría)</span></span>
       </button>
-      <button class="nav-tab" data-tab="consola" role="tab" aria-selected="false">
+      <button class="nav-tab" data-tab="consola" data-role-restricted="supervisor" role="tab" aria-selected="false">
         <i class="fas fa-terminal"></i>
         <span>Consola<span class="tab-text-extra"> MQTT</span></span>
       </button>

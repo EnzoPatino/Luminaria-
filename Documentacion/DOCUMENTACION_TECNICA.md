@@ -24,9 +24,10 @@ Project_Luminaria/
 |   `-- mqtt-client.js
 |-- Documentacion/
 |   |-- DOCUMENTACION_TECNICA.md
-|   |-- CONTEXTO_IA.md
+|   |-- CONTEXTO_TECNICO.md
 |   |-- DOCUMENTACION_TECNICA_DRAFT(1).md
 |   `-- Reporte_MQTT_Pasantias_corregido.docx
+|-- MANUAL_DESARROLLADOR.md
 |-- README.md
 `-- README_MQTT_UI.md
 ```
