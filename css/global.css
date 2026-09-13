@@ -332,11 +332,66 @@ html, body {
   white-space: nowrap;
 }
 
+/* Estilos para el selector de rol mejorado */
+.role-selector-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--bg-dark);
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.role-toggle-btn {
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.role-toggle-btn:hover {
+  background: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.role-toggle-btn .arrow-icon {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.role-select {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .role-selector-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .role-toggle-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
 .btn-primary {
   background: var(--color-accent);
   color: #ffffff;
   border-color: var(--color-accent-text);
 }
+
 .btn-primary:hover {
   background: var(--color-accent-hover);
   transform: translateY(-1px);

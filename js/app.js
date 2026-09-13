@@ -399,6 +399,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (elements.roleSelector && elements.roleSelector.value !== role) {
       elements.roleSelector.value = role;
     }
+    
+    const roleToggleText = document.getElementById("roleToggleText");
+    if (roleToggleText) {
+      roleToggleText.textContent = role === "supervisor" ? "Vista Supervisor" : "Vista Técnico";
+    }
+    
     updateRoleIcon(role);
 
     // Si la pestaña activa actual está restringida al cambiar a Técnico, cambiar automáticamente a Tableros
@@ -474,6 +480,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (elements.roleSelector) {
       elements.roleSelector.addEventListener("change", (e) => {
         setRole(e.target.value);
+      });
+    }
+
+    const btnRoleToggle = document.getElementById("btnRoleToggle");
+    const roleToggleText = document.getElementById("roleToggleText");
+    if (btnRoleToggle && roleToggleText) {
+      btnRoleToggle.addEventListener("click", () => {
+        const currentRole = appState.userRole;
+        const nextRole = currentRole === "supervisor" ? "tecnico" : "supervisor";
+        setRole(nextRole);
+        elements.roleSelector.value = nextRole;
+        roleToggleText.textContent = nextRole === "supervisor" ? "Vista Supervisor" : "Vista Técnico";
       });
     }
 
