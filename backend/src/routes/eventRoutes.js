@@ -1,10 +1,10 @@
 const express = require('express');
 const { createEvent } = require('../controllers/eventController');
+const { validateEventPayload } = require('../middlewares/eventIngestionMiddleware');
 
 const router = express.Router();
 
-// Entrada mínima para persistir el mismo contrato JSON que usa MQTT.
-// No pretende ser la API REST completa del producto final.
-router.post('/', createEvent);
+// Seccion: entrada HTTP protegida por contrato JSON antes de tocar servicios.
+router.post('/', validateEventPayload, createEvent);
 
 module.exports = router;

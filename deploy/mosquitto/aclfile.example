@@ -1,0 +1,15 @@
+# Seccion: permisos para dispositivos de campo.
+user esp32_writer
+topic write neuquen/iluminacion/#
+
+# Seccion: permisos para el worker de backend.
+user backend_worker
+topic read neuquen/iluminacion/#
+
+# Seccion: permisos para la UI web por WebSockets.
+user web_dashboard
+topic read neuquen/iluminacion/#
+topic write api/evento
+
+# Seccion: regla por defecto restrictiva.
+pattern read $SYS/broker/connection/%c/state

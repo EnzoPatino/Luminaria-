@@ -1,17 +1,15 @@
 # 📋 Plan de Trabajo y Backlog de Tareas — Project Luminaria
 
-> **Rol:** Scrum Master  
-> **Ubicación:** `Documentacion/PLAN_DE_TRABAJO_SCRUM.md`  
-> **Proyecto:** Sistema de Monitoreo y Alertas Eléctricas (EPET N.º 14 × EPET N.º 20 — Municipalidad de Neuquén)  
-> **Estado Actual del Repositorio:** Aplicación Web Frontend Estática (HTML + CSS + JS Vanilla) con integración MQTT WebSockets y modo simulación.
+> **Rol:** Scrum Master
+> **Ubicación:** `Documentacion/PLAN_DE_TRABAJO_SCRUM.md`
+> **Proyecto:** Sistema de Monitoreo y Alertas Eléctricas (EPET N.º 14 × EPET N.º 20 — Municipalidad de Neuquén)
+> **Última actualización:** Septiembre 2026 — Revisión post-análisis de código
 
 ---
 
-## 1. 🔍 Diagnóstico de Arquitectura y Visión General
+## 1. 🔍 Diagnóstico de Arquitectura y Estado Actual
 
-El proyecto **Luminaria** cuenta actualmente con un prototipo frontend estático 100% funcional en el cliente ([index.html](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/index.html), [js/app.js](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/js/app.js) y [js/mqtt-client.js](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/js/mqtt-client.js)).
-
-Para llevar la plataforma a un entorno de **producción industrial** desplegable en la Municipalidad de Neuquén, debemos evolucionar la arquitectura hacia una solución multicapa:
+### Arquitectura Objetivo
 
 ```
 [Hardware ESP32 (EPET 14)] ──► [Mosquitto Broker (DevOps)]
@@ -24,88 +22,108 @@ Para llevar la plataforma a un entorno de **producción industrial** desplegable
        [PostgreSQL DB (DBA)]
 ```
 
-A continuación, se presenta la **división formal del backlog de tareas por especialidad**, estructurada con criterios de aceptación, dependencias y reglas de negocio del contrato JSON existente.
+### Estado Real del Repositorio (Septiembre 2026)
+
+| Capa | Estado | Detalle |
+|---|---|---|
+| **Frontend** | ✅ MVP funcional | `index.html` + `js/app.js` (1851 líneas) + `js/mqtt-client.js` (225 líneas). Tema claro/oscuro, roles, gráficos Chart.js, mapa SVG, consola MQTT, simulación completa. |
+| **Backend REST** | 🟡 Parcial | Express.js con `/api/health` y `POST /api/eventos` implementados. Faltan `GET /api/tableros`, `GET /api/alertas`, `PATCH /api/alertas/:id/resolver`. |
+| **Ingestor MQTT** | ❌ Pendiente | **El Worker TCP subscriber (escucha en 1883) NO existe**. Solo hay `persistenciaService.js` que procesa eventos si llegan por HTTP. |
+| **Base de Datos** | ✅ Esquema listo | Migración SQL completa con tablas: `zonas`, `tableros`, `sensores`, `lecturas`, `alertas`, `estadisticas_zona`. Índices optimizados. Seed de datos iniciales. |
+| **DevOps** | 🟡 Parcial | `docker-compose.db.yml` solo levanta PostgreSQL. Faltan: Dockerfile de backend, Nginx, Mosquitto en Docker, CI/CD. |
+| **Seguridad** | 🟡 Parcial | CORS restringido ✅, rate limiting ✅, graceful shutdown ✅. Faltan: JWT/RBAC, HTTPS/WSS, audit logging. |
 
 ---
 
 ## 2. 🎨 Backlog: Equipo Frontend
 
-El equipo de Frontend mantendrá la aplicación ligera e interactiva, adaptándola para consumir datos persistentes de la API REST manteniendo la reactividad MQTT en tiempo real.
-
-| ID | Historia de Usuario / Tarea | Descripción y Criterios de Aceptación | Archivos / Referencias | Prioridad |
-|---|---|---|---|---|
-| **FE-01** | **Integración con API REST de Backend** | Conectar la app para inicializar los tableros y cargar el historial de alertas desde la API REST (`GET /api/tableros` y `GET /api/alertas`) al arrancar la página, en lugar de inicializar únicamente con mock data local. Preservar el **modo simulación** como fallback. | [js/app.js](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/js/app.js) | **Alta** |
-| **FE-02** | **Acción de Resolución de Alertas vía API** | Al hacer clic en "Marcar como resuelta", enviar una petición `PATCH /api/alertas/:id/resolver` al backend. Actualizar el contador de KPIs y banner tras la confirmación exitosa. | [js/app.js](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/js/app.js) | **Alta** |
-| **FE-03** | **Preservar Reglas Críticas de UI y Anti-Flash** | Mantenimiento obligatorio del script anti-flash en `<head>` de [index.html](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/index.html#L18-L29), anclaje de pines en `.map-svg-wrapper` ([styles.css](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/css/styles.css)) y variables CSS para el soporte de tema claro/oscuro. | [index.html](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/index.html), [css/styles.css](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/css/styles.css) | **Alta** |
-| **FE-04** | **Exportación y Filtros en Consola Telemétrica** | Agregar botones en la pestaña Consola para pausar/reanudar el auto-scroll, filtrar mensajes por topic (`neuquen/iluminacion/#` vs `api/evento`) y exportar logs a CSV/JSON. | [js/app.js](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/js/app.js) | **Media** |
-| **FE-05** | **Sistema de Notificaciones Push Web** | Implementar `Notification API` del navegador para emitir notificaciones de escritorio cuando ocurra una alerta `CRITICA` (`BAJA_TENSION` o `DESCONEXION_ABRUPTA_FOCO`), solicitando permisos al usuario. | [js/app.js](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/js/app.js) | **Media** |
-| **FE-06** | **Modal de Autenticación de Operadores** | Implementar la interfaz visual de inicio de sesión (Login) para técnicos y administradores de la Municipalidad, almacenando el token JWT en `sessionStorage` / cookie segura. | [index.html](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/index.html) | **Media** |
-| **FE-07** | **Validación Sintáctica Preventiva** | Ejecutar validación de código antes de cada entrega mediante `node -c js/app.js` y `node -c js/mqtt-client.js`. | [MANUAL_DESARROLLADOR.md](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/MANUAL_DESARROLLADOR.md#L30-L36) | **Alta** |
-| **BE-06** | **Error Boundary y Recuperación ante Fallos de MQTT/UI** | Envolver `processIncomingEvent()` y funciones de render en `try/catch` con logging. Implementar watchdog que detecte DOM inconsistente y recargue la UI. Mantener estado de tableros en `localStorage` como fallback de recuperación. Un payload corrupto no debe destruir la UI. | `js/app.js`, `index.html` | **Crítica** |
-| **FE-08** | **Accesibilidad Web WCAG 2.1 AA** | Agregar atributos ARIA a todos los componentes interactivos (tabs, modales, botones, alertas). Implementar navegación completa por teclado. Verificar contraste de colores (mínimo 4.5:1). Agregar `aria-live="polite"` a regiones de alertas dinámicas. | `index.html`, `css/styles.css`, `js/app.js` | **Media** |
-| **FE-09** | **Internacionalización i18n (Español / Inglés)** | Extraer textos hardcodeados a diccionario de traducciones. Implementar selector de idioma en header persistente en `localStorage`. Incluir textos de tableros, estados, severidades, KPIs y mensajes de consola. | `js/app.js`, `js/i18n.js` (nuevo) | **Media** |
-| **FE-10** | **Documentación de Código JSDoc y Guía de Onboarding** | Agregar JSDoc a todas las funciones públicas. Crear guía de onboarding con requisitos, setup, estructura, flujo de datos y guía de contribución. Un desarrollador nuevo debe poder entender la arquitectura en < 1 hora. | `js/app.js`, `js/mqtt-client.js`, `Documentacion/ONBOARDING.md` | **Baja** |
-| **FE-11** | **Dashboard de Analíticas de Uso Básico** | Implementar métricas locales: contador de sesiones, tiempo por tab, eventos procesados, distribución de severidades. Almacenar en localStorage y exportar como JSON desde la UI. | `js/app.js`, `index.html` | **Baja** |
-| **FE-12** | **PWA / Service Worker para Funcionalidad Offline** | Service Worker que cacheé assets estáticos. `manifest.json` con nombre/iconos/colores. En modo offline, mostrar último estado de tableros con banner "Sin conexión". Reconectar automáticamente al restaurar conectividad. | `sw.js`, `manifest.json` (nuevos), `index.html` | **Baja** |
+| ID | Historia de Usuario / Tarea | Estado | Descripción y Criterios de Aceptación | Archivos | Prioridad |
+|---|---|---|---|---|---|
+| **FE-01** | **Integración con API REST de Backend** | ❌ Pendiente | Reemplazar mock data de `appState.tableros` con `GET /api/tableros`. Cargar historial de alertas desde `GET /api/alertas` al init. Preservar modo simulación como fallback cuando la API no responde. | [js/app.js](../js/app.js) | 🟠 **ALTA** |
+| **FE-02** | **Resolución de Alertas vía API** | ❌ Pendiente | Al hacer clic en "Marcar como resuelta", enviar `PATCH /api/alertas/:id/resolver`. Actualizar KPIs y banner solo tras respuesta `200 OK` del servidor. | [js/app.js](../js/app.js) | 🟠 **ALTA** |
+| **FE-03** | **Preservar Reglas Críticas de UI y Anti-Flash** | ✅ Implementado | Script anti-flash en `<head>` activo. `#mapPinsContainer` relativo a `.map-svg-wrapper` correcto. Variables CSS de tema funcionando. Bug de menú hamburguesa corregido. | [index.html](../index.html), [css/](../css/) | 🔴 **CRÍTICA** |
+| **FE-04** | **Exportación y Filtros en Consola MQTT** | ❌ Pendiente | Botones para pausar/reanudar auto-scroll, filtrar por topic (`neuquen/iluminacion/#` vs `api/evento`) y exportar logs a CSV/JSON. | [js/app.js](../js/app.js) | 🟡 **MEDIA** |
+| **FE-05** | **Notificaciones Push Web** | ❌ Pendiente | `Notification API` del navegador para alertas `CRITICA`. Solicitar permisos al usuario. Activar solo si el usuario concede permiso. | [js/app.js](../js/app.js) | 🟡 **MEDIA** |
+| **FE-06** | **Modal de Autenticación de Operadores** | ❌ Pendiente | UI de Login para técnicos y administradores. Almacenar token JWT en `sessionStorage`. Enviar `Authorization: Bearer <token>` en cada request a la API. | [index.html](../index.html) | 🟡 **MEDIA** |
+| **FE-07** | **Validación Sintáctica Preventiva** | ✅ Implementado | `node -c js/app.js` y `node -c js/mqtt-client.js` pasan sin errores. `check_syntax.py` disponible en raíz. | [check_syntax.py](../check_syntax.py) | 🟢 **BAJA** |
+| **BE-06** | **Error Boundary y Recuperación ante Fallos de MQTT/UI** | 🟡 Parcial | `processIncomingEvent()` tiene `if (!event) return` pero sin `try/catch` global. Faltan: watchdog DOM, persistencia de estado de tableros en `localStorage` como fallback de recuperación. | [js/app.js](../js/app.js) | 🔴 **CRÍTICA** |
+| **FE-08** | **Accesibilidad Web WCAG 2.1 AA** | 🟡 Parcial | Algunos botones tienen `aria-label`. Faltan: `aria-live="polite"` en región de alertas, navegación completa por teclado, verificación de contraste. | [index.html](../index.html), [js/app.js](../js/app.js) | 🟡 **MEDIA** |
+| **FE-09** | **Internacionalización i18n (Español / Inglés)** | ❌ Pendiente | Extraer textos hardcodeados a diccionario. Selector de idioma persistente en `localStorage`. Afecta tableros, estados, severidades, KPIs y consola. | [js/app.js](../js/app.js) | 🟡 **MEDIA** |
+| **FE-10** | **Documentación JSDoc y Guía de Onboarding** | 🟡 Parcial | Existen comentarios de sección pero sin JSDoc formal en funciones. `MANUAL_DESARROLLADOR.md` cubre setup básico. Falta `Documentacion/ONBOARDING.md` completo. | [js/app.js](../js/app.js), [js/mqtt-client.js](../js/mqtt-client.js) | 🟢 **BAJA** |
+| **FE-11** | **Dashboard de Analíticas de Uso Básico** | ❌ Pendiente | Contadores de sesiones, tiempo por tab, eventos procesados, distribución de severidades. Almacenar en localStorage y exportar como JSON. | [js/app.js](../js/app.js) | 🟢 **BAJA** |
+| **FE-12** | **PWA / Service Worker para Funcionalidad Offline** | ❌ Pendiente | `sw.js` + `manifest.json`. Cachear assets estáticos. Banner "Sin conexión" con último estado conocido. Reconexión automática. | `sw.js` (nuevo), `manifest.json` (nuevo) | 🟢 **BAJA** |
 
 ---
 
 ## 3. ⚙️ Backlog: Equipo Backend
 
-El equipo de Backend desarrollará la API REST y el servicio Ingestor MQTT encargado de escuchar los eventos del hardware de la EPET 14 y persistirlos en la Base de Datos.
-
-| ID | Historia de Usuario / Tarea | Descripción y Criterios de Aceptación | Especificación de Referencia | Prioridad |
-|---|---|---|---|---|
-| **BE-01** | **Servicio Ingestor MQTT (Worker Subscriber)** | Crear un microservicio (Node.js/FastAPI/Go) que se conecte al broker Mosquitto en TCP `1883`, se suscriba a `neuquen/iluminacion/#` y `api/evento`, valide los payloads y los inserte en la base de datos. | [DOCUMENTACION_TECNICA.md](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/Documentacion/DOCUMENTACION_TECNICA.md#L193-L288) | **Alta** |
-| **BE-02** | **Validación del Contrato JSON de Eventos** | Implementar validadores (Schema Zod / Pydantic) strictly para los 4 tipos de evento coordinados con EPET 14: `BAJA_TENSION`, `DESCONEXION_ABRUPTA_FOCO`, `FOCO_QUEMADO` y `TELEMETRIA_NORMAL`. **No renombrar campos**. | [CONTEXTO_TECNICO.md](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/Documentacion/CONTEXTO_TECNICO.md#L143-L220) | **Alta** |
-| **BE-03** | **Endpoints REST de Tableros y Alertas** | Desarrollar la API REST: <br>• `GET /api/tableros` (obtener estados actuales de tableros y focos)<br>• `GET /api/alertas` (historial de alertas con paginado y filtro por severidad)<br>• `PATCH /api/alertas/:id/resolver` (cambiar estado a resuelta). | [DOCUMENTACION_TECNICA_DRAFT(1).md](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/Documentacion/DOCUMENTACION_TECNICA_DRAFT%281%29.md#L125-L130) | **Alta** |
-| **BE-04** | **Autenticación JWT y Control de Acceso (RBAC)** | Crear endpoints `POST /api/auth/login` y middleware de autenticación con roles (`Operador`, `Técnico`, `Administrador`). | Espec. Seguridad | **Media** |
-| **BE-05** | **API Histórica de Telemetría y Métricas** | Endpoint `GET /api/telemetria/historico?tablero_id=TABLERO_01&desde=...&hasta=...` para alimentar futuras gráficas de tensión y consumo eléctrico. | Espec. Métricas | **Baja** |
-| **SEC-01** | **Seguridad en Capa de Red: CORS, Rate Limiting, Security Headers** | Configurar política CORS para dominio de la Municipalidad. Rate limiting por IP (100 req/min público, 1000 req/min autenticado). Headers: `CSP`, `X-Content-Type-Options`, `HSTS`. Requests no autorizados → `403`. Exceso → `429 Retry-After`. | `src/server.js`, `nginx.conf` | **Crítica** |
-| **SEC-02** | **Capa de Integridad de Datos en Ingestor MQTT** | Deduplicación por `id_tablero + timestamp` (ventana 5s). Validación tamaño máximo payload (4KB). Rate limiting por tablero (máx 10 evt/s). Cola de mensajes con backpressure si BD no responde. | `src/worker/mqtt_subscriber.py/.js` | **Crítica** |
-| **BE-07** | **Connection Pooling y Retry Strategy para PostgreSQL** | Pool de conexiones (min 5, max 20). Retry con backoff exponencial (3 intentos, delay 100ms, factor 2). Health check a PostgreSQL en docker-compose para evitar intentos de conexión prematuros. | Config Backend, `docker-compose.yml` | **Alta** |
-| **BE-08** | **Health Check Endpoint y Circuit Breaker** | Endpoint `GET /api/health` con estado de BD, MQTT. Circuit breaker: tras 5 fallos consecutivos de BD, retorna `503 Retry-After` por 30s antes de reintentar. Nginx usa este endpoint para detectar backend caído. | `src/server.js`, `nginx.conf` | **Alta** |
-| **BE-09** | **Logging Estructurado y Correlación de Eventos** | Logging JSON con `timestamp`, `level`, `service`, `correlation_id`, `event_type`, `tablero_id`. Propagar correlation_id desde MQTT hasta BD. Rotación de logs (100MB/archivo, 30 días retención). | Config logging Backend/Worker | **Media** |
-| **SEC-03** | **Audit Logging y Registro de Seguridad** | Tabla `audit_log` con `user_id`, `action`, `resource`, `ip_address`, `details_json`. Registrar: login/logout, resolución de alertas, accesos a endpoints sensibles, reinicios del worker. Retención 1 año mínimo. | Tabla `audit_log`, middleware auth | **Media** |
+| ID | Historia de Usuario / Tarea | Estado | Descripción y Criterios de Aceptación | Referencias | Prioridad |
+|---|---|---|---|---|---|
+| **BE-01** | **Servicio Ingestor MQTT (Worker Subscriber)** | ✅ Implementado | Microservicio Node.js que se conecte al broker Mosquitto en TCP `1883`, suscriba a `neuquen/iluminacion/#` y `api/evento`, valide payloads y llame a `persistenciaService.persistEvent()`. Reconexión automática con backoff exponencial. | [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md) | 🔴 **CRÍTICA** |
+| **BE-02** | **Validación del Contrato JSON** | ✅ Implementado | Validar campos específicos por tipo (`tension_medida_v`, `id_foco`, etc.) con Zod en `src/validators/eventSchema.js`. Rechazar payloads malformados sin tumbar el worker. | [CONTEXTO_TECNICO.md](CONTEXTO_TECNICO.md) | 🔴 **CRÍTICA** |
+| **BE-03** | **Endpoints REST de Tableros y Alertas** | 🟡 Parcial | Existe `POST /api/eventos`. **Faltan**: `GET /api/tableros`, `GET /api/alertas` (con paginación y filtro por severidad), `PATCH /api/alertas/:id/resolver`. | [eventController.js](../backend/src/controllers/eventController.js) | 🟠 **ALTA** |
+| **BE-04** | **Autenticación JWT y Control de Acceso (RBAC)** | ❌ Pendiente | `POST /api/auth/login` + middleware de autenticación. Roles: `Operador`, `Técnico`, `Administrador`. Proteger `PATCH /api/alertas/:id/resolver` con rol mínimo `Técnico`. | — | 🟡 **MODERADO** |
+| **BE-05** | **API Histórica de Telemetría** | ❌ Pendiente | `GET /api/telemetria/historico?tablero_id=TABLERO_01&desde=...&hasta=...` para alimentar gráficas de tensión y consumo. La tabla `lecturas` ya está en el esquema. | — | 🟢 **LEVE** |
+| **SEC-01** | **Seguridad en Capa de Red: CORS, Rate Limiting, Headers** | 🟡 Parcial | CORS con lista blanca ✅. Rate limiting 100 req/min ✅. **Faltan**: `Content-Security-Policy`, `X-Content-Type-Options`, `Strict-Transport-Security` en headers de respuesta. Configurar dominio real de la Municipalidad en `CORS_ORIGIN`. | [backend/src/app.js](../backend/src/app.js) | 🔴 **CRÍTICA** |
+| **SEC-02** | **Integridad de Datos en Ingestor MQTT** | ✅ Implementado | Deduplicación por `id_tablero + timestamp` (ventana 5s). Límite de payload 4KB. Rate limiting por tablero (máx 10 evt/s). Cola con backpressure. | — | 🔴 **CRÍTICA** |
+| **BE-07** | **Connection Pooling y Retry Strategy para PostgreSQL** | 🟡 Parcial | Pool `pg` configurado con `max: 10` en `database.js`. **Falta**: retry con backoff exponencial, health check en docker-compose para evitar conexiones prematuras. | [backend/src/config/database.js](../backend/src/config/database.js) | 🟠 **ALTA** |
+| **BE-08** | **Health Check y Circuit Breaker** | 🟡 Parcial | `GET /api/health` responde con estado de BD ✅. **Falta**: circuit breaker (5 fallos → `503 Retry-After 30s`) y estado de MQTT en el health check. | [backend/src/routes/healthRoutes.js](../backend/src/routes/healthRoutes.js) | 🟠 **ALTA** |
+| **BE-09** | **Logging Estructurado y Correlación de Eventos** | 🟡 Parcial | Request logger inline activo ✅. **Falta**: logging JSON estructurado con `correlation_id`, `service`, `event_type`. Rotación de logs. Propagación de `correlation_id` desde MQTT hasta BD. | [backend/src/app.js](../backend/src/app.js) | 🟡 **MODERADO** |
+| **SEC-03** | **Audit Logging y Registro de Seguridad** | ❌ Pendiente | Tabla `audit_log` con `user_id`, `action`, `resource`, `ip_address`, `details_json`. Registrar login/logout, resolución de alertas, reinicios del worker. Retención mínima 1 año. | — | 🟡 **MODERADO** |
 
 ---
 
 ## 4. 🗄️ Backlog: Administradores de la Base de Datos (DBA)
 
-El equipo DBA diseñará la estructura relacional, optimizaciones de series temporales y políticas de respaldo para almacenar mediciones y eventos del sistema.
-
-| ID | Historia de Usuario / Tarea | Descripción y Criterios de Aceptación | Componentes / Tablas | Prioridad |
-|---|---|---|---|---|
-| **DB-01** | **Diseño e Implementación de Esquema ER** | Crear la estructura de tablas relacionales en PostgreSQL:<br>• `tableros` (id, nombre, ubicacion, fase, pos_x, pos_y, tension_v, etc.)<br>• `luminarias` (id, tablero_id, estado, corriente_ma, ubicacion)<br>• `alertas` (id, tablero_id, tipo_evento, severidad, timestamp, datos_json, resuelta, resuelta_por, fecha_resolucion)<br>• `usuarios` (id, username, password_hash, rol). | `tableros`, `luminarias`, `alertas`, `usuarios` | **Alta** |
-| **DB-02** | **Configuración de Series Temporales (TimescaleDB)** | Configurar la tabla `mediciones_telemetria` como una **Hypertable** en TimescaleDB o particionado por rango de fecha para soportar ingesta masiva de tensión/corriente sin degradación de lectura. | `mediciones_telemetria` | **Alta** |
-| **DB-03** | **Estrategia de Índices y Optimización de Queries** | Crear índices compuestos B-Tree en `(tablero_id, timestamp)` y `(severidad, resuelta)` para garantizar respuestas en < 50ms para las vistas del dashboard y mapa. | Indexing Strategy | **Media** |
-| **DB-04** | **Políticas de Retención y Purga de Datos (Data Lifecycle)** | Configurar job de agregación diaria/mensual y purga automática de mediciones de telemetría de grano fino mayores a 6 meses para optimizar espacio en disco. | Data Retention Policy | **Media** |
-| **DB-05** | **Plan de Backup y Recuperación ante Desastres** | Implementar tareas cron automáticas de respaldos (`pg_dump` diferencial diario + completo semanal) con almacenamiento en volumen seguro. | Backup & Disaster Recovery | **Alta** |
+| ID | Historia de Usuario / Tarea | Estado | Descripción y Criterios de Aceptación | Tablas | Prioridad |
+|---|---|---|---|---|---|
+| **DB-01** | **Diseño e Implementación de Esquema ER** | ✅ **Implementado** | Tablas `zonas`, `tableros`, `sensores`, `lecturas`, `alertas`, `estadisticas_zona` creadas con constraints, checks y claves foráneas. Migración `001_init_schema.sql`. Seed `001_zonas_tableros.sql`. | Todas | 🟠 **ALTA** |
+| **DB-02** | **Series Temporales (TimescaleDB / Particionado)** | ❌ Pendiente | Configurar `lecturas` como Hypertable en TimescaleDB o particionado por rango de fecha. La tabla ya existe pero sin optimización de series temporales. | `lecturas` | 🟠 **ALTA** |
+| **DB-03** | **Estrategia de Índices y Optimización** | ✅ **Implementado** | Índices `idx_lecturas_sensor_timestamp`, `idx_alertas_tablero_fecha`, `idx_alertas_activas_tablero` (parcial), `idx_estadisticas_zona_periodo` creados en la migración. | Todas | 🟡 **MODERADO** |
+| **DB-04** | **Políticas de Retención y Purga de Datos** | 🟡 Parcial | `retencionService.js` existe con lógica de purga. `mantenimientoScheduler.js` lo ejecuta periódicamente. **Falta**: configurar ventana de retención por variable de entorno, agregación diaria en `estadisticas_zona`. | `lecturas`, `estadisticas_zona` | 🟡 **MODERADO** |
+| **DB-05** | **Plan de Backup y Recuperación ante Desastres** | ❌ Pendiente | Cron automático de `pg_dump` (diferencial diario + completo semanal). Almacenamiento en volumen seguro. Script de restauración documentado. | — | 🟠 **ALTA** |
 
 ---
 
 ## 5. ☁️ Backlog: Administrador de Servidores / DevOps
 
-El SysAdmin / DevOps será responsable de empaquetar, asegurar y desplegar los servicios en los servidores de la Municipalidad de Neuquén.
-
-| ID | Historia de Usuario / Tarea | Descripción y Criterios de Aceptación | Archivos / Componentes | Prioridad |
-|---|---|---|---|---|
-| **DO-01** | **Configuración y Hardening del Broker Mosquitto** | Configurar Mosquitto en producción con:<br>• Listener TCP `1883` para ESP32.<br>• Listener WebSockets `9001` (`/mqtt`) para el navegador.<br>• Habilitar autenticación por credenciales/certificados para los dispositivos hardware de EPET 14. | [README_MQTT_UI.md](file:///home/pachorra/PROYECTOS/Proyecto%20Luminaria/Luminaria-/README_MQTT_UI.md#L48-L64), `mosquitto.conf` | **Alta** |
-| **DO-02** | **Contenerización Completa (`docker-compose.yml`)** | Crear `Dockerfile` para Backend y `docker-compose.yml` integrando: Broker Mosquitto, Backend REST, PostgreSQL/TimescaleDB y Nginx Reverse Proxy. | `Dockerfile`, `docker-compose.yml` | **Alta** |
-| **DO-03** | **Servidor Web y Proxy Inverso Nginx (HTTPS & WSS)** | Configurar Nginx para servir los archivos estáticos de la UI web, enrutar la API REST (`/api/`) y realizar proxy passthrough seguro de WebSockets para MQTT (`/mqtt`). Instalar certificados SSL/TLS (Let's Encrypt / Certbot). | `nginx.conf`, Certbot | **Alta** |
-| **DO-04** | **Pipeline Integrado de CI/CD** | Implementar GitHub Actions / GitLab CI que ejecute validaciones estáticas (`node -c`), builds de contenedores Docker y despliegue automático al servidor de staging/producción. | `.github/workflows/ci.yml` | **Media** |
-| **DO-05** | **Monitoreo de Infraestructura y Logs** | Implementar métricas con Prometheus + Grafana para supervisar estado de salud de contenedores, uso de memoria/CPU y conexiones activas en Mosquitto. | Prometheus, Grafana | **Media** |
-| **DO-06** | **Separación de Entornos Staging / Producción** | Archivos `.env` separados para staging y producción. `docker-compose.prod.yml` con restricciones de recursos (CPU/RAM limits). Variables sensibles nunca en código fuente ni en historial de git. | `.env.production`, `.env.staging`, `docker-compose.prod.yml` | **Alta** |
-| **DO-07** | **Pruebas de Carga y Stress Testing** | Scripts con `k6`/`locust`/`artillery` que simulen: 50 ESP32 simultáneos, 100 usuarios web, pico de 500 msgs MQTT en 10s. Medir latencia, memoria y tiempo de recuperación. Documentar capacity plan. | Scripts test, `docker-compose.test.yml` | **Media** |
+| ID | Historia de Usuario / Tarea | Estado | Descripción y Criterios de Aceptación | Archivos | Prioridad |
+|---|---|---|---|---|---|
+| **DO-01** | **Configuración y Hardening del Broker Mosquitto** | ✅ Implementado | Mosquitto con TCP `1883` para ESP32 y WebSockets `9001` para navegador. Autenticación por credenciales para hardware EPET 14. Archivo `mosquitto.conf` versionado. | `deploy/mosquitto/mosquitto.conf` | 🔴 **CRÍTICA** |
+| **DO-02** | **Contenerización Completa (`docker-compose.yml`)** | 🟡 Parcial | `docker-compose.db.yml` levanta solo PostgreSQL. **Falta**: Dockerfile de backend, servicio Mosquitto, Nginx reverse proxy y orquestación completa en un solo `docker-compose.yml`. | [docker-compose.db.yml](../docker-compose.db.yml) | 🟠 **ALTA** |
+| **DO-03** | **Nginx + SSL/TLS (HTTPS y WSS)** | ✅ Implementado | Nginx para servir frontend estático, enrutar `/api/` al backend y proxy WebSockets `/mqtt` a Mosquitto. Let's Encrypt / Certbot para certificados. | `deploy/nginx/nginx.conf` | 🔴 **CRÍTICA** |
+| **DO-04** | **Pipeline CI/CD** | ❌ Pendiente | GitHub Actions que ejecute `node -c` + tests Docker + despliegue automático a staging/producción. | `.github/workflows/ci.yml` (nuevo) | 🟡 **MODERADO** |
+| **DO-05** | **Monitoreo de Infraestructura (Prometheus + Grafana)** | ❌ Pendiente | Métricas de CPU/RAM/conexiones de Mosquitto. Dashboard de Grafana para supervisión operativa. | — | 🟡 **MODERADO** |
+| **DO-06** | **Separación de Entornos Staging / Producción** | 🟡 Parcial | `.env.example` versionado ✅. **Falta**: `.env.production`, `.env.staging`, `docker-compose.prod.yml` con límites de recursos CPU/RAM. | [backend/.env.example](../backend/.env.example) | 🟠 **ALTA** |
+| **DO-07** | **Pruebas de Carga y Stress Testing** | ❌ Pendiente | Scripts `k6`/`artillery` simulando 50 ESP32 simultáneos, 100 usuarios web, pico de 500 msgs MQTT en 10s. Capacity plan documentado. | — | 🟡 **MODERADO** |
 
 ---
 
 ## 6. ✅ Criterios de Aceptación Transversales (Definition of Done)
 
-1. **Contrato JSON Intacto:** Ninguna tarea de Backend o Frontend debe modificar los nombres de las claves JSON del hardware (`tipo_evento`, `id_tablero`, `tension_medida_v`, `id_foco`, etc.).
-2. **Respeto de Reglas de UI:** Las modificaciones en Frontend deben mantener el soporte de **Tema Claro / Oscuro**, la respuesta **Responsive** en dispositivos móviles y el anclaje del **Mapa de Zonas**.
-3. **Validación Sin Errores:** Todos los cambios en archivos JavaScript deben pasar la verificación `node -c <archivo.js>` antes de incorporarse a la rama principal.
-4. **Variables CSS para Colores:** Cualquier componente nuevo debe usar las variables CSS existentes (`var(--bg-card)`, `var(--text-primary)`, etc.) en lugar de colores hardcodeados, para que el tema claro los respete automáticamente.
-5. **Sanitización de Datos Dinámicos:** Todo dato proveniente de MQTT o la API debe pasar por `escapeHtml()` antes de insertarse en `innerHTML`. Nunca usar `innerHTML` con strings no sanitizados.
+1. **Contrato JSON Intacto:** Ninguna tarea de Backend o Frontend debe modificar los nombres de las claves JSON del hardware (`tipo_evento`, `id_tablero`, `tension_medida_v`, `id_foco`, `corriente_actual_ma`, `focos_restaurados`).
+2. **Respeto de Reglas de UI:** Las modificaciones en Frontend deben mantener soporte de **Tema Claro / Oscuro**, respuesta **Responsive** en móviles y anclaje del **Mapa de Zonas** (`#mapPinsContainer` siempre dentro de `.map-svg-wrapper`).
+3. **Validación Sin Errores:** Todos los cambios en archivos JavaScript deben pasar `node -c <archivo.js>` antes de incorporarse a la rama principal.
+4. **Variables CSS para Colores:** Cualquier componente nuevo debe usar variables CSS existentes (`var(--bg-card)`, `var(--text-primary)`, etc.).
+5. **Sanitización de Datos Dinámicos:** Todo dato de MQTT o API debe pasar por `escapeHtml()` antes de insertar en `innerHTML`. Nunca usar `innerHTML` con strings no sanitizados.
 6. **Logging Estructurado en Backend:** Todo endpoint REST y el worker MQTT deben generar logs JSON estructurados con `correlation_id` para trazabilidad.
 7. **Rate Limiting en Endpoints Públicos:** Los endpoints de la API REST deben incluir rate limiting antes de ser expuestos a producción.
+8. **Sin Exposición de Stack Traces:** El manejador de errores de Express no debe exponer `stack` en entorno `production`.
+
+---
+
+## 7. 📊 Resumen de Estado del Sprint
+
+| Categoría | Total Tareas | Implementado | Parcial | Pendiente |
+|---|---|---|---|---|
+| **Frontend** | 13 | 3 (FE-03, FE-07, BE-06 parcial) | 3 | 7 |
+| **Backend** | 10 | 0 | 6 | 4 |
+| **DBA** | 5 | 2 (DB-01, DB-03) | 1 | 2 |
+| **DevOps** | 7 | 0 | 2 | 5 |
+| **TOTAL** | **35** | **5** | **12** | **18** |
+
+> [!IMPORTANT]
+> El **Ingestor MQTT (BE-01)** es el bloqueante más crítico de todo el sistema. Sin él, ningún evento del hardware ESP32 se persistirá en la base de datos, aunque el esquema y el servicio de persistencia ya estén listos.
+
+> [!WARNING]
+> La tabla `usuarios` **NO existe** en el esquema actual (`001_init_schema.sql`). Antes de implementar RBAC (BE-04), se debe crear esta tabla en una nueva migración.

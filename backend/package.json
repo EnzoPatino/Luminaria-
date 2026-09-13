@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "worker:mqtt": "node src/workers/mqttSubscriber.js",
     "db:migrate": "node src/scripts/migrate.js",
     "db:seed": "node src/scripts/seed.js",
     "db:maintenance": "node src/scripts/mantenimiento.js"
@@ -15,6 +16,10 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^8.7.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "zod": "^4.6.4"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
   }
 }

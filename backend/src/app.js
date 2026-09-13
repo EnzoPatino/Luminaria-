@@ -3,11 +3,11 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const routes = require('./routes');
-const { closePool } = require('./config/database');
 
 const app = express();
 
 app.disable('x-powered-by');
+app.set('trust proxy', config.trustProxy);
 
 // BB-04: Request logger inline para trazabilidad de peticiones
 app.use((req, res, next) => {
@@ -82,18 +82,11 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({
     status: 'error',
     statusCode,
+    ...(err.code && { code: err.code }),
     message: err.message || 'Error interno del servidor.',
+    ...(err.details && { details: err.details }),
     ...(config.env === 'development' && { stack: err.stack }),
   });
 });
 
-process.once('SIGINT', async () => {
-  await closePool();
-});
-
-process.once('SIGTERM', async () => {
-  await closePool();
-});
-
 module.exports = app;
-
