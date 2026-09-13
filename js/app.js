@@ -5,6 +5,8 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+  const API_BASE_URL = "http://localhost:3000/api";
+  const API_TIMEOUT_MS = 5000;
   // ==========================================
   // ESTADO DE LA APLICACIÓN
   // ==========================================
@@ -79,6 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
     activeFilter: "ALL",
     soundEnabled: true,
     expandedTableroId: null,
+    apiAvailable: false,
     sensor: {
       apiKey: "ClaveUnicaParaSensoresToken123",
       temperatura: 23.0,
@@ -175,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
   // INICIALIZACIÓN
   // ==========================================
-  function init() {
+  async function init() {
     setupTabNavigation();
     setupEventListeners();
     setupMqttCallbacks();
@@ -189,7 +192,124 @@ document.addEventListener("DOMContentLoaded", () => {
     updateSensorUI();
 
     // Conectar a MQTT o Modo Simulación
-    window.luminariaMQTT.connect();
+    await loadInitialData();
+    if (window.luminariaMQTT) window.luminariaMQTT.connect();
+  }
+
+  // REST remains optional: this timeout-bound helper makes local simulation a
+  // fail-safe fallback when the server or network is unavailable.
+  async function requestAPI(path, options = {}) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers: { Accept: "application/json", ...(options.headers || {}) },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`API ${response.status}: ${path}`);
+      const body = await response.json();
+      if (!body || body.status !== "ok") throw new Error(`Invalid API response: ${path}`);
+      return body.data;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  async function fetchTablerosFromAPI() {
+    const tableros = await requestAPI("/tableros");
+    if (!Array.isArray(tableros)) throw new Error("Invalid boards list.");
+    return tableros;
+  }
+
+  async function fetchAlertasFromAPI() {
+    const alertas = await requestAPI("/alertas");
+    if (!Array.isArray(alertas)) throw new Error("Invalid alerts list.");
+    return alertas;
+  }
+
+  async function resolveAlertaAPI(id) {
+    return requestAPI(`/alertas/${encodeURIComponent(String(id))}/resolver`, {
+      method: "PATCH",
+    });
+  }
+
+  function toFiniteNumber(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function normalizarTableroAPI(tablero) {
+    const focos = {};
+    if (Array.isArray(tablero.focos)) {
+      tablero.focos.forEach((foco) => {
+        const id = foco && foco.id_foco != null ? String(foco.id_foco) : "";
+        if (!id) return;
+        focos[id] = {
+          id,
+          corriente_ma: toFiniteNumber(foco.corriente_medida_ma, 0),
+          estado: ["ok", "robado", "quemado"].includes(foco.estado) ? foco.estado : "ok",
+        };
+      });
+    }
+    return {
+      id: String(tablero.id_tablero),
+      nombre: tablero.nombre_tablero || tablero.id_tablero,
+      ubicacion: tablero.ubicacion || "Ubicacion no informada",
+      posX: Math.min(Math.max(toFiniteNumber(tablero.pos_x, 50), 0), 100),
+      posY: Math.min(Math.max(toFiniteNumber(tablero.pos_y, 50), 0), 100),
+      tension_v: toFiniteNumber(tablero.tension_medida_v, toFiniteNumber(tablero.tension_nominal, 220)),
+      tension_nominal_v: toFiniteNumber(tablero.tension_nominal, 220),
+      fase: tablero.fase || "L1",
+      estado: tablero.estado || "ok",
+      focos,
+    };
+  }
+
+  function normalizarAlertaAPI(alerta) {
+    const tipo = alerta.tipo_alerta || "ALERTA";
+    const severidad = ["CRITICA", "ADVERTENCIA", "INFO"].includes(alerta.prioridad)
+      ? alerta.prioridad
+      : "INFO";
+    return {
+      id: String(alerta.id_alerta),
+      tipo_evento: tipo,
+      severidad,
+      titulo: `${tipo.replace(/_/g, " ")} en ${alerta.id_tablero || "tablero"}`,
+      timestamp: alerta.fecha_hora_generada || new Date().toISOString(),
+      ubicacion: alerta.ubicacion || "Ubicacion no informada",
+      datos: alerta.datos_json && typeof alerta.datos_json === "object" ? alerta.datos_json : {},
+      id_tablero: String(alerta.id_tablero || ""),
+      resuelta: alerta.estado_alerta === "resuelta",
+    };
+  }
+
+  async function loadInitialData() {
+    try {
+      const [tablerosAPI, alertasAPI] = await Promise.all([
+        fetchTablerosFromAPI(),
+        fetchAlertasFromAPI(),
+      ]);
+      const tableros = Object.fromEntries(
+        tablerosAPI
+          .filter((tablero) => tablero && tablero.id_tablero != null)
+          .map((tablero) => {
+            const normalized = normalizarTableroAPI(tablero);
+            return [normalized.id, normalized];
+          }),
+      );
+      if (Object.keys(tableros).length === 0) throw new Error("No persisted boards.");
+      appState.tableros = tableros;
+      appState.alerts = alertasAPI.map(normalizarAlertaAPI);
+      appState.apiAvailable = true;
+      if (!appState.tableros[appState.selectedTableroId]) {
+        appState.selectedTableroId = Object.keys(appState.tableros)[0];
+      }
+      refreshAllViews();
+    } catch (error) {
+      appState.apiAvailable = false;
+      console.warn("[Luminaria] API REST unavailable; using local simulation.", error);
+    }
   }
 
   // ==========================================
@@ -1130,14 +1250,32 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="alert-location"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(alert.ubicacion)}</div>
         ${detailsHtml ? `<div class="alert-details-grid">${detailsHtml}</div>` : ""}
         <div class="alert-actions">
-          <button class="btn btn-secondary btn-sm btn-resolve" data-id="${alert.id}">
+          <button class="btn btn-secondary btn-sm btn-resolve">
             <i class="fas ${alert.resuelta ? "fa-check-double" : "fa-check"}"></i> ${alert.resuelta ? "Resuelta" : "Marcar Resuelta"}
           </button>
         </div>
       `;
 
       const btnResolve = card.querySelector(".btn-resolve");
-      btnResolve.addEventListener("click", () => {
+      btnResolve.addEventListener("click", async () => {
+        if (appState.apiAvailable) {
+          if (alert.resuelta) return;
+          btnResolve.disabled = true;
+          try {
+            await resolveAlertaAPI(alert.id);
+            // Update only after the server has confirmed persistence.
+            alert.resuelta = true;
+            renderAlerts();
+            updateKPIs();
+            renderMapPins();
+          } catch (error) {
+            console.warn("[Luminaria] No se pudo resolver la alerta en la API.", error);
+            btnResolve.disabled = false;
+          }
+          return;
+        }
+
+        // In explicit simulation fallback, preserve the original local toggle.
         alert.resuelta = !alert.resuelta;
         renderAlerts();
         updateKPIs();

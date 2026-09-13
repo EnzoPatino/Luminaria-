@@ -84,4 +84,66 @@ async function updateDerivedState(client, idTablero) {
   return result.rows[0];
 }
 
-module.exports = { upsertFromEvent, updateDerivedState };
+/**
+ * Returns the current, UI-ready state of every electrical board.  Focos are
+ * inferred from the latest alert recorded for each id_foco_afectado because
+ * the physical luminaires are reported by hardware events, not stored in a
+ * separate table in the current schema.
+ */
+async function findAll(client) {
+  const result = await client.query(
+    `SELECT
+       t.id_tablero,
+       t.nombre_tablero,
+       t.ubicacion,
+       t.pos_x,
+       t.pos_y,
+       t.fase,
+       t.tension_nominal,
+       t.estado,
+       latest.valor_tension AS tension_medida_v,
+       COALESCE(focos.focos, '[]'::jsonb) AS focos
+     FROM tableros t
+     LEFT JOIN LATERAL (
+       SELECT l.valor_tension
+       FROM sensores s
+       JOIN lecturas l ON l.id_sensor = s.id_sensor
+       WHERE s.id_tablero = t.id_tablero
+       ORDER BY l.timestamp DESC
+       LIMIT 1
+     ) latest ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT jsonb_agg(
+         jsonb_build_object(
+           'id_foco', foco.id_foco,
+           'corriente_medida_ma', foco.corriente_medida_ma,
+           'estado', foco.estado
+         ) ORDER BY foco.id_foco
+       ) AS focos
+       FROM (
+         SELECT DISTINCT ON (a.id_foco_afectado)
+           a.id_foco_afectado AS id_foco,
+           COALESCE(
+             NULLIF(a.datos_json ->> 'corriente_actual_ma', '')::numeric,
+             NULLIF(a.datos_json ->> 'corriente_medida_ma', '')::numeric,
+             0
+           ) AS corriente_medida_ma,
+           CASE
+             WHEN a.estado_alerta = 'resuelta' THEN 'ok'
+             WHEN a.tipo_alerta = 'DESCONEXION_ABRUPTA_FOCO' THEN 'robado'
+             WHEN a.tipo_alerta = 'FOCO_QUEMADO' THEN 'quemado'
+             ELSE 'ok'
+           END AS estado
+         FROM alertas a
+         WHERE a.id_tablero = t.id_tablero
+           AND a.id_foco_afectado IS NOT NULL
+         ORDER BY a.id_foco_afectado, a.fecha_hora_generada DESC
+       ) foco
+     ) focos ON TRUE
+     ORDER BY t.id_tablero ASC`
+  );
+
+  return result.rows;
+}
+
+module.exports = { upsertFromEvent, updateDerivedState, findAll };
