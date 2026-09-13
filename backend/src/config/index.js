@@ -49,4 +49,12 @@ module.exports = {
     connectTimeoutMs: toPositiveNumber(process.env.MQTT_CONNECT_TIMEOUT_MS, 10000),
     useTls: toBoolean(process.env.MQTT_USE_TLS, false),
   },
+
+  // Seccion: configuracion Supabase
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || '',
+    secretKey: process.env.SUPABASE_SECRET_KEY || '',
+    jwksUrl: process.env.SUPABASE_JWKS_URL || '',
+  },
 };

@@ -29,6 +29,9 @@
   <!-- Librería Chart.js para Gráficos Ligeros y Accesibles -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- Librería Cliente Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Anti-flash: aplica el tema y rol guardado antes de que renderice la página -->
   <script>
     (function() {
@@ -71,6 +74,11 @@
         <div class="mqtt-status-pill" title="Estado de conexión MQTT">
           <span class="status-dot disconnected" id="mqttStatusDot"></span>
           <span id="mqttStatusText">Conectando al servidor...</span>
+        </div>
+
+        <div class="supabase-status-pill" id="supabaseStatusPill" title="Estado de conexión Supabase">
+          <span class="status-dot disconnected" id="supabaseStatusDot"></span>
+          <span id="supabaseStatusText">Supabase Conectando...</span>
         </div>
 
         <button class="header-hamburger-btn" id="btnHeaderMenu" aria-label="Abrir menú de opciones" aria-expanded="false" aria-controls="headerActions" title="Menú de opciones">
@@ -533,6 +541,7 @@
   </div>
 
   <script src="js/mqtt-client.js"></script>
+  <script src="js/supabase-client.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: luminaria_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: luminaria
+      POSTGRES_USER: luminaria
+      POSTGRES_PASSWORD: luminaria_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - luminaria_pgdata:/var/lib/postgresql/data
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: luminaria_mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./deploy/mosquitto/passwords:/mosquitto/config/passwords
+      - ./deploy/mosquitto/aclfile:/mosquitto/config/aclfile
+      - luminaria_mqttdata:/mosquitto/data
+      - luminaria_mqttlog:/mosquitto/log
+
+volumes:
+  luminaria_pgdata:
+  luminaria_mqttdata:
+  luminaria_mqttlog:

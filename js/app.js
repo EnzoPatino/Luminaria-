@@ -182,6 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTabNavigation();
     setupEventListeners();
     setupMqttCallbacks();
+    setupSupabaseIntegration();
     applyStoredTheme();
     applyStoredRole();
     updateTableroUI();
@@ -891,6 +892,30 @@ document.addEventListener("DOMContentLoaded", () => {
     window.luminariaMQTT.onMessageCallback = (topic, payloadJson) => {
       processIncomingEvent(payloadJson);
     };
+  }
+
+  function setupSupabaseIntegration() {
+    if (!window.luminariaSupabase) return;
+
+    window.luminariaSupabase.onStatusChange((status) => {
+      if (!elements.mqttConsoleLog) return;
+      const timestamp = new Date().toLocaleTimeString();
+      const logRow = document.createElement("div");
+      const type = status === "connected" ? "info" : status === "error" ? "warn" : "info";
+      logRow.className = `log-row log-type-${type}`;
+
+      const message =
+        status === "connected"
+          ? `Supabase en línea (${window.luminariaSupabase.config.url})`
+          : `Supabase estado: ${status}`;
+
+      logRow.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-topic">[supabase]</span> <span class="log-text">${escapeHtml(message)}</span>`;
+
+      elements.mqttConsoleLog.prepend(logRow);
+      if (elements.mqttConsoleLog.children.length > 60) {
+        elements.mqttConsoleLog.removeChild(elements.mqttConsoleLog.lastChild);
+      }
+    });
   }
 
   function processIncomingEvent(event) {

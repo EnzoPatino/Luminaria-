@@ -264,7 +264,8 @@ html, body {
   flex-wrap: wrap;
 }
 
-.mqtt-status-pill {
+.mqtt-status-pill,
+.supabase-status-pill {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -737,13 +738,15 @@ html, body {
     gap: 0.6rem;
   }
 
-  .mqtt-status-pill {
+  .mqtt-status-pill,
+  .supabase-status-pill {
     flex: 0 0 auto;
     padding: 0.45rem;
     gap: 0;
   }
 
-  .mqtt-status-pill #mqttStatusText {
+  .mqtt-status-pill #mqttStatusText,
+  .supabase-status-pill #supabaseStatusText {
     display: none;
   }
 
