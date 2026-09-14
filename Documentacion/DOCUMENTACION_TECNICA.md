@@ -1,16 +1,23 @@
 # Documentacion Tecnica - Project Luminaria
 
 **Sistema de Monitoreo y Alertas Electricas en Tiempo Real**  
-**Municipalidad de Neuquen**
-**Version documentada:** Agosto 2026
+**Municipalidad de Neuquen**  
+**Version documentada:** Septiembre 2026
 
 ---
 
 ## 1. Alcance Actual
 
-Project Luminaria es una interfaz web estatica para monitoreo de tableros electricos de alumbrado publico. La version actual del repositorio implementa el panel de control en navegador, la integracion MQTT por WebSockets y un modo de simulacion local para pruebas sin hardware ni broker activo.
+Project Luminaria es una plataforma integral de monitoreo inteligente de tableros electricos de alumbrado publico. La arquitectura del sistema esta compuesta por:
 
-El backend REST, PostgreSQL y los contenedores Docker siguen siendo parte de la arquitectura objetivo del proyecto, pero no estan implementados en el arbol actual. Cualquier documentacion de API o base de datos debe tratarse como especificacion futura hasta que esos modulos existan en el repositorio.
+1. **Frontend Web (Vanilla JS + Supabase Client):** Panel de control institucional en tiempo real, consumo de telemetría por WebSockets/MQTT, mapas interactivos SVG, gráficos analíticos y persistencia en la nube mediante Supabase. Incluye modo de simulación offline como fallback de tolerancia a fallos.
+2. **Backend REST & Worker MQTT (Node.js + Express):** Servicio API para gestión de tableros, alertas y health check, junto a un microservicio worker que ingesta eventos por TCP (puerto 1883) directamente a PostgreSQL.
+3. **Persistencia Híbrida de Base de Datos:**
+   * **Supabase Cloud (PostgreSQL 15+):** Almacenamiento administrado en la nube con Row Level Security (RLS), tiempo real y sincronización persistente de tableros y alertas (`supabase_schema.sql`).
+   * **PostgreSQL Local:** Motor relacional con migraciones (`001_init_schema.sql`), ingestión de series temporales masivas de sensores y mantenimiento automático con agregaciones diarias.
+4. **Infraestructura Contenerizada:** Broker Eclipse Mosquitto con perfiles de acceso (TCP 1883 + WebSockets 9001), PostgreSQL y proxy inverso Nginx.
+
+> La documentación detallada para el equipo de base de datos se encuentra en [`Documentacion/MANUAL_BASE_DE_DATOS.md`](MANUAL_BASE_DE_DATOS.md).
 
 ## 2. Estructura del Repositorio
 
@@ -18,47 +25,75 @@ El backend REST, PostgreSQL y los contenedores Docker siguen siendo parte de la 
 Project_Luminaria/
 |-- index.html
 |-- css/
-|   `-- styles.css
+|   |-- global.css
+|   |-- tableros.css
+|   |-- mapa.css
+|   |-- alertas.css
+|   |-- consola.css
+|   |-- modales.css
+|   `-- telemetria.css
 |-- js/
 |   |-- app.js
-|   `-- mqtt-client.js
+|   |-- mqtt-client.js
+|   `-- supabase-client.js
+|-- backend/
+|   |-- server.js
+|   |-- package.json
+|   `-- src/
+|       |-- app.js
+|       |-- config/
+|       |-- controllers/
+|       |-- db/ (migrations & seeds)
+|       |-- routes/
+|       |-- services/
+|       |-- validators/
+|       `-- workers/
+|-- deploy/
+|   |-- mosquitto/
+|   `-- nginx/
 |-- Documentacion/
+|   |-- MANUAL_BASE_DE_DATOS.md
 |   |-- DOCUMENTACION_TECNICA.md
 |   |-- CONTEXTO_TECNICO.md
-|   |-- DOCUMENTACION_TECNICA_DRAFT(1).md
-|   `-- Reporte_MQTT_Pasantias_corregido.docx
+|   |-- MATRIZ_DE_TAREAS_POR_NIVEL.md
+|   `-- PLAN_DE_TRABAJO_SCRUM.md
+|-- supabase_schema.sql
+|-- docker-compose.yml
+|-- docker-compose.db.yml
 |-- MANUAL_DESARROLLADOR.md
 |-- README.md
-`-- README_MQTT_UI.md
+`-- README_DB.md
 ```
-
-### Archivos principales
-
-- `index.html`: estructura de la aplicacion, cabecera, KPIs, tabs, mapa, historial, consola y modales. Incluye un script anti-flash inline en el `<head>` que aplica el tema guardado antes de pintar la pagina.
-- `css/styles.css`: sistema visual responsive con tema oscuro por defecto y tema claro (`[data-theme="light"]`). Variables CSS centralizadas en `:root` para todos los colores. Estados semaforo y ajustes moviles.
-- `js/app.js`: estado de tableros, renderizado de UI, procesamiento de eventos, filtros, sonidos y toggle de tema claro/oscuro con persistencia en `localStorage`.
-- `js/mqtt-client.js`: cliente Paho MQTT sobre WebSockets, persistencia de configuracion y fallback a simulacion.
 
 ---
 
 ## 3. Arquitectura en Ejecucion
 
 ```text
-[ESP32 / Gateway]
-          |
-          | MQTT TCP 1883
-          v
-[Broker Mosquitto]
-          |
-          | MQTT WebSocket 9001 /mqtt
-          v
-[Navegador: index.html + Paho MQTT]
-          |
-          v
-[app.js: estado local, alertas, mapa, KPIs y consola]
+               ┌──────────────────────────────────────────────┐
+               │         HARDWARE ESP32 / SENSORES            │
+               └──────────────────────┬───────────────────────┘
+                                      │ MQTT TCP 1883
+                                      ▼
+               ┌──────────────────────────────────────────────┐
+               │           BROKER MOSQUITTO (MQTT)            │
+               └──────────────┬────────────────┬──────────────┘
+                              │ WS 9001 (/mqtt)│ TCP 1883
+                              ▼                ▼
+         ┌─────────────────────────┐     ┌────────────────────────────┐
+         │ NAVEGADOR (FRONTEND)    │     │ BACKEND WORKER INGESTOR    │
+         │ • index.html + Paho     │     │ • Node.js subscriber       │
+         │ • supabase-client.js    │     │ • Validación Zod           │
+         │ • app.js (UI en vivo)   │     │ • REST API (/api/)         │
+         └────────────┬────────────┘     └─────────────┬──────────────┘
+                      │                                │
+                      ▼ HTTPS / Realtime               ▼ Pool pg
+         ┌─────────────────────────┐     ┌────────────────────────────┐
+         │ SUPABASE CLOUD (PG)     │     │ POSTGRESQL LOCAL           │
+         │ • Tableros & Alertas    │     │ • Lecturas telemétricas    │
+         │ • Row Level Security    │     │ • Mantenimiento & Purga    │
+         └─────────────────────────┘     └────────────────────────────┘
 ```
-
-Si la libreria Paho no esta disponible o la conexion al broker falla, `mqtt-client.js` activa el modo simulacion. En ese modo, las publicaciones se procesan internamente mediante el mismo callback que usa MQTT real.
 
 ---
 

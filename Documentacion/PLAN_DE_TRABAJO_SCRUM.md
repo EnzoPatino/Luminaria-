@@ -39,8 +39,8 @@
 
 | ID | Historia de Usuario / Tarea | Estado | Descripción y Criterios de Aceptación | Archivos | Prioridad |
 |---|---|---|---|---|---|
-| **FE-01** | **Integración con API REST de Backend** | ❌ Pendiente | Reemplazar mock data de `appState.tableros` con `GET /api/tableros`. Cargar historial de alertas desde `GET /api/alertas` al init. Preservar modo simulación como fallback cuando la API no responde. | [js/app.js](../js/app.js) | 🟠 **ALTA** |
-| **FE-02** | **Resolución de Alertas vía API** | ❌ Pendiente | Al hacer clic en "Marcar como resuelta", enviar `PATCH /api/alertas/:id/resolver`. Actualizar KPIs y banner solo tras respuesta `200 OK` del servidor. | [js/app.js](../js/app.js) | 🟠 **ALTA** |
+| **FE-01** | **Integración con API REST y Supabase Cloud** | ✅ Implementado | Carga de tableros y alertas desde backend REST o Supabase Cloud con fallback a modo simulación. Sincronización transparente de datos persistentes. | [js/app.js](../js/app.js), [js/supabase-client.js](../js/supabase-client.js) | 🟠 **ALTA** |
+| **FE-02** | **Resolución de Alertas vía API y Supabase** | ✅ Implementado | Al hacer clic en "Marcar Resuelta", persiste en backend REST y en Supabase Cloud con fecha y rol del técnico responsable. | [js/app.js](../js/app.js), [js/supabase-client.js](../js/supabase-client.js) | 🟠 **ALTA** |
 | **FE-03** | **Preservar Reglas Críticas de UI y Anti-Flash** | ✅ Implementado | Script anti-flash en `<head>` activo. `#mapPinsContainer` relativo a `.map-svg-wrapper` correcto. Variables CSS de tema funcionando. Bug de menú hamburguesa corregido. | [index.html](../index.html), [css/](../css/) | 🔴 **CRÍTICA** |
 | **FE-04** | **Exportación y Filtros en Consola MQTT** | ❌ Pendiente | Botones para pausar/reanudar auto-scroll, filtrar por topic (`neuquen/iluminacion/#` vs `api/evento`) y exportar logs a CSV/JSON. | [js/app.js](../js/app.js) | 🟡 **MEDIA** |
 | **FE-05** | **Notificaciones Push Web** | ❌ Pendiente | `Notification API` del navegador para alertas `CRITICA`. Solicitar permisos al usuario. Activar solo si el usuario concede permiso. | [js/app.js](../js/app.js) | 🟡 **MEDIA** |
@@ -61,15 +61,15 @@
 |---|---|---|---|---|---|
 | **BE-01** | **Servicio Ingestor MQTT (Worker Subscriber)** | ✅ Implementado | Microservicio Node.js que se conecte al broker Mosquitto en TCP `1883`, suscriba a `neuquen/iluminacion/#` y `api/evento`, valide payloads y llame a `persistenciaService.persistEvent()`. Reconexión automática con backoff exponencial. | [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md) | 🔴 **CRÍTICA** |
 | **BE-02** | **Validación del Contrato JSON** | ✅ Implementado | Validar campos específicos por tipo (`tension_medida_v`, `id_foco`, etc.) con Zod en `src/validators/eventSchema.js`. Rechazar payloads malformados sin tumbar el worker. | [CONTEXTO_TECNICO.md](CONTEXTO_TECNICO.md) | 🔴 **CRÍTICA** |
-| **BE-03** | **Endpoints REST de Tableros y Alertas** | 🟡 Parcial | Existe `POST /api/eventos`. **Faltan**: `GET /api/tableros`, `GET /api/alertas` (con paginación y filtro por severidad), `PATCH /api/alertas/:id/resolver`. | [eventController.js](../backend/src/controllers/eventController.js) | 🟠 **ALTA** |
+| **BE-03** | **Endpoints REST de Tableros y Alertas** | ✅ Implementado | `POST /api/eventos`, `GET /api/tableros`, `GET /api/alertas` y `PATCH /api/alertas/:id/resolver` implementados con controladores y rutas en backend. | [backend/src/routes/](../backend/src/routes/) | 🟠 **ALTA** |
 | **BE-04** | **Autenticación JWT y Control de Acceso (RBAC)** | ❌ Pendiente | `POST /api/auth/login` + middleware de autenticación. Roles: `Operador`, `Técnico`, `Administrador`. Proteger `PATCH /api/alertas/:id/resolver` con rol mínimo `Técnico`. | — | 🟡 **MODERADO** |
 | **BE-05** | **API Histórica de Telemetría** | ❌ Pendiente | `GET /api/telemetria/historico?tablero_id=TABLERO_01&desde=...&hasta=...` para alimentar gráficas de tensión y consumo. La tabla `lecturas` ya está en el esquema. | — | 🟢 **LEVE** |
 | **SEC-01** | **Seguridad en Capa de Red: CORS, Rate Limiting, Headers** | 🟡 Parcial | CORS con lista blanca ✅. Rate limiting 100 req/min ✅. **Faltan**: `Content-Security-Policy`, `X-Content-Type-Options`, `Strict-Transport-Security` en headers de respuesta. Configurar dominio real de la Municipalidad en `CORS_ORIGIN`. | [backend/src/app.js](../backend/src/app.js) | 🔴 **CRÍTICA** |
 | **SEC-02** | **Integridad de Datos en Ingestor MQTT** | ✅ Implementado | Deduplicación por `id_tablero + timestamp` (ventana 5s). Límite de payload 4KB. Rate limiting por tablero (máx 10 evt/s). Cola con backpressure. | — | 🔴 **CRÍTICA** |
 | **BE-07** | **Connection Pooling y Retry Strategy para PostgreSQL** | 🟡 Parcial | Pool `pg` configurado con `max: 10` en `database.js`. **Falta**: retry con backoff exponencial, health check en docker-compose para evitar conexiones prematuras. | [backend/src/config/database.js](../backend/src/config/database.js) | 🟠 **ALTA** |
-| **BE-08** | **Health Check y Circuit Breaker** | 🟡 Parcial | `GET /api/health` responde con estado de BD ✅. **Falta**: circuit breaker (5 fallos → `503 Retry-After 30s`) y estado de MQTT en el health check. | [backend/src/routes/healthRoutes.js](../backend/src/routes/healthRoutes.js) | 🟠 **ALTA** |
+| **BE-08** | **Health Check y Circuit Breaker** | 🟡 Parcial | `GET /api/health` responde con estado de BD y Supabase ✅. **Falta**: circuit breaker (5 fallos → `503 Retry-After 30s`) y estado de MQTT en el health check. | [backend/src/routes/healthRoutes.js](../backend/src/routes/healthRoutes.js) | 🟠 **ALTA** |
 | **BE-09** | **Logging Estructurado y Correlación de Eventos** | 🟡 Parcial | Request logger inline activo ✅. **Falta**: logging JSON estructurado con `correlation_id`, `service`, `event_type`. Rotación de logs. Propagación de `correlation_id` desde MQTT hasta BD. | [backend/src/app.js](../backend/src/app.js) | 🟡 **MODERADO** |
-| **SEC-03** | **Audit Logging y Registro de Seguridad** | ❌ Pendiente | Tabla `audit_log` con `user_id`, `action`, `resource`, `ip_address`, `details_json`. Registrar login/logout, resolución de alertas, reinicios del worker. Retención mínima 1 año. | — | 🟡 **MODERADO** |
+| **SEC-03** | **Audit Logging y Registro de Seguridad** | 🟡 Parcial | Registro de técnico resolutor y fecha/hora en la tabla `alertas` en base de datos ✅. Falta tabla general `audit_log` para registrar inicios de sesión y accesos. | [supabase_schema.sql](../supabase_schema.sql) | 🟡 **MODERADO** |
 
 ---
 
@@ -116,11 +116,11 @@
 
 | Categoría | Total Tareas | Implementado | Parcial | Pendiente |
 |---|---|---|---|---|
-| **Frontend** | 13 | 3 (FE-03, FE-07, BE-06 parcial) | 3 | 7 |
-| **Backend** | 10 | 0 | 6 | 4 |
+| **Frontend** | 13 | 4 (FE-01, FE-02, FE-03, FE-07) | 3 | 6 |
+| **Backend** | 11 | 4 (BE-01, BE-02, BE-03, SEC-02) | 5 | 2 |
 | **DBA** | 5 | 2 (DB-01, DB-03) | 1 | 2 |
-| **DevOps** | 7 | 0 | 2 | 5 |
-| **TOTAL** | **35** | **5** | **12** | **18** |
+| **DevOps** | 7 | 2 (DO-01, DO-03) | 2 | 3 |
+| **TOTAL** | **36** | **12** | **11** | **13** |
 
 > [!IMPORTANT]
 > El **Ingestor MQTT (BE-01)** es el bloqueante más crítico de todo el sistema. Sin él, ningún evento del hardware ESP32 se persistirá en la base de datos, aunque el esquema y el servicio de persistencia ya estén listos.

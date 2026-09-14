@@ -309,7 +309,33 @@ document.addEventListener("DOMContentLoaded", () => {
       refreshAllViews();
     } catch (error) {
       appState.apiAvailable = false;
-      console.warn("[Luminaria] API REST unavailable; using local simulation.", error);
+      console.warn("[Luminaria] API REST local no disponible. Intentando Supabase Cloud...", error);
+
+      if (window.luminariaSupabase) {
+        try {
+          const [sbTableros, sbAlertas] = await Promise.all([
+            window.luminariaSupabase.fetchTableros(),
+            window.luminariaSupabase.fetchAlertas(),
+          ]);
+          if (sbTableros && sbTableros.length > 0) {
+            const tableros = Object.fromEntries(
+              sbTableros.map((t) => {
+                const norm = normalizarTableroAPI(t);
+                return [norm.id, norm];
+              }),
+            );
+            appState.tableros = tableros;
+          }
+          if (Array.isArray(sbAlertas) && sbAlertas.length > 0) {
+            appState.alerts = sbAlertas.map(normalizarAlertaAPI);
+          }
+          if (sbTableros || sbAlertas) {
+            refreshAllViews();
+          }
+        } catch (sbErr) {
+          console.warn("[Luminaria] Error conectando con Supabase Cloud:", sbErr);
+        }
+      }
     }
   }
 
@@ -915,6 +941,53 @@ document.addEventListener("DOMContentLoaded", () => {
       if (elements.mqttConsoleLog.children.length > 60) {
         elements.mqttConsoleLog.removeChild(elements.mqttConsoleLog.lastChild);
       }
+
+      // Si Supabase se conecta, sincronizar alertas de la nube y activar Realtime
+      if (status === "connected") {
+        window.luminariaSupabase.fetchAlertas().then((alerts) => {
+          if (Array.isArray(alerts) && alerts.length > 0) {
+            appState.alerts = alerts.map(normalizarAlertaAPI);
+            renderAlerts();
+            updateKPIs();
+            renderMapPins();
+          }
+        }).catch(() => {});
+
+        window.luminariaSupabase.subscribeToRealtime(
+          (payload) => {
+            if (payload.eventType === "INSERT" && payload.new) {
+              const incomingAlert = normalizarAlertaAPI(payload.new);
+              if (!appState.alerts.some((a) => String(a.id) === String(incomingAlert.id))) {
+                appState.alerts.unshift(incomingAlert);
+                renderAlerts();
+                updateKPIs();
+                renderMapPins();
+              }
+            } else if (payload.eventType === "UPDATE" && payload.new) {
+              const updated = normalizarAlertaAPI(payload.new);
+              const idx = appState.alerts.findIndex((a) => String(a.id) === String(updated.id));
+              if (idx !== -1) {
+                appState.alerts[idx] = updated;
+                renderAlerts();
+                updateKPIs();
+                renderMapPins();
+              }
+            }
+          },
+          (payload) => {
+            if (payload.eventType === "UPDATE" && payload.new) {
+              const updatedTablero = normalizarTableroAPI(payload.new);
+              if (appState.tableros[updatedTablero.id]) {
+                appState.tableros[updatedTablero.id] = {
+                  ...appState.tableros[updatedTablero.id],
+                  ...updatedTablero,
+                };
+                refreshAllViews();
+              }
+            }
+          }
+        );
+      }
     });
   }
 
@@ -1016,6 +1089,21 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     appState.alerts.unshift(alertRecord);
+
+    // Persistir alerta y actualizar tablero en Supabase Cloud si está disponible
+    if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
+      window.luminariaSupabase.insertAlerta(alertRecord).then((persisted) => {
+        if (persisted && persisted.id_alerta) {
+          alertRecord.id = String(persisted.id_alerta);
+        }
+      }).catch((err) => console.warn("[Supabase] No se pudo persistir alerta:", err));
+
+      window.luminariaSupabase.updateTablero(tableroId, {
+        tension_medida_v: tablero.tension_v,
+        estado: tablero.estado,
+        focos: tablero.focos,
+      }).catch(() => {});
+    }
 
     if (appState.soundEnabled) {
       playAlertAudioSound(soundType);
@@ -1301,12 +1389,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const btnResolve = card.querySelector(".btn-resolve");
       btnResolve.addEventListener("click", async () => {
+        const tecnicoResponsable =
+          appState.userRole === "tecnico" ? "Técnico de Guardia" : "Supervisor Municipal";
+
         if (appState.apiAvailable) {
           if (alert.resuelta) return;
           btnResolve.disabled = true;
           try {
             await resolveAlertaAPI(alert.id);
-            // Update only after the server has confirmed persistence.
             alert.resuelta = true;
             renderAlerts();
             updateKPIs();
@@ -1318,7 +1408,23 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // In explicit simulation fallback, preserve the original local toggle.
+        // Si Supabase está conectado, persistir la resolución en la nube con el técnico
+        if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
+          btnResolve.disabled = true;
+          try {
+            await window.luminariaSupabase.resolveAlerta(alert.id, tecnicoResponsable);
+            alert.resuelta = true;
+            renderAlerts();
+            updateKPIs();
+            renderMapPins();
+            return;
+          } catch (e) {
+            console.warn("[Supabase] Error resolviendo alerta en nube:", e);
+            btnResolve.disabled = false;
+          }
+        }
+
+        // En simulación local pura, alternar estado
         alert.resuelta = !alert.resuelta;
         renderAlerts();
         updateKPIs();

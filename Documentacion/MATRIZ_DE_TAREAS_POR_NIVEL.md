@@ -30,11 +30,11 @@
 | **SEC-01** | Backend / DevOps | Seguridad en Capa de Red: CORS, Rate Limiting, Headers | 🟡 Parcial | 🔴 **CRÍTICO** | 5 SP | CORS y rate limiting implementados ✅. Faltan headers CSP / HSTS / X-Content-Type-Options. |
 | **SEC-02** | Backend | Integridad de Datos en Ingestor MQTT (deduplicación, límites) | ✅ Implementado | 🔴 **CRÍTICO** | 3 SP | Implementado rate limiting y deduplicación en src/services/ingestaService.js. |
 | **BE-06** | Frontend | Error Boundary y Recuperación ante Fallos de MQTT/UI | 🟡 Parcial | 🔴 **CRÍTICO** | 3 SP | `processIncomingEvent()` tiene validación nula básica pero sin `try/catch` envolvente. Un payload inesperado puede silenciosamente corromper el estado de UI. |
-| **BE-03** | Backend | Endpoints REST (`GET /api/tableros`, `GET /api/alertas`, `PATCH /api/alertas/:id`) | 🟡 Parcial | 🟠 **ALTO** | 8 SP | Solo `POST /api/eventos` y `GET /api/health` implementados. El frontend no puede obtener estado persistente ni resolver alertas contra el servidor. |
-| **DB-01** | DBA | Diseño e Implementación de Esquema Relacional ER | ✅ Implementado | 🟠 **ALTO** | 5 SP | Esquema completo con 6 tablas, constraints y 8 índices optimizados. Listo para producción. ✔ |
+| **BE-03** | Backend | Endpoints REST (`GET /api/tableros`, `GET /api/alertas`, `PATCH /api/alertas/:id`, `GET /api/config`) | ✅ Implementado | 🟠 **ALTO** | 8 SP | Implementados endpoints REST completos con controladores, rutas y health check en src/routes/. ✔ |
+| **DB-01** | DBA | Diseño e Implementación de Esquema Relacional ER (Local + Supabase) | ✅ Implementado | 🟠 **ALTO** | 5 SP | Esquema relacional con 6 tablas locales y esquema Supabase Cloud con RLS y Realtime en supabase_schema.sql. ✔ |
 | **DB-02** | DBA | Series Temporales (TimescaleDB / Particionado) | ❌ Pendiente | 🟠 **ALTO** | 5 SP | La tabla `lecturas` existe pero sin particionado. Con ingesta masiva de sensores, la BD se degradará sin esta optimización. |
-| **FE-01** | Frontend | Integración con API REST (manteniendo Simulación fallback) | ❌ Pendiente | 🟠 **ALTO** | 5 SP | La UI trabaja 100% con mock data. Sin integración, no hay persistencia real ni visibilidad del estado actual de la red eléctrica. |
-| **FE-02** | Frontend | Resolución de Alertas vía API REST | ❌ Pendiente | 🟠 **ALTO** | 3 SP | La resolución de alertas solo existe en memoria del navegador. Se pierde al recargar la página. |
+| **FE-01** | Frontend | Integración con API REST y Supabase Cloud | ✅ Implementado | 🟠 **ALTO** | 5 SP | Carga de tableros y alertas desde backend REST o Supabase Cloud con fallback transparente a simulación. ✔ |
+| **FE-02** | Frontend | Resolución de Alertas vía API REST y Supabase | ✅ Implementado | 🟠 **ALTO** | 3 SP | Resolución persistida en backend local y Supabase con registro de técnico responsable y timestamp. ✔ |
 | **DO-02** | DevOps | Contenerización Completa `docker-compose.yml` | 🟡 Parcial | 🟠 **ALTO** | 5 SP | Solo PostgreSQL en Docker. Backend, Mosquitto y Nginx sin contenerizar. El despliegue en servidores de la Municipalidad es inviable sin esto. |
 | **DB-05** | DBA | Plan de Backup y Recuperación (`pg_dump` cron) | ❌ Pendiente | 🟠 **ALTO** | 3 SP | Sin backups, un fallo eléctrico o de hardware del servidor pierde todo el historial de eventos de la red municipal. |
 | **BE-07** | Backend / DBA | Connection Pooling y Retry Strategy para PostgreSQL | 🟡 Parcial | 🟠 **ALTO** | 3 SP | Pool `pg` con `max: 10` configurado. Falta retry con backoff y health check en docker-compose. |
@@ -49,7 +49,7 @@
 | **DO-05** | DevOps | Monitoreo de Infraestructura (Prometheus + Grafana) | ❌ Pendiente | 🟡 **MODERADO** | 5 SP | Sin métricas, un pico de tráfico o fallo de memoria en el broker pasa desapercibido hasta la caída del servicio. |
 | **FE-08** | Frontend | Accesibilidad WCAG 2.1 AA (ARIA, Contraste, Teclado) | 🟡 Parcial | 🟡 **MODERADO** | 3 SP | Algunos botones tienen `aria-label`. Falta `aria-live` en región de alertas y navegación completa por teclado. |
 | **FE-09** | Frontend | Internacionalización i18n (Español / Inglés) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Todos los textos hardcodeados en español en `js/app.js`. |
-| **SEC-03** | Backend / DBA | Audit Logging y Registro de Seguridad | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Sin tabla `audit_log`, no hay trazabilidad de quién resolvió alertas ni de accesos no autorizados. Requisito de cumplimiento normativo municipal. |
+| **SEC-03** | Backend / DBA | Audit Logging y Registro de Seguridad | 🟡 Parcial | 🟡 **MODERADO** | 3 SP | Registro de técnico resolutor y timestamp en tabla alertas implementado en BD ✅. Falta tabla general audit_log para logins. |
 | **DO-07** | DevOps | Pruebas de Carga y Stress Testing | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Sin load testing no se conoce la capacidad real del sistema ante una tormenta eléctrica que genere eventos masivos. |
 | **BE-09** | Backend | Logging Estructurado y Correlación de Eventos | 🟡 Parcial | 🟡 **MODERADO** | 2 SP | Request logger activo. Falta JSON estructurado con `correlation_id` para trazabilidad MQTT→Worker→BD. |
 | **FE-04** | Frontend | Exportación CSV/JSON y Filtros en Consola MQTT | ❌ Pendiente | 🟢 **LEVE** | 2 SP | Herramienta de diagnóstico secundario para el desarrollador/técnico. |
@@ -223,7 +223,7 @@ Sprint 5 (2 semanas) — REFINAMIENTO
 | `BB-08` | ✅ ELIMINADO | Manejador de errores centralizado sin exposición de `stack` en producción | `backend/src/app.js` |
 | `BB-09` | 🔴 ABIERTO | Headers de seguridad HTTP faltantes (CSP, HSTS, X-Content-Type-Options) | `backend/src/app.js` |
 | `BB-10` | 🔴 ABIERTO | Tabla `usuarios` no existe en el esquema DB (bloquea BE-04) | `001_init_schema.sql` |
-| `BB-11` | 🔴 ABIERTO | Worker MQTT Ingestor no existe. Eventos de hardware ESP32 no se persisten. | Archivo a crear |
+| `BB-11` | ✅ ELIMINADO | Worker MQTT Ingestor implementado en src/workers/mqttSubscriber.js y activo en server.js | `backend/src/workers/mqttSubscriber.js` |
 | `BB-12` | 🟡 PARCIAL | `processIncomingEvent()` en frontend sin `try/catch` global (riesgo de crash silencioso) | `js/app.js` |
 
 ---

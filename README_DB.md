@@ -2,34 +2,38 @@
 
 Esta carpeta contiene los cambios de persistencia preparados para copiar sobre el repositorio `Luminaria-`.
 
-## Qué implementa
+## Arquitectura de Persistencia Híbrida
 
-- PostgreSQL con `pg` y SQL plano.
-- 6 tablas: `zonas`, `tableros`, `sensores`, `lecturas`, `alertas`, `estadisticas_zona`.
-- Se eliminan como entidades de esta etapa: técnico, usuario_app, reparación y luminaria/foco.
-- `id_foco` queda como texto en `alertas`.
-- `lecturas` llega a `tableros` únicamente mediante `sensores`.
-- `alertas` mantiene `id_tablero` directo porque el evento MQTT siempre trae ese identificador.
-- Sensor virtual automático si un tablero todavía no tiene sensor registrado.
-- Alertas CRITICA: 6 meses. Alertas ADVERTENCIA/INFO y lecturas: 1 mes.
-- Mínimo, máximo y promedio de tensión por zona y día antes de perder las lecturas crudas.
-- Purga segura: primero alertas, después lecturas sin referencias de alertas.
-- Endpoint mínimo `POST /api/eventos` para persistir el mismo JSON que usa MQTT.
-- Scheduler diario con `setInterval`, sin añadir `node-cron`.
+Project Luminaria utiliza dos niveles de persistencia:
 
-## Aplicación
+1. **Supabase Cloud (PostgreSQL Administrado):**
+   * Tablas `tableros` y `alertas` en la nube con soporte **Row Level Security (RLS)** y **Realtime**.
+   * Persistencia inmediata desde el frontend (`js/supabase-client.js`) para que las alertas y resoluciones técnicas queden registradas permanentemente tras recargas (`F5`).
+   * Script DDL y semillas: [`supabase_schema.sql`](supabase_schema.sql).
+   * Manual técnico completo para DBAs: [`Documentacion/MANUAL_BASE_DE_DATOS.md`](Documentacion/MANUAL_BASE_DE_DATOS.md).
 
-1. Copiá el contenido de esta carpeta sobre la raíz del repo.
-2. En `backend/`, ejecutá `npm install` para actualizar `package-lock.json` y descargar `pg`.
-3. Copiá `backend/.env.example` a `backend/.env`.
-4. Levantá PostgreSQL con la configuración de tu entorno.
-5. Ejecutá `npm run db:migrate`.
-6. Ejecutá `npm run db:seed`.
-7. Ejecutá `npm start`.
+2. **PostgreSQL Local (Motor de Ingesta y Series Temporales):**
+   * 6 tablas: `zonas`, `tableros`, `sensores`, `lecturas`, `alertas`, `estadisticas_zona`.
+   * Ingestión de telemetría de sensores por TCP (1883) y REST (`POST /api/eventos`).
+   * Migración: `backend/src/db/migrations/001_init_schema.sql`.
+   * Scheduler de agregaciones diarias y purga periódica segura.
 
-Para ejecutar mantenimiento manual:
+## Aplicación y Despliegue
 
-`npm run db:maintenance`
+### A. Supabase Cloud (Producción / Frontend)
+1. Abrir **Supabase Dashboard** > **SQL Editor**.
+2. Pegar el contenido de [`supabase_schema.sql`](supabase_schema.sql) y presionar **Run**.
+3. Las variables de entorno se configuran en `.env` y `backend/.env`.
+
+### B. PostgreSQL Local (Backend / Ingestor)
+1. En `backend/`, ejecutá `npm install`.
+2. Asegurar que las variables de conexión estén en `backend/.env`.
+3. Ejecutá las migraciones y seeds:
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
+4. Para ejecutar mantenimiento manual: `npm run db:maintenance`.
 
 ## Prueba de ingestión
 
