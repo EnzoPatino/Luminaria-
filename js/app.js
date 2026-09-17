@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
     kpiAdvertencias: document.getElementById("kpiAdvertencias"),
     kpiTotalTableros: document.getElementById("kpiTotalTableros"),
 
-    mapPinsContainer: document.getElementById("mapPinsContainer"),
+    leafletMapContainer: document.getElementById("leafletMapContainer"),
     selectTablero: document.getElementById("selectTablero"),
     tableroUbicacion: document.getElementById("tableroUbicacion"),
     voltageGaugeNum: document.getElementById("voltageGaugeNum"),
@@ -485,9 +485,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetPaneId =
           "tab" + targetTab.charAt(0).toUpperCase() + targetTab.slice(1);
         const targetPane = document.getElementById(targetPaneId);
-        if (targetPane) {
-          targetPane.classList.add("active");
-        }
+          if (targetPane) {
+            targetPane.classList.add("active");
+            if (targetPaneId === "tabMapa" && leafletMap) {
+               setTimeout(() => leafletMap.invalidateSize(), 50);
+            }
+          }
 
         if (targetTab === "sensores") {
           setTimeout(() => {
@@ -1435,9 +1438,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  
+  
+  let leafletMap = null;
+  let leafletMarkers = {};
+
+  function initLeafletMap() {
+    const neuquenCoords = [-38.9516, -68.0591];
+    
+    if (!elements.leafletMapContainer || typeof L === 'undefined') return;
+
+    // Inicializar el mapa sin la marca de agua (attributionControl: false)
+    leafletMap = L.map(elements.leafletMapContainer, { attributionControl: false }).setView(neuquenCoords, 13);
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+    }).addTo(leafletMap);
+
+    renderMapPins();
+  }
+
+  setTimeout(() => {
+    initLeafletMap();
+  }, 100);
+
   function renderMapPins() {
-    if (!elements.mapPinsContainer) return;
-    elements.mapPinsContainer.innerHTML = "";
+    if (!leafletMap) return; 
+
+    const baseLat = -38.98;
+    const baseLng = -68.08;
 
     Object.values(appState.tableros).forEach((tablero) => {
       let worstSeverity = "ok";
@@ -1468,50 +1497,56 @@ document.addEventListener("DOMContentLoaded", () => {
         worstSeverity = "warning";
       }
 
-      let pinColor = "var(--color-ok)";
-      let pinIcon = "fa-check";
+      let pinColor = "#10b981";
       if (worstSeverity === "critical") {
-        pinColor = "var(--color-critical)";
-        pinIcon = "fa-triangle-exclamation";
+        pinColor = "#ef4444";
       } else if (worstSeverity === "warning") {
-        pinColor = "var(--color-warning)";
-        pinIcon = "fa-exclamation";
+        pinColor = "#f59e0b";
       }
 
       const isSelected = tablero.id === appState.selectedTableroId;
 
-      const pinNode = document.createElement("div");
-      pinNode.className = `map-pin-node ${isSelected ? "selected" : ""}`;
-      pinNode.style.left = `${tablero.posX}%`;
-      pinNode.style.top = `${tablero.posY}%`;
-      pinNode.style.setProperty("--pin-color", pinColor);
-      pinNode.title = `${tablero.nombre || tablero.id}: ${tablero.ubicacion} (Clic para seleccionar)`;
+      const lat = baseLat + (tablero.posY / 100) * 0.05;
+      const lng = baseLng + (tablero.posX / 100) * 0.08;
 
-      pinNode.innerHTML = `
-        <div class="map-pin-icon-wrap">
-          <i class="fas ${pinIcon}"></i>
-        </div>
-        <div class="map-pin-label">
-          <span class="map-pin-status-dot"></span>
-          <span>${escapeHtml(tablero.nombre || tablero.id)}</span>
-        </div>
-      `;
+      if (leafletMarkers[tablero.id]) {
+        const marker = leafletMarkers[tablero.id];
+        marker.setLatLng([lat, lng]);
+        marker.setStyle({
+          color: isSelected ? "#000000" : "#ffffff",
+          fillColor: pinColor,
+          weight: isSelected ? 3 : 2
+        });
+      } else {
+        const marker = L.circleMarker([lat, lng], {
+          radius: 10,
+          fillColor: pinColor,
+          color: isSelected ? "#000000" : "#ffffff",
+          weight: isSelected ? 3 : 2,
+          opacity: 1,
+          fillOpacity: 1
+        }).addTo(leafletMap);
+        
+        marker.bindTooltip(tablero.nombre || tablero.id, {
+          direction: 'top',
+          offset: [0, -10]
+        });
 
-      pinNode.addEventListener("click", () => {
-        appState.selectedTableroId = tablero.id;
-        appState.expandedTableroId = tablero.id;
-        if (elements.selectTablero) elements.selectTablero.value = tablero.id;
-        updateTableroUI();
-        renderMapPins();
+        marker.on("click", () => {
+          appState.selectedTableroId = tablero.id;
+          appState.expandedTableroId = tablero.id;
+          if (elements.selectTablero) elements.selectTablero.value = tablero.id;
+          updateTableroUI();
+          renderMapPins();
 
-        // Cambiar a la pestaña de Tableros si hace clic en el mapa
-        const tablerosNavTab = document.querySelector(
-          '.nav-tab[data-tab="tableros"]',
-        );
-        if (tablerosNavTab) tablerosNavTab.click();
-      });
+          const tablerosNavTab = document.querySelector(
+            '.nav-tab[data-tab="tableros"]',
+          );
+          if (tablerosNavTab) tablerosNavTab.click();
+        });
 
-      elements.mapPinsContainer.appendChild(pinNode);
+        leafletMarkers[tablero.id] = marker;
+      }
     });
   }
 

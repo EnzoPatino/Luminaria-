@@ -237,20 +237,8 @@
           </div>
         </div>
 
-        <div class="map-card">
-          <div class="map-svg-wrapper">
-            <svg width="100%" height="100%" viewBox="0 0 800 240" preserveAspectRatio="none">
-              <path d="M 40 120 Q 200 80 400 130 T 760 110" stroke="var(--map-path)" stroke-width="6" fill="none" />
-              <path d="M 180 20 L 180 220" stroke="var(--map-grid)" stroke-width="3" stroke-dasharray="6,6" fill="none" />
-              <path d="M 420 20 L 420 220" stroke="var(--map-grid)" stroke-width="3" stroke-dasharray="6,6" fill="none" />
-              <path d="M 620 20 L 620 220" stroke="var(--map-grid)" stroke-width="3" stroke-dasharray="6,6" fill="none" />
-              <path d="M 0 190 Q 300 170 800 200" stroke="var(--map-river)" stroke-width="12" fill="none" opacity="0.25" />
-            </svg>
-
-            <div class="map-pins-layer" id="mapPinsContainer">
-              <!-- Nodos renderizados dinámicamente desde app.js -->
-            </div>
-          </div>
+        <div class="map-card" style="height: 400px; padding: 0;">
+          <div id="leafletMapContainer" style="width: 100%; height: 100%; border-radius: var(--radius-md); z-index: 1;"></div>
         </div>
       </section>
 
@@ -540,6 +528,10 @@
     </div>
   </div>
 
+  <!-- Leaflet CSS y JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
   <script src="js/mqtt-client.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/app.js"></script>
