@@ -23,16 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tension_v: 220.0,
         tension_nominal_v: 220.0,
         fase: "L1",
-        focos: {
-          FOCO_A1: { id: "FOCO_A1", corriente_ma: 450.0, estado: "ok" },
-          FOCO_A2: { id: "FOCO_A2", corriente_ma: 448.0, estado: "ok" },
-          FOCO_A3: { id: "FOCO_A3", corriente_ma: 452.0, estado: "ok" },
-          FOCO_A4: { id: "FOCO_A4", corriente_ma: 445.0, estado: "ok" },
-          FOCO_B1: { id: "FOCO_B1", corriente_ma: 450.0, estado: "ok" },
-          FOCO_B2: { id: "FOCO_B2", corriente_ma: 449.0, estado: "ok" },
-          FOCO_B3: { id: "FOCO_B3", corriente_ma: 451.0, estado: "ok" },
-          FOCO_B4: { id: "FOCO_B4", corriente_ma: 446.0, estado: "ok" },
-        },
+        //focos borrados
       },
       TABLERO_02: {
         id: "TABLERO_02",
@@ -43,11 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tension_v: 218.5,
         tension_nominal_v: 220.0,
         fase: "L2",
-        focos: {
-          FOCO_C1: { id: "FOCO_C1", corriente_ma: 450.0, estado: "ok" },
-          FOCO_C2: { id: "FOCO_C2", corriente_ma: 447.0, estado: "ok" },
-          FOCO_C3: { id: "FOCO_C3", corriente_ma: 452.0, estado: "ok" },
-        },
+     // focos borrados
       },
       TABLERO_03: {
         id: "TABLERO_03",
@@ -58,10 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tension_v: 220.0,
         tension_nominal_v: 220.0,
         fase: "L3",
-        focos: {
-          FOCO_D1: { id: "FOCO_D1", corriente_ma: 450.0, estado: "ok" },
-          FOCO_D2: { id: "FOCO_D2", corriente_ma: 450.0, estado: "ok" },
-        },
+      // focos borrados
       },
       TABLERO_04: {
         id: "TABLERO_04",
@@ -72,9 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tension_v: 221.0,
         tension_nominal_v: 220.0,
         fase: "L1",
-        focos: {
-          FOCO_E1: { id: "FOCO_E1", corriente_ma: 450.0, estado: "ok" },
-        },
+       // focos borrados
       },
     },
     alerts: [],
@@ -1190,6 +1172,16 @@ document.addEventListener("DOMContentLoaded", () => {
               0,
             ) / totalFocos
           : 0;
+      const circuitoPct =
+        totalFocos > 0 ? Math.round((focosOk / totalFocos) * 100) : 0;
+      const circuitoEstado =
+        totalFocos === 0
+          ? "Sin datos"
+          : circuitoPct === 100
+            ? "Circuito operativo"
+            : "Requiere revisión";
+      const circuitoClass =
+        totalFocos === 0 ? "unknown" : circuitoPct === 100 ? "ok" : "warning";
 
       let focosListHtml = "";
       if (totalFocos === 0) {
@@ -1259,6 +1251,17 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="info-cell-val">${focosOk} de ${totalFocos} Operativas</span>
           </div>
         </div>
+<!-- Estado del circuito -->
+        <div class="circuit-health ${circuitoClass}">
+          <div class="circuit-health-head">
+            <span class="info-cell-lbl">Estado del circuito</span>
+            <span class="circuit-health-label">${circuitoEstado}</span>
+          </div>
+          <div class="circuit-health-track" aria-label="${totalFocos > 0 ? `${circuitoPct}% de focos operativos` : "Sin datos de focos"}">
+            <div class="circuit-health-fill" style="width: ${circuitoPct}%;"></div>
+          </div>
+          <span class="circuit-health-detail">${totalFocos > 0 ? `${focosOk} de ${totalFocos} focos operativos` : "No hay focos registrados"}</span>
+        </div>
 
         <div class="tablero-card-actions">
           <button class="btn btn-secondary btn-sm btn-select-tablero">
@@ -1299,10 +1302,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </div>
 
-            <div class="focos-list">
-              <div class="focos-list-title"><i class="fas fa-lightbulb"></i> Focos del Circuito (${totalFocos})</div>
-              ${focosListHtml}
-            </div>
+             <!-- Lista de focos eliminada -->
           </div>
         </div>`
             : ""
@@ -1312,14 +1312,15 @@ document.addEventListener("DOMContentLoaded", () => {
       card
         .querySelector(".btn-select-tablero")
         .addEventListener("click", () => {
-          if (tablero.id !== appState.selectedTableroId) {
-            appState.selectedTableroId = tablero.id;
-            appState.expandedTableroId = tablero.id;
-            if (elements.selectTablero)
-              elements.selectTablero.value = tablero.id;
-          } else {
-            appState.expandedTableroId =
-              appState.expandedTableroId === tablero.id ? null : tablero.id;
+          const isSameTablero = tablero.id === appState.selectedTableroId;
+          const shouldClose =
+            isSameTablero && appState.expandedTableroId === tablero.id;
+
+          appState.selectedTableroId = tablero.id;
+          appState.expandedTableroId = shouldClose ? null : tablero.id;
+
+          if (elements.selectTablero) {
+            elements.selectTablero.value = tablero.id;
           }
           updateTableroUI();
           renderMapPins();

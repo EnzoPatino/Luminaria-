@@ -5,9 +5,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
   gap: 1.25rem;
+  align-items: start;
 }
 
 .tablero-card {
+  align-self: start;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -221,6 +223,66 @@
   color: var(--text-main);
   margin-top: 0.1rem;
 }
+/* Estado del circuito */
+.circuit-health {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.75rem;
+}
+
+.circuit-health-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.circuit-health-label {
+  color: var(--color-ok);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.circuit-health.warning .circuit-health-label {
+  color: var(--color-warning);
+}
+
+.circuit-health.unknown .circuit-health-label {
+  color: var(--text-dim);
+}
+
+.circuit-health-track {
+  height: 7px;
+  margin-top: 0.45rem;
+  background: var(--meter-track-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.circuit-health-fill {
+  height: 100%;
+  background: var(--color-ok);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.circuit-health.warning .circuit-health-fill {
+  background: var(--color-warning);
+}
+
+.circuit-health.unknown .circuit-health-fill {
+  background: var(--text-dim);
+}
+
+.circuit-health-detail {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
 
 .tablero-card-actions {
   display: flex;
@@ -264,11 +326,12 @@
 
 .expand-stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
 .expand-stat {
+  min-width: 0;
   background: var(--bg-dark);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -284,6 +347,7 @@
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
 }
 
 .expand-stat-val {
@@ -291,6 +355,7 @@
   font-size: 0.9rem;
   font-weight: 800;
   color: var(--text-main);
+  overflow-wrap: anywhere;
 }
 
 .expand-stat-val.ok { color: var(--color-ok); }
@@ -380,4 +445,4 @@
   color: var(--color-warning);
   border: 1px solid var(--color-warning-border);
 }
-
+
