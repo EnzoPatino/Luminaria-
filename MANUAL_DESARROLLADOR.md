@@ -68,17 +68,28 @@ index.html ──► carga css/styles.css + lib Paho MQTT (CDN)
 ### Backend (Node.js + Express)
 
 ```
-server.js ──► app.js ──► routes/index.js ──► [healthRoutes, etc.] ──► controllers/ [healthController, etc.]
+server.js ──► app.js ──► routes/index.js ──► [healthRoutes, uplinkRoutes, etc.] ──► controllers/
+```
+
+**Flujo de ingesta ChirpStack (HTTP Webhook):**
+
+```
+ChirpStack POST /api/uplink?event=up
+  ──► uplinkRoutes.js
+  ──► chirpstackController.js (discrimina join/up/ack)
+  ──► chirpstackAdapter.js (mapea DevEUI → id_tablero, decodifica payload)
+  ──► ingestaService.js (dedup + rate limit)
+  ──► persistenciaService.js (PostgreSQL)
 ```
 
 **Responsabilidades por directorio:**
 
-- **`backend/server.js`** — Punto de entrada y bootstrapping del servidor.
+- **`backend/server.js`** — Punto de entrada. Inicia MQTT condicionalmente (`MQTT_SUBSCRIBER_ENABLED`).
 - **`backend/src/app.js`** — Configuración de Express, middlewares globales y montaje de rutas (`/api`).
 - **`backend/src/config/`** — Gestión de variables de entorno y configuración global.
-- **`backend/src/routes/`** — Definición de endpoints y enrutamiento.
-- **`backend/src/controllers/`** — Lógica de control de peticiones y respuestas HTTP.
-- **`backend/src/services/`** — Lógica de negocio y acceso a datos (capa de servicio).
+- **`backend/src/routes/`** — Definición de endpoints. Incluye `uplinkRoutes.js` para el webhook de ChirpStack.
+- **`backend/src/controllers/`** — Lógica de control. Incluye `chirpstackController.js` (manejo de webhooks LoRaWAN).
+- **`backend/src/services/`** — Lógica de negocio. Incluye `chirpstackAdapter.js` (mapeo DevEUI→tablero, decodificación de payloads Base64/JSON).
 - **`backend/src/middlewares/`** — Middlewares transversales (ej. `errorHandler`).
 - **`backend/src/models/`** — Definición de modelos de datos.
 

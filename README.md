@@ -39,22 +39,35 @@ Luego ingrese a `http://localhost:8080` en su navegador.
 
 ---
 
-## 4. Configuración de Mosquitto MQTT
+## 4. Integración con ChirpStack (LoRaWAN vía HTTP)
 
-Para conectar la UI a un broker Mosquitto real mediante WebSockets:
+El backend recibe la telemetría de los nodos LoRaWAN directamente desde **ChirpStack** mediante un webhook HTTP:
 
-1. Asegúrese de que `mosquitto.conf` contenga un listener en puerto WebSocket (por ejemplo, 9001):
-```ini
-listener 1883
-protocol mqtt
+1. Iniciar el backend:
+   ```bash
+   cd backend
+   npm install
+   npm start
+   ```
+2. En otra terminal, levantar el túnel público:
+   ```bash
+   npx localtunnel --port 3000 --subdomain telemetria-epet14
+   ```
+3. La URL del webhook configurada en ChirpStack es:
+   ```
+   https://telemetria-epet14.loca.lt/api/uplink
+   ```
+4. **Verificar que esté activo:** abrir `http://localhost:3000/api/uplink` en el navegador.
+5. **Inspeccionar último dato recibido:** `http://localhost:3000/api/uplink/last`
 
-listener 9001
-protocol websockets
-allow_anonymous true
+El adaptador (`chirpstackAdapter.js`) mapea automáticamente el DevEUI del nodo al tablero correspondiente y clasifica la telemetría según umbrales de tensión.
+
+### Configuración de Mosquitto MQTT (opcional)
+
+Si se desea usar MQTT en paralelo, configurar `MQTT_SUBSCRIBER_ENABLED=true` en `backend/.env` y asegurar que Mosquitto esté corriendo:
+```bash
+docker compose up -d mosquitto
 ```
-2. En la UI, haga clic en el botón **Broker MQTT**.
-3. Ingrese el Host (`localhost` o IP del servidor) y el Puerto WebSocket (`9001`).
-4. Ingrese los topics a suscribir: `neuquen/iluminacion/#, api/evento`.
 
 ---
 
@@ -68,13 +81,19 @@ Project_Luminaria/
 ├── js/
 │   ├── mqtt-client.js         # Cliente WebSocket MQTT para Mosquitto
 │   └── app.js                 # Lógica de UI, medidores, gestión de eventos y tema
+├── backend/
+│   ├── server.js              # Entrypoint del servidor backend
+│   └── src/
+│       ├── controllers/       # Lógica de los endpoints (incluye chirpstackController.js)
+│       ├── routes/            # Definición de rutas (incluye uplinkRoutes.js)
+│       └── services/          # Reglas de negocio (incluye chirpstackAdapter.js)
 ├── Documentacion/
 │   ├── DOCUMENTACION_TECNICA.md   # Documentación técnica completa para desarrolladores
 │   ├── CONTEXTO_TECNICO.md        # Manual de contexto y especificaciones técnicas
 │   ├── DOCUMENTACION_TECNICA_DRAFT(1).md # Borrador histórico de arquitectura
 │   └── Reporte_MQTT_Pasantias_corregido.docx
 ├── MANUAL_DESARROLLADOR.md    # Guía operativa para desarrolladores
-└── README.md                    # Guía rápida del proyecto
+└── README.md                  # Guía rápida del proyecto
 ```
 
 ---

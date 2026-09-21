@@ -6,8 +6,10 @@ node_modules/
 .env.*
 !.env.example
 
-# Logs
+# Logs y dumps temporales de red
 *.log
+gateway-*.json
+scratch/
 
 # Sistema operativo
 .DS_Store

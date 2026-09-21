@@ -4,12 +4,14 @@ const eventRoutes = require('./eventRoutes');
 const tableroRoutes = require('./tableroRoutes');
 const alertaRoutes = require('./alertaRoutes');
 const configRoutes = require('./configRoutes');
+const uplinkRoutes = require('./uplinkRoutes');
 
 const router = express.Router();
 
 router.use('/health', healthRoutes);
 router.use('/config', configRoutes);
 router.use('/eventos', eventRoutes);
+router.use('/uplink', uplinkRoutes);
 router.use('/tableros', tableroRoutes);
 router.use('/alertas', alertaRoutes);
 

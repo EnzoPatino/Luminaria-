@@ -14,7 +14,7 @@ Project Luminaria utiliza dos niveles de persistencia:
 
 2. **PostgreSQL Local (Motor de Ingesta y Series Temporales):**
    * 6 tablas: `zonas`, `tableros`, `sensores`, `lecturas`, `alertas`, `estadisticas_zona`.
-   * Ingestión de telemetría de sensores por TCP (1883) y REST (`POST /api/eventos`).
+   * Ingestión de telemetría por HTTP desde ChirpStack (`POST /api/uplink`) y REST genérico (`POST /api/eventos`). MQTT disponible opcionalmente.
    * Migración: `backend/src/db/migrations/001_init_schema.sql`.
    * Scheduler de agregaciones diarias y purga periódica segura.
 
@@ -36,6 +36,26 @@ Project Luminaria utiliza dos niveles de persistencia:
 4. Para ejecutar mantenimiento manual: `npm run db:maintenance`.
 
 ## Prueba de ingestión
+
+### Vía ChirpStack HTTP (producción)
+
+POST `http://localhost:3000/api/uplink?event=up`
+
+ChirpStack envía el webhook automáticamente. Para simular manualmente:
+
+```bash
+curl -X POST http://localhost:3000/api/uplink?event=up \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "deviceInfo": { "devEui": "24e124746e392242", "deviceName": "ArduinoRFM95_v2" },
+    "object": { "tension": 218.4, "corriente": 425, "fase": "L1" },
+    "rxInfo": [{ "rssi": -112 }]
+  }'
+```
+
+Para inspeccionar el último dato recibido: `GET http://localhost:3000/api/uplink/last`
+
+### Vía REST genérico
 
 POST `http://localhost:3000/api/eventos`
 

@@ -19,10 +19,17 @@ const server = app.listen(PORT, () => {
   console.log(
     `Event ingestion available at http://localhost:${PORT}/api/eventos`,
   );
+  console.log(
+    `ChirpStack uplink available at http://localhost:${PORT}/api/uplink`,
+  );
 
   // Seccion: procesos autonomos que deben correr aunque no haya navegador abierto.
   startMaintenanceScheduler();
-  mqttSubscriber.start();
+  if (config.mqtt && config.mqtt.enabled) {
+    mqttSubscriber.start();
+  } else {
+    console.log('[MQTT] Suscriptor desactivado por configuración (Modo HTTP activo).');
+  }
 });
 
 function closeHttpServer() {
@@ -45,7 +52,9 @@ async function shutdown(signal) {
 
   try {
     stopMaintenanceScheduler();
-    await mqttSubscriber.stop();
+    if (config.mqtt && config.mqtt.enabled) {
+      await mqttSubscriber.stop();
+    }
     await closeHttpServer();
     await closePool();
     console.log("Servidor cerrado correctamente.");
