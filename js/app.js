@@ -1227,17 +1227,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <div class="tablero-meter-section">
           <div class="meter-head">
-            <span class="meter-lbl">Tensión de Red</span>
-            <span class="meter-val ${statusClass}">${fmtVoltage(tablero.tension_v)} <span class="meter-unit">Volts</span></span>
+            <span class="meter-lbl">Amper</span>
+            <span class="meter-val ${statusClass}">${fmtVoltage(tablero.tension_v)} <span class="meter-unit">Amper</span></span>
           </div>
           <div class="meter-track">
             <div class="meter-danger-line" title="Límite mínimo 190V"></div>
             <div class="meter-fill ${statusClass}" style="width: ${pctVoltage}%;"></div>
           </div>
           <div class="meter-ticks">
-            <span>0V</span>
-            <span class="danger-tick">190V Mín.</span>
-            <span>220V Normal</span>
+            <span>0A</span>
+            <span class="danger-tick">190A Min</span>
+            <span>220A normal</span>
           </div>
         </div>
 
