@@ -163,14 +163,26 @@ supabaseClient
 
 ---
 
-## 6. 🛠️ Diccionario del Esquema Local PostgreSQL (`001_init_schema.sql`)
+## 6. 🛠️ Diccionario del Esquema Local PostgreSQL
 
-En entornos locales o servidores on-premise de la Municipalidad, la base de datos `luminaria` incluye además las tablas de telemetría masiva:
+En entornos locales o servidores on-premise de la Municipalidad, la base de datos `luminaria` incluye las siguientes tablas estructuradas en migraciones secuenciales:
 
+### Migración 001 (`001_init_schema.sql`):
 * **`zonas`**: Áreas urbanas de Neuquén (`Centro / Palacio Municipal`, `Parque Norte`, etc.).
+* **`tableros`**: Tableros eléctricos con posición X/Y, fase y estado operativo derivado.
 * **`sensores`**: Vínculo entre tableros y hardware telemétrico (ESP32 MAC, módulos LoRa).
 * **`lecturas`**: Almacén masivo de lecturas telemétricas brutas (tensión, corriente, RSSI LoRa, timestamp).
+* **`alertas`**: Registro histórico de incidencias eléctricas con prioridad y estado.
 * **`estadisticas_zona`**: Agregaciones diarias calculadas (tensión mínima, máxima y promedio) para análisis a largo plazo.
+
+### Migración 002 (`002_usuarios_y_audit.sql`):
+* **`usuarios`**: Operadores y personal técnico para autenticación JWT y control de acceso (RBAC).
+  * Columnas: `id_usuario`, `nombre`, `email`, `password_hash` (`scrypt`), `rol` (`'admin'`, `'supervisor'`, `'tecnico'`), `activo`, timestamps.
+  * Restricción CHECK de roles y validación de formato de email.
+* **`audit_log`**: Registro inmutable de eventos de seguridad y acciones sensibles (logins exitosos/fallidos, altas de usuarios, resolución de alertas).
+  * Columnas: `id_audit`, `timestamp`, `id_usuario`, `accion`, `recurso`, `id_recurso`, `ip_origen`, `detalles` (JSONB), `correlation_id`.
+  * Índices en `timestamp DESC`, `id_usuario`, `accion` y `correlation_id`.
+* **Alteración en `alertas`**: Incorporación de la columna `resuelto_por REFERENCES usuarios(id_usuario)` para trazabilidad del técnico que atendió la falla.
 
 ### Ciclo de Mantenimiento y Purga:
 * **Alertas CRÍTICAS**: Retención de 6 meses.
@@ -192,14 +204,14 @@ En entornos locales o servidores on-premise de la Municipalidad, la base de dato
 curl -s -H "apikey: <SUPABASE_PUBLISHABLE_KEY>" \
   https://rhnglkhvqfmapwdbcktm.supabase.co/rest/v1/tableros
 
-# Health check unificado de la API
+# Health check unificado de la API con circuit breaker
 curl -s http://localhost:3000/api/health
 ```
 
-### Ejecutar Migración y Seeds Locales
+### Ejecutar Migraciones y Seeds Locales
 ```bash
 cd backend
-npm run db:migrate       # Ejecuta 001_init_schema.sql
+npm run db:migrate       # Ejecuta 001_init_schema.sql y 002_usuarios_y_audit.sql en orden
 npm run db:seed          # Ejecuta 001_zonas_tableros.sql
 npm run db:maintenance   # Ejecuta purga y agregación diaria
 ```

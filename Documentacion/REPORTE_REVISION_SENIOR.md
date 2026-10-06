@@ -71,6 +71,9 @@ La bitácora oficial está en `Documentacion/MATRIZ_DE_TAREAS_POR_NIVEL.md` → 
 | `BB-06` | ✅ ELIMINADO | CORS restringido con lista blanca de orígenes autorizados (`CORS_ORIGIN`) |
 | `BB-07` | ✅ ELIMINADO | Rate limiting por IP (`express-rate-limit`, 100 req/min) y límite de body 1MB |
 | `BB-08` | ✅ ELIMINADO | Manejador de errores centralizado sin exposición de `stack` en producción |
+| `BB-09` | ✅ ELIMINADO | Headers de seguridad HTTP (CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Permissions-Policy) |
+| `BB-10` | ✅ ELIMINADO | Tabla `usuarios` creada vía migración `002_usuarios_y_audit.sql` con roles y autenticación JWT |
+| `BB-11` | ✅ ELIMINADO | Worker MQTT Ingestor implementado en `src/workers/mqttSubscriber.js` y activo en `server.js` |
 
 ---
 

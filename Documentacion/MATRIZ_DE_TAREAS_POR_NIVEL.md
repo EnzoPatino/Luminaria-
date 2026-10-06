@@ -27,7 +27,7 @@
 | **BE-02** | Backend | Validación del Contrato JSON de Eventos | ✅ Implementado | 🔴 **CRÍTICO** | 3 SP | Implementada validación robusta con Zod en src/validators/eventSchema.js. |
 | **FE-03** | Frontend | Preservar Script Anti-flash, Tema y Anclaje Mapa SVG | ✅ Implementado | 🔴 **CRÍTICO** | 2 SP | Reglas de UI preservadas. Bug del menú hamburguesa corregido. ✔ |
 | **DO-03** | DevOps | Proxy Inverso Nginx + SSL/TLS (HTTPS y WSS) | ✅ Implementado | 🔴 **CRÍTICO** | 5 SP | Configurado en deploy/nginx/nginx.conf con proxy pass y websocket upgrade. |
-| **SEC-01** | Backend / DevOps | Seguridad en Capa de Red: CORS, Rate Limiting, Headers | 🟡 Parcial | 🔴 **CRÍTICO** | 5 SP | CORS y rate limiting implementados ✅. Faltan headers CSP / HSTS / X-Content-Type-Options. |
+| **SEC-01** | Backend / DevOps | Seguridad en Capa de Red: CORS, Rate Limiting, Headers | ✅ Implementado | 🔴 **CRÍTICO** | 5 SP | CORS, rate limiting y headers HTTP de seguridad (CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Permissions-Policy). ✔ |
 | **SEC-02** | Backend | Integridad de Datos en Ingestor MQTT (deduplicación, límites) | ✅ Implementado | 🔴 **CRÍTICO** | 3 SP | Implementado rate limiting y deduplicación en src/services/ingestaService.js. |
 | **BE-06** | Frontend | Error Boundary y Recuperación ante Fallos de MQTT/UI | 🟡 Parcial | 🔴 **CRÍTICO** | 3 SP | `processIncomingEvent()` tiene validación nula básica pero sin `try/catch` envolvente. Un payload inesperado puede silenciosamente corromper el estado de UI. |
 | **BE-03** | Backend | Endpoints REST (`GET /api/tableros`, `GET /api/alertas`, `PATCH /api/alertas/:id`, `GET /api/config`) | ✅ Implementado | 🟠 **ALTO** | 8 SP | Implementados endpoints REST completos con controladores, rutas y health check en src/routes/. ✔ |
@@ -37,10 +37,10 @@
 | **FE-02** | Frontend | Resolución de Alertas vía API REST y Supabase | ✅ Implementado | 🟠 **ALTO** | 3 SP | Resolución persistida en backend local y Supabase con registro de técnico responsable y timestamp. ✔ |
 | **DO-02** | DevOps | Contenerización Completa `docker-compose.yml` | 🟡 Parcial | 🟠 **ALTO** | 5 SP | Solo PostgreSQL en Docker. Backend, Mosquitto y Nginx sin contenerizar. El despliegue en servidores de la Municipalidad es inviable sin esto. |
 | **DB-05** | DBA | Plan de Backup y Recuperación (`pg_dump` cron) | ❌ Pendiente | 🟠 **ALTO** | 3 SP | Sin backups, un fallo eléctrico o de hardware del servidor pierde todo el historial de eventos de la red municipal. |
-| **BE-07** | Backend / DBA | Connection Pooling y Retry Strategy para PostgreSQL | 🟡 Parcial | 🟠 **ALTO** | 3 SP | Pool `pg` con `max: 10` configurado. Falta retry con backoff y health check en docker-compose. |
+| **BE-07** | Backend / DBA | Connection Pooling y Retry Strategy para PostgreSQL | ✅ Implementado | 🟠 **ALTO** | 3 SP | Pool `pg` con retry automático (`queryWithRetry`) y backoff exponencial con jitter ante fallos transitorios de BD. ✔ |
 | **DO-06** | DevOps | Separación de Entornos Staging / Producción | 🟡 Parcial | 🟠 **ALTO** | 3 SP | `.env.example` versionado. Faltan archivos de entorno separados para staging y producción. |
-| **BE-08** | Backend | Health Check y Circuit Breaker | 🟡 Parcial | 🟠 **ALTO** | 2 SP | `GET /api/health` verifica BD con `SELECT 1`. Falta circuit breaker y estado de MQTT en el health check. |
-| **BE-04** | Backend | Autenticación JWT y Control de Acceso (RBAC) | ❌ Pendiente | 🟡 **MODERADO** | 5 SP | Los endpoints de resolución de alertas son públicos. Sin RBAC, cualquier cliente puede resolver o manipular alertas. |
+| **BE-08** | Backend | Health Check y Circuit Breaker | ✅ Implementado | 🟠 **ALTO** | 2 SP | `GET /api/health` con Circuit Breaker (estados closed, half-open, open), monitoreo de BD, estado MQTT en vivo y Supabase. ✔ |
+| **BE-04** | Backend | Autenticación JWT y Control de Acceso (RBAC) | ✅ Implementado | 🟡 **MODERADO** | 5 SP | Migración 002 `usuarios`, HMAC-SHA256 con scrypt, endpoints `/api/auth` (login/register/me) y middleware RBAC por rol. ✔ |
 | **FE-06** | Frontend | Modal de Autenticación (UI Login) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Depende de BE-04. Sin login, el switch de roles (Supervisor/Técnico) es solo decorativo. |
 | **FE-05** | Frontend | Notificaciones Push Web (`Notification API`) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | El técnico de guardia no recibe alertas si no tiene la pestaña activa. |
 | **DO-04** | DevOps | Pipeline CI/CD (GitHub Actions / GitLab CI) | ❌ Pendiente | 🟡 **MODERADO** | 5 SP | Sin CI/CD, cada despliegue es manual y propenso a errores humanos. |
@@ -49,9 +49,9 @@
 | **DO-05** | DevOps | Monitoreo de Infraestructura (Prometheus + Grafana) | ❌ Pendiente | 🟡 **MODERADO** | 5 SP | Sin métricas, un pico de tráfico o fallo de memoria en el broker pasa desapercibido hasta la caída del servicio. |
 | **FE-08** | Frontend | Accesibilidad WCAG 2.1 AA (ARIA, Contraste, Teclado) | 🟡 Parcial | 🟡 **MODERADO** | 3 SP | Algunos botones tienen `aria-label`. Falta `aria-live` en región de alertas y navegación completa por teclado. |
 | **FE-09** | Frontend | Internacionalización i18n (Español / Inglés) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Todos los textos hardcodeados en español en `js/app.js`. |
-| **SEC-03** | Backend / DBA | Audit Logging y Registro de Seguridad | 🟡 Parcial | 🟡 **MODERADO** | 3 SP | Registro de técnico resolutor y timestamp en tabla alertas implementado en BD ✅. Falta tabla general audit_log para logins. |
+| **SEC-03** | Backend / DBA | Audit Logging y Registro de Seguridad | ✅ Implementado | 🟡 **MODERADO** | 3 SP | Migración 002 `audit_log`, middleware `audit()` para registrar logins y resoluciones con IP, correlation_id y timestamp. ✔ |
 | **DO-07** | DevOps | Pruebas de Carga y Stress Testing | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Sin load testing no se conoce la capacidad real del sistema ante una tormenta eléctrica que genere eventos masivos. |
-| **BE-09** | Backend | Logging Estructurado y Correlación de Eventos | 🟡 Parcial | 🟡 **MODERADO** | 2 SP | Request logger activo. Falta JSON estructurado con `correlation_id` para trazabilidad MQTT→Worker→BD. |
+| **BE-09** | Backend | Logging Estructurado y Correlación de Eventos | ✅ Implementado | 🟡 **MODERADO** | 2 SP | Logger estructurado (`src/services/logger.js`) con niveles, correlation_id por request y middleware de correlación. ✔ |
 | **FE-04** | Frontend | Exportación CSV/JSON y Filtros en Consola MQTT | ❌ Pendiente | 🟢 **LEVE** | 2 SP | Herramienta de diagnóstico secundario para el desarrollador/técnico. |
 | **BE-05** | Backend | API Histórica de Telemetría para Gráficas | ❌ Pendiente | 🟢 **LEVE** | 5 SP | La tabla `lecturas` contiene los datos pero no hay endpoint para exponerlos. Requerido solo para reportes estadísticos futuros. |
 | **FE-07** | Frontend | Validación Sintáctica Automática (`node -c`) | ✅ Implementado | 🟢 **LEVE** | 1 SP | `check_syntax.py` en raíz. `node -c js/app.js` y `node -c js/mqtt-client.js` pasan sin errores. ✔ |
@@ -92,17 +92,19 @@
 - **Archivos a crear:** `nginx.conf`, integrar en `docker-compose.yml`
 - **Criterio:** Navegador puede acceder a `https://luminaria.neuquen.gob.ar` y conectar MQTT por `wss://`.
 
-#### `SEC-01` — Seguridad Capa de Red (completar)
-- **Estado:** CORS ✅ · Rate limiting ✅ · **Faltan headers de seguridad**
-- **Acción:** Agregar en `backend/src/app.js`:
-  ```js
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Content-Security-Policy', "default-src 'self'");
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  ```
+#### `SEC-01` — Seguridad Capa de Red ✅ DONE
+- **Estado:** ✅ Implementado
+- **Implementación:** En `backend/src/app.js`: CORS restringido por lista blanca (`CORS_ORIGIN`), rate limiting por IP (`express-rate-limit`), límite de 1MB en body JSON, y cabeceras de seguridad HTTP:
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `X-XSS-Protection: 0`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+  - En producción: `Strict-Transport-Security: max-age=31536000; includeSubDomains` y `Content-Security-Policy`.
 
-#### `SEC-02` — Integridad de Datos Ingestor
-- **Implementar en el Worker (BE-01):** ventana de deduplicación, rate limiting por tablero, cola con backpressure.
+#### `SEC-02` — Integridad de Datos Ingestor ✅ DONE
+- **Estado:** ✅ Implementado
+- **Implementación:** En `src/services/ingestaService.js`: ventana de deduplicación SHA-256 en memoria con reserva temprana y rate limiting con buckets deslizantes por tablero (`TABLERO_RATE_LIMIT_EXCEEDED`).
 
 #### `BE-06` — Error Boundary UI (ampliar)
 - **Estado:** 🟡 Parcial
@@ -112,15 +114,23 @@
 
 ### 🟠 Nivel ALTO — Esencial para MVP
 
-#### `BE-03` — Endpoints REST (implementar los faltantes)
-- **Existe:** `POST /api/eventos` ✅ · `GET /api/health` ✅
-- **Falta implementar:**
-  ```
-  GET  /api/tableros                           → tablerosModel.findAll()
-  GET  /api/alertas?severidad=CRITICA&page=1   → alertasModel.findAll(filters)
-  PATCH /api/alertas/:id/resolver              → alertasModel.resolve(id)
-  ```
-- **Criterio:** Respuestas en formato `{ status, data, pagination }`. Paginación con `limit` y `offset`.
+#### `BE-03` — Endpoints REST ✅ DONE
+- **Estado:** ✅ Implementado
+- **Endpoints:**
+  - `POST /api/eventos` → ingesta con deduplicación y persistencia transaccional.
+  - `POST /api/uplink` → recepción de paquetes ChirpStack LoRaWAN.
+  - `GET /api/tableros` → listado y estado derivado de tableros.
+  - `GET /api/alertas` → filtrado por severidad/estado con paginación (`limit`, `offset`, `total`).
+  - `PATCH /api/alertas/:id/resolver` → resolución transaccional de alertas (asociada al usuario autenticado).
+  - `GET /api/config` → exposición segura de tópicos y brokers.
+
+#### `BE-07` — Connection Pooling y Retry Strategy ✅ DONE
+- **Estado:** ✅ Implementado
+- **Implementación:** En `src/config/database.js`: función `queryWithRetry(text, params)` con reintentos configurables (`DB_MAX_RETRIES`), backoff exponencial con jitter aleatorio para prevenir thundering herd ante errores transitorios (`ECONNREFUSED`, `ETIMEDOUT`, `57P01`, `08006`, etc.). Pool dimensionado con `max`, `idleTimeoutMillis` y `connectionTimeoutMillis`.
+
+#### `BE-08` — Health Check y Circuit Breaker ✅ DONE
+- **Estado:** ✅ Implementado
+- **Implementación:** En `src/routes/healthRoutes.js`: Circuit Breaker de 3 estados (`closed`, `half-open`, `open`) para no degradar el servidor si PostgreSQL cae, monitoreo del suscriptor TCP MQTT en vivo (`setMqttSubscriberRef`), estado del cliente Supabase Cloud y métrica de `uptime` del proceso.
 
 #### `DB-01` — Esquema ER ✅ DONE
 - 6 tablas creadas, 8 índices, constraints y checks robustos. Seed de datos iniciales disponible.
@@ -139,19 +149,19 @@
 
 ### 🟡 Nivel MODERADO — Funcional / Operativo
 
-| ID | Acción Principal | Dependencia Previa |
-|---|---|---|
-| **BE-04** | Crear tabla `usuarios` (migración 002), `POST /api/auth/login` con bcrypt + JWT | DB-01 ✅ |
-| **FE-06** | Modal de Login en UI, guardar JWT en sessionStorage | BE-04 |
-| **FE-05** | `Notification.requestPermission()` en init, `new Notification()` en alertas críticas | Ninguna |
-| **DO-04** | `.github/workflows/ci.yml` con jobs: lint, test, docker build, deploy | DO-02 |
-| **DB-04** | Configurar ventana retención via `RETENTION_DAYS` en `.env`, job agregación `estadisticas_zona` | DB-01 ✅ |
-| **DO-05** | Añadir Prometheus + Grafana a `docker-compose.yml` | DO-02 |
-| **FE-08** | `aria-live="polite"` en `#alertsContainer`, roles ARIA en tabs y modales | Ninguna |
-| **FE-09** | `js/i18n.js` con diccionario ES/EN, selector en header | Ninguna |
-| **SEC-03** | Migración 003 tabla `audit_log`, middleware de auditoría en endpoints sensibles | BE-04 |
-| **DO-07** | Script `k6` simulando carga real | DO-02 |
-| **BE-09** | Reemplazar `console.log` inline por `winston`/`pino` con JSON estructurado | Ninguna |
+| ID | Acción Principal | Dependencia Previa | Estado |
+|---|---|---|---|
+| **BE-04** | Tabla `usuarios` (`002_usuarios_y_audit.sql`), auth JWT (HMAC-SHA256, scrypt), RBAC (`requireRole`) y rutas `/api/auth` (login/register/me) | DB-01 ✅ | ✅ Implementado |
+| **FE-06** | Modal de Login en UI, guardar JWT en sessionStorage | BE-04 ✅ | ❌ Pendiente |
+| **FE-05** | `Notification.requestPermission()` en init, `new Notification()` en alertas críticas | Ninguna | ❌ Pendiente |
+| **DO-04** | `.github/workflows/ci.yml` con jobs: lint, test, docker build, deploy | DO-02 | ❌ Pendiente |
+| **DB-04** | Configurar ventana retención via `RETENTION_DAYS` en `.env`, job agregación `estadisticas_zona` | DB-01 ✅ | 🟡 Parcial |
+| **DO-05** | Añadir Prometheus + Grafana a `docker-compose.yml` | DO-02 | ❌ Pendiente |
+| **FE-08** | `aria-live="polite"` en `#alertsContainer`, roles ARIA en tabs y modales | Ninguna | 🟡 Parcial |
+| **FE-09** | `js/i18n.js` con diccionario ES/EN, selector en header | Ninguna | ❌ Pendiente |
+| **SEC-03** | Tabla `audit_log` (`002_usuarios_y_audit.sql`), modelo `auditLogModel.js`, middleware `audit()` fire-and-forget, y `resuelto_por` en `alertas` | BE-04 ✅ | ✅ Implementado |
+| **DO-07** | Script `k6` simulando carga real | DO-02 | ❌ Pendiente |
+| **BE-09** | Logger estructurado (`src/services/logger.js`) con formato JSON/texto, `correlation_id` y middleware `X-Correlation-Id` | Ninguna | ✅ Implementado |
 
 ---
 
@@ -221,8 +231,8 @@ Sprint 5 (2 semanas) — REFINAMIENTO
 | `BB-06` | ✅ ELIMINADO | CORS restringido con lista blanca de orígenes (`CORS_ORIGIN` en `.env`) | `backend/src/app.js` |
 | `BB-07` | ✅ ELIMINADO | Rate limiting por IP (`express-rate-limit`, 100 req/min) y límite body 1MB | `backend/src/app.js` |
 | `BB-08` | ✅ ELIMINADO | Manejador de errores centralizado sin exposición de `stack` en producción | `backend/src/app.js` |
-| `BB-09` | 🔴 ABIERTO | Headers de seguridad HTTP faltantes (CSP, HSTS, X-Content-Type-Options) | `backend/src/app.js` |
-| `BB-10` | 🔴 ABIERTO | Tabla `usuarios` no existe en el esquema DB (bloquea BE-04) | `001_init_schema.sql` |
+| `BB-09` | ✅ ELIMINADO | Headers de seguridad HTTP (X-Content-Type-Options, X-Frame-Options, CSP, HSTS, Permissions-Policy) | `backend/src/app.js` |
+| `BB-10` | ✅ ELIMINADO | Tabla `usuarios` implementada vía migración `002_usuarios_y_audit.sql` con roles y auth | `src/db/migrations/002_usuarios_y_audit.sql` |
 | `BB-11` | ✅ ELIMINADO | Worker MQTT Ingestor implementado en src/workers/mqttSubscriber.js y activo en server.js | `backend/src/workers/mqttSubscriber.js` |
 | `BB-12` | 🟡 PARCIAL | `processIncomingEvent()` en frontend sin `try/catch` global (riesgo de crash silencioso) | `js/app.js` |
 

@@ -42,12 +42,54 @@ Project_Luminaria/
 |   `-- src/
 |       |-- app.js
 |       |-- config/
+|       |   |-- database.js (Pool pg con queryWithRetry y backoff exponencial)
+|       |   `-- index.js
 |       |-- controllers/
-|       |-- db/ (migrations & seeds)
+|       |   |-- alertaController.js (Resolución con trazabilidad de usuario)
+|       |   |-- authController.js (Login, registro con Zod)
+|       |   |-- configController.js
+|       |   |-- eventController.js
+|       |   |-- tableroController.js
+|       |   `-- uplinkController.js
+|       |-- db/
+|       |   `-- migrations/
+|       |       |-- 001_init_schema.sql
+|       |       `-- 002_usuarios_y_audit.sql (Usuarios, RBAC y audit_log)
+|       |-- middlewares/
+|       |   |-- auditMiddleware.js (Auditoría fire-and-forget)
+|       |   |-- authMiddleware.js (JWT requireAuth y RBAC requireRole)
+|       |   |-- correlationMiddleware.js (Generador de X-Correlation-Id)
+|       |   `-- eventIngestionMiddleware.js
+|       |-- models/
+|       |   |-- alertasModel.js
+|       |   |-- auditLogModel.js
+|       |   |-- lecturasModel.js
+|       |   |-- sensoresModel.js
+|       |   |-- tablerosModel.js
+|       |   `-- usuariosModel.js
 |       |-- routes/
+|       |   |-- alertaRoutes.js (Protegido con requireRole)
+|       |   |-- authRoutes.js (/api/auth/login, /register, /me)
+|       |   |-- configRoutes.js
+|       |   |-- eventRoutes.js
+|       |   |-- healthRoutes.js (Circuit Breaker y estado MQTT)
+|       |   |-- index.js
+|       |   |-- tableroRoutes.js
+|       |   `-- uplinkRoutes.js
+|       |-- scripts/
+|       |   |-- migrate.js (Ejecución automática y ordenada de migraciones)
+|       |   `-- seed.js
 |       |-- services/
+|       |   |-- authService.js (JWT HMAC-SHA256, scrypt)
+|       |   |-- ingestaService.js (Deduplicación SHA-256 y rate limit)
+|       |   |-- logger.js (Logger estructurado con correlation_id)
+|       |   |-- mantenimientoScheduler.js
+|       |   |-- persistenciaService.js
+|       |   `-- retencionService.js
 |       |-- validators/
+|       |   `-- eventSchema.js (Validación Zod por tipo de evento)
 |       `-- workers/
+|           `-- mqttSubscriber.js (TCP 1883 con reconexión autónoma)
 |-- deploy/
 |   |-- mosquitto/
 |   `-- nginx/
@@ -328,35 +370,107 @@ Las alertas resueltas dejan de contarse en KPIs y en la severidad derivada del m
 
 ---
 
-## 9. Pruebas Manuales
+## 9. Arquitectura y Módulos del Backend (Node.js + Express)
 
-1. Abrir `index.html` directamente o servir el directorio con `python3 -m http.server 8080`.
-2. Verificar que la app intente conectar a `localhost:9001/mqtt`.
-3. Si no hay broker, confirmar que pasa a `Modo Simulacion Activo`.
-4. Abrir **Simulador** y ejecutar los cuatro presets: baja tension, desconexion abrupta, foco quemado y telemetria normal.
-5. Revisar que cambien las tarjetas, el mapa, el banner, los KPIs, el feed de alertas y la consola.
-6. Marcar alertas como resueltas y verificar que los contadores se actualicen.
-7. Probar el interruptor de tema claro/oscuro: el icono debe alternar entre `fa-moon` y `fa-sun`, todos los componentes (incluido el mapa SVG) deben mantener contraste legible, y la eleccion debe persistir al recargar.
-8. Limpiar `localStorage` y recargar para confirmar que la aplicacion arranca en modo oscuro por defecto sin flash.
+El backend opera como un servicio autónomo y resiliente, diseñado para alta concurrencia tanto en ingesta telemétrica como en servicio de API para operadores.
 
-Validaciones sintacticas recomendadas:
+### 9.1 Endpoints de la API REST (`/api/`)
 
-```bash
-node -c js/app.js
-node -c js/mqtt-client.js
-```
+| Método | Ruta | Acceso / Rol | Descripción |
+|---|---|---|---|
+| `GET` | `/api/health` | Público | Health check integral con **Circuit Breaker** (BD, worker MQTT, Supabase Cloud y uptime). |
+| `GET` | `/api/config` | Público | Configuración pública de red y tópicos MQTT permitidos. |
+| `POST` | `/api/auth/login` | Público | Autenticación con email/password. Retorna JWT con claims de usuario y rol. Registra auditoría. |
+| `POST` | `/api/auth/register` | `admin` | Alta de nuevo operador (`admin`, `supervisor`, `tecnico`) con hashing seguro `scrypt`. |
+| `GET` | `/api/auth/me` | Autenticado | Retorna los datos y rol del token JWT activo. |
+| `POST` | `/api/eventos` | Público / Red IoT | Ingesta transaccional con validación de contrato Zod, deduplicación SHA-256 y rate limiting por tablero. |
+| `POST` | `/api/uplink` | Red LoRaWAN | Receptor de tramas ChirpStack v4 decodificadas. |
+| `GET` | `/api/tableros` | Público | Listado de tableros con telemetría actual y severidad derivada. |
+| `GET` | `/api/alertas` | Público | Historial de alertas con filtros (`severidad`, `estado`) y paginación (`limit`, `offset`, `total`). |
+| `PATCH` | `/api/alertas/:id/resolver` | `admin`, `supervisor` | Resolución transaccional de alertas. Registra `resuelto_por` (ID de usuario) y emite log en `audit_log`. |
+
+### 9.2 Capa de Seguridad y Red
+
+1. **Headers de Seguridad HTTP:**
+   - `X-Content-Type-Options: nosniff` (previene ataques MIME-sniffing).
+   - `X-Frame-Options: DENY` (inmunidad contra clickjacking).
+   - `X-XSS-Protection: 0` (según los estándares modernos OWASP).
+   - `Referrer-Policy: strict-origin-when-cross-origin`.
+   - `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+   - En entorno de producción (`NODE_ENV=production`): HSTS (`Strict-Transport-Security: max-age=31536000; includeSubDomains`) y CSP (`Content-Security-Policy`).
+2. **CORS con Lista Blanca:**
+   - Configurable mediante la variable `CORS_ORIGIN` en `.env`.
+   - Incluye orígenes locales predeterminados (`http://localhost:3000`, `http://localhost:5500`, `http://127.0.0.1:5500`).
+3. **Rate Limiting y Límite de Payload:**
+   - Límite global por IP (`express-rate-limit`, 100 peticiones por ventana configurable).
+   - Límite estricto de body JSON a 1MB para prevenir denegación de servicio por memoria.
+
+### 9.3 Autenticación y Autorización (RBAC)
+
+- **Mecanismo:** JSON Web Tokens (JWT) firmados con HMAC-SHA256 utilizando el módulo nativo `crypto` de Node.js (cero dependencias externas vulnerables).
+- **Almacenamiento de Contraseñas:** Hashing criptográfico mediante `scrypt` con salt aleatorio de 16 bytes y clave derivada de 64 bytes.
+- **Roles Implementados:**
+  - `admin`: Control total, gestión de usuarios (`/api/auth/register`), resolución de alertas y mantenimiento.
+  - `supervisor`: Monitoreo y resolución de alertas críticas y advertencias.
+  - `tecnico`: Monitoreo, lectura de telemetría y diagnóstico.
+- **Middlewares:**
+  - `requireAuth`: Valida firma y expiración del JWT en `Authorization: Bearer <token>`. Inyecta `req.user`.
+  - `requireRole(...roles)`: Valida que el rol del usuario posea los privilegios requeridos.
+
+### 9.4 Resiliencia y Conexión a Base de Datos
+
+- **Connection Pool:** Pool `pg` con límites configurables de conexiones (`max`, `idleTimeoutMillis`, `connectionTimeoutMillis`).
+- **Retry con Backoff Exponencial (`queryWithRetry`):**
+  - Reintenta automáticamente ante fallos transitorios de red o reinicio del motor (`ECONNREFUSED`, `ETIMEDOUT`, `57P01`, `08006`).
+  - Aplica factor exponencial `delay = baseDelay * 2^intento` y *jitter* aleatorio para evitar saturación (*thundering herd*).
+- **Circuit Breaker en `/api/health`:**
+  - Tres estados operativos: `closed` (normal), `open` (circuito abierto tras 3 fallos consecutivos; no satura la BD con consultas innecesarias), `half-open` (prueba de reconexión tras 30 segundos).
+  - Reporta en tiempo real el estado de conexión del worker MQTT mediante `setMqttSubscriberRef`.
+
+### 9.5 Observabilidad, Correlación y Auditoría
+
+- **Correlation ID:** Middleware que genera o preserva un identificador único `X-Correlation-Id` en cada petición HTTP, propagado hacia la cabecera de respuesta y hacia cada entrada del log.
+- **Logger Estructurado:** `src/services/logger.js` emite eventos en formato JSON en producción y texto coloreado en desarrollo, con niveles configurables (`error`, `warn`, `info`, `debug`).
+- **Audit Logging (`audit_log`):** Middleware `audit()` que registra de forma asíncrona (*fire-and-forget*, sin demorar la respuesta del usuario) toda acción crítica (autenticación, cambios de roles, resolución de incidentes) asociando usuario, IP, recurso y `correlation_id`.
 
 ---
 
-## 10. Cambios Documentados en Esta Version
+## 10. Pruebas y Verificación
 
-- Rediseño responsive de la interfaz, especialmente navegacion y layout movil.
-- Simplificacion de pantalla principal en pestañas.
-- Incorporacion de grilla de tableros como vista principal.
-- Persistencia de configuracion MQTT en `localStorage`.
-- Simulador con evento adicional `TELEMETRIA_NORMAL`.
-- Registro de alertas resolubles y filtros por severidad.
-- Correccion del anclaje de los pines del mapa: `#mapPinsContainer` (`.map-pins-layer`) se movio dentro de `.map-svg-wrapper` para que los pines queden fijados al mapa en todos los tamaños de pantalla.
-- Ajuste responsive del mapa en movil: etiquetas con `max-width` y salto de linea para evitar recortes en los bordes, iconos reducidos y altura de mapa ampliada.
-- Aclaracion de que backend/API/PostgreSQL no estan presentes actualmente en el repositorio.
-- **Interruptor de tema claro/oscuro** en la cabecera del header. Atributo `data-theme` aplicado sobre `<html>`, redefinicion de variables CSS en `[data-theme="light"]`, persistencia en `localStorage` clave `luminaria_theme` y script anti-flash en el `<head>` de `index.html` para evitar parpadeo al cargar. Colores hardcodeados del mapa SVG y de varios componentes migrados a variables CSS para soportar ambos temas.
+1. **Pruebas de la API REST:**
+   ```bash
+   # Health check con circuit breaker y estado MQTT
+   curl http://localhost:3000/api/health
+
+   # Login de usuario
+   curl -X POST http://localhost:3000/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"admin@neuquen.gob.ar","password":"password123"}'
+
+   # Consulta de tableros
+   curl http://localhost:3000/api/tableros
+   ```
+
+2. **Validaciones Sintácticas:**
+   ```bash
+   node -c js/app.js
+   node -c js/mqtt-client.js
+   ```
+
+3. **Ejecución de Migraciones de Base de Datos:**
+   ```bash
+   npm run db:migrate
+   ```
+
+---
+
+## 11. Cambios Documentados en Esta Versión
+
+- **Seguridad en Capa de Red (SEC-01 / BB-09):** Headers HTTP obligatorios (CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Permissions-Policy).
+- **Autenticación JWT y RBAC (BE-04 / BB-10):** Migración `002_usuarios_y_audit.sql`, modelo `usuariosModel`, servicio `authService` con hashing `scrypt` y middleware `authMiddleware`.
+- **Auditoría de Operaciones (SEC-03):** Tabla `audit_log`, middleware `auditMiddleware` para trazabilidad de logins y resoluciones técnicas (`resuelto_por`).
+- **Resiliencia de Base de Datos (BE-07):** Reintentos automáticos con backoff exponencial y jitter en `database.js` (`queryWithRetry`).
+- **Health Check y Circuit Breaker (BE-08):** Monitor inteligente de base de datos con estados `closed`/`open`/`half-open`, reporte en vivo de suscriptor MQTT y cliente Supabase.
+- **Logging Estructurado y Correlación (BE-09):** Módulo `logger.js` y middleware `X-Correlation-Id` para rastreo unificado de eventos.
+- **Migraciones Secuenciales:** Runner `migrate.js` actualizado para ejecutar dinámicamente todos los archivos `.sql` en orden alfabético.
+- **Optimizaciones Frontend Previas:** Corrección del menú hamburguesa en móviles, sanitización XSS, singleton de AudioContext y soporte completo para modo oscuro anti-flash.
