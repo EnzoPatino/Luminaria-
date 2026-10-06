@@ -41,8 +41,11 @@ async function resolveAlerta(req, res, next) {
   }
 
   try {
+    // BE-04: asociar el usuario autenticado que resuelve la alerta
+    const resuelto_por = req.user ? req.user.id_usuario : null;
+
     const alerta = await withTransaction(async (client) => {
-      const resolved = await alertasModel.resolve(client, idAlerta);
+      const resolved = await alertasModel.resolve(client, idAlerta, resuelto_por);
       if (!resolved) return null;
       await tablerosModel.updateDerivedState(client, resolved.id_tablero);
       return resolved;

@@ -34,14 +34,15 @@ async function create(client, alert) {
   return result.rows[0];
 }
 
-async function resolve(client, idAlerta) {
+async function resolve(client, idAlerta, resuelto_por = null) {
   const result = await client.query(
     `UPDATE alertas
      SET estado_alerta = 'resuelta',
-         fecha_resolucion = COALESCE(fecha_resolucion, now())
+         fecha_resolucion = COALESCE(fecha_resolucion, now()),
+         resuelto_por = COALESCE($2, resuelto_por)
      WHERE id_alerta = $1
      RETURNING *`,
-    [idAlerta]
+    [idAlerta, resuelto_por]
   );
 
   return result.rows[0] || null;
@@ -88,6 +89,7 @@ async function getAll(client, filters = {}) {
        a.prioridad,
        a.estado_alerta,
        a.fecha_resolucion,
+       a.resuelto_por,
        a.es_persistente,
        a.datos_json
      FROM alertas a

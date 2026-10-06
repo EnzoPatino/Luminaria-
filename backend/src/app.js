@@ -3,18 +3,54 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const routes = require('./routes');
+const logger = require('./services/logger');
+const { correlationMiddleware } = require('./middlewares/correlationMiddleware');
 
 const app = express();
 
 app.disable('x-powered-by');
 app.set('trust proxy', config.trustProxy);
 
-// BB-04: Request logger inline para trazabilidad de peticiones
+// ─────────────────────────────────────────────────────────────────────────────
+// SEC-01 / BB-09: Headers de seguridad HTTP obligatorios.
+// Estos headers protegen contra ataques comunes (XSS, clickjacking, MIME
+// sniffing, downgrade HTTPS) sin romper funcionalidad.
+// ─────────────────────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  // HSTS: solo en producción para no bloquear desarrollo local
+  if (config.env === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' wss: https:; font-src 'self'"
+    );
+  }
+
+  next();
+});
+
+// BE-09: Middleware de correlación (genera un ID único por request)
+app.use(correlationMiddleware);
+
+// BE-09: Request logger estructurado con correlation_id
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`);
+    logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`, {
+      correlation_id: req.correlationId,
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      duration_ms: duration,
+      ip: req.ip,
+    });
   });
   next();
 });
@@ -78,7 +114,15 @@ app.use((req, res) => {
 // BB-08: Manejador centralizado de errores
 app.use((err, req, res, next) => {
   const statusCode = err.status || err.statusCode || (err.message && err.message.includes('CORS') ? 403 : 500);
-  console.error('[API Error]', err);
+
+  logger.error('Error en API', {
+    correlation_id: req.correlationId,
+    status: statusCode,
+    code: err.code,
+    message: err.message,
+    stack: config.env === 'development' ? err.stack : undefined,
+  });
+
   res.status(statusCode).json({
     status: 'error',
     statusCode,
