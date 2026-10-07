@@ -113,6 +113,26 @@
   color: var(--color-accent-text);
 }
 
+.tablero-fault {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.tablero-fault.critical {
+  color: var(--color-critical);
+  background: var(--color-critical-bg);
+}
+
+.tablero-fault.warning {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
 /* Medidor de Voltaje */
 .tablero-meter-section {
   background: var(--bg-dark);
@@ -312,7 +332,7 @@
 }
 
 .tablero-expand.open {
-  max-height: 620px;
+  max-height: 1600px;
   opacity: 1;
 }
 
@@ -445,4 +465,3 @@
   color: var(--color-warning);
   border: 1px solid var(--color-warning-border);
 }
-

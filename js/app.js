@@ -1033,9 +1033,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let soundType = "info";
 
     if (event.tipo_evento === "BAJA_TENSION") {
-      const tension = event.datos?.tension_medida_v || 185.0;
+      const tension = toFiniteNumber(event.datos?.tension_medida_v, 185.0);
       tablero.tension_v = tension;
       tablero.fase = event.datos?.fase || "L1";
+      tablero.fallaActiva = `Baja tensión: ${tension.toFixed(1)} V`;
       alertTitle = `Baja Tensión Detectada: ${tension}V (Umbral: ${event.datos?.umbral_minimo_v || 190}V)`;
       soundType = "critical";
     } else if (event.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") {
@@ -1050,6 +1051,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tablero.focos[focoId].corriente_ma =
         event.datos?.corriente_actual_ma || 0.0;
       tablero.focos[focoId].estado = "robado";
+      tablero.fallaActiva = "Desconexión detectada en el tablero";
       alertTitle = `Desconexión Abrupta / Posible Robo en ${tablero.nombre || tableroId}`;
       soundType = "critical";
     } else if (event.tipo_evento === "FOCO_QUEMADO") {
@@ -1061,13 +1063,13 @@ document.addEventListener("DOMContentLoaded", () => {
           estado: "quemado",
         };
       }
-      tablero.focos[focoId].corriente_ma =
-        event.datos?.corriente_medida_ma || 12.5;
+      tablero.focos[focoId].corriente_ma = toFiniteNumber(event.datos?.corriente_medida_ma, 12.5);
       tablero.focos[focoId].estado = "quemado";
+      tablero.fallaActiva = "Falla de luminaria detectada en el tablero";
       alertTitle = `Anomalía de Consumo / Foco Quemado en ${tablero.nombre || tableroId}`;
       soundType = "warning";
     } else if (event.tipo_evento === "TELEMETRIA_NORMAL") {
-      tablero.tension_v = event.datos?.tension_medida_v || 220.0;
+      tablero.tension_v = toFiniteNumber(event.datos?.tension_medida_v, 220.0);
       if (event.datos?.focos_restaurados) {
         event.datos.focos_restaurados.forEach((fId) => {
           if (tablero.focos[fId]) {
@@ -1081,6 +1083,7 @@ document.addEventListener("DOMContentLoaded", () => {
           tablero.focos[fId].corriente_ma = 450.0;
         });
       }
+      tablero.fallaActiva = "";
       alertTitle = `Telemetría Normal Restablecida en ${tablero.nombre || tableroId}`;
       soundType = "info";
     }
@@ -1158,28 +1161,35 @@ document.addEventListener("DOMContentLoaded", () => {
         statusIcon = "fa-exclamation-triangle";
       }
 
-      let totalFocos = Object.keys(tablero.focos || {}).length;
-      let focosOk = 0;
-      let focosRobados = 0;
-      let focosQuemados = 0;
-
-      Object.values(tablero.focos || {}).forEach((f) => {
-        if (f.estado === "ok") focosOk++;
-        else if (f.estado === "robado") focosRobados++;
-        else if (f.estado === "quemado") focosQuemados++;
-      });
-
-      if (focosRobados > 0) {
+      const voltageCritical = tablero.tension_v < 190.0;
+      const voltageWarning = tablero.tension_v >= 190.0 && tablero.tension_v < 210.0;
+      const focos = Object.values(tablero.focos || {});
+      const hayDesconexion = focos.some((foco) => foco.estado === "robado");
+      const hayFallaLuminaria = focos.some((foco) => foco.estado === "quemado");
+      if (voltageCritical || hayDesconexion) {
         statusClass = "critical";
-        statusLabel = `Desconexión Abrupta (${focosRobados})`;
         statusBadgeClass = "badge-critical";
-        statusIcon = "fa-bolt";
-      } else if (focosQuemados > 0 && statusClass !== "critical") {
+        statusIcon = "fa-triangle-exclamation";
+        statusLabel = [
+          voltageCritical ? "Baja tensión" : "",
+          hayDesconexion ? "Falla de luminaria" : "",
+        ].filter(Boolean).join(" · ");
+      } else if (voltageWarning || hayFallaLuminaria) {
         statusClass = "warning";
-        statusLabel = `Foco Quemado (${focosQuemados})`;
         statusBadgeClass = "badge-warning";
         statusIcon = "fa-exclamation-circle";
+        statusLabel = [
+          voltageWarning ? "Tensión baja" : "",
+          hayFallaLuminaria ? "Falla de luminaria" : "",
+        ].filter(Boolean).join(" · ");
       }
+
+      const fallasActivas = [];
+      if (tablero.tension_v < 210) {
+        fallasActivas.push(`${tablero.tension_v < 190 ? "Baja tensión" : "Tensión fuera de rango"}: ${fmtVoltage(tablero.tension_v)} V`);
+      }
+      if (hayDesconexion) fallasActivas.push("Desconexión detectada en el tablero");
+      if (hayFallaLuminaria) fallasActivas.push("Falla de luminaria detectada en el tablero");
 
       const isSelected = tablero.id === appState.selectedTableroId;
       const isExpanded = tablero.id === appState.expandedTableroId;
@@ -1187,49 +1197,6 @@ document.addEventListener("DOMContentLoaded", () => {
         Math.max((tablero.tension_v / 250.0) * 100, 0),
         100,
       );
-
-      const focosArr = Object.values(tablero.focos || {});
-      const avgCorriente =
-        totalFocos > 0
-          ? focosArr.reduce(
-              (sum, f) => sum + (Number(f.corriente_ma) || 0),
-              0,
-            ) / totalFocos
-          : 0;
-      const circuitoPct =
-        totalFocos > 0 ? Math.round((focosOk / totalFocos) * 100) : 0;
-      const circuitoEstado =
-        totalFocos === 0
-          ? "Sin datos"
-          : circuitoPct === 100
-            ? "Circuito operativo"
-            : "Requiere revisión";
-      const circuitoClass =
-        totalFocos === 0 ? "unknown" : circuitoPct === 100 ? "ok" : "warning";
-
-      let focosListHtml = "";
-      if (totalFocos === 0) {
-        focosListHtml =
-          '<div class="foco-row-empty">Sin focos registrados en este tablero.</div>';
-      } else {
-        focosListHtml = focosArr
-          .map((f) => {
-            const estado = f.estado || "ok";
-            const estadoLabel =
-              estado === "robado"
-                ? "Robado"
-                : estado === "quemado"
-                  ? "Quemado"
-                  : "Operativo";
-            return `
-          <div class="foco-row ${estado}">
-            <span class="foco-row-id">${escapeHtml(f.id)}</span>
-            <span class="foco-row-current">${(Number(f.corriente_ma) || 0).toFixed(1)} mA</span>
-            <span class="foco-state-badge ${estado}">${estadoLabel}</span>
-          </div>`;
-          })
-          .join("");
-      }
 
       const card = document.createElement("article");
       card.className = `tablero-card ${statusClass} ${isSelected ? "selected" : ""}`;
@@ -1248,6 +1215,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="tablero-location">
           <i class="fas fa-location-dot"></i> ${escapeHtml(tablero.ubicacion)}
         </div>
+
+        ${fallasActivas.length ? `<div class="tablero-fault ${statusClass}" role="status"><i class="fas fa-triangle-exclamation"></i><span>Fallas detectadas: ${fallasActivas.map((falla) => escapeHtml(falla)).join(" · ")}</span></div>` : ""}
 
         <div class="tablero-meter-section">
           <div class="meter-head">
@@ -1271,20 +1240,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="info-cell-val">${escapeHtml(tablero.fase || "L1")}</span>
           </div>
           <div class="info-cell">
-            <span class="info-cell-lbl">Circuito Luminarias</span>
-            <span class="info-cell-val">${focosOk} de ${totalFocos} Operativas</span>
+            <span class="info-cell-lbl">Estado del tablero</span>
+            <span class="info-cell-val">${hayDesconexion || hayFallaLuminaria ? "Requiere revisión" : statusClass === "ok" ? "Operativo" : "Requiere revisión"}</span>
           </div>
-        </div>
-<!-- Estado del circuito -->
-        <div class="circuit-health ${circuitoClass}">
-          <div class="circuit-health-head">
-            <span class="info-cell-lbl">Estado del circuito</span>
-            <span class="circuit-health-label">${circuitoEstado}</span>
-          </div>
-          <div class="circuit-health-track" aria-label="${totalFocos > 0 ? `${circuitoPct}% de focos operativos` : "Sin datos de focos"}">
-            <div class="circuit-health-fill" style="width: ${circuitoPct}%;"></div>
-          </div>
-          <span class="circuit-health-detail">${totalFocos > 0 ? `${focosOk} de ${totalFocos} focos operativos` : "No hay focos registrados"}</span>
         </div>
 
         <div class="tablero-card-actions">
@@ -1305,28 +1263,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span class="expand-stat-val">${fmtVoltage(tablero.tension_nominal_v || 220.0)} V</span>
               </div>
               <div class="expand-stat">
-                <span class="expand-stat-lbl">Corriente Promedio</span>
-                <span class="expand-stat-val">${avgCorriente.toFixed(1)} mA</span>
-              </div>
-              <div class="expand-stat">
-                <span class="expand-stat-lbl">Operativos</span>
-                <span class="expand-stat-val ok">${focosOk}</span>
-              </div>
-              <div class="expand-stat">
-                <span class="expand-stat-lbl">Robados</span>
-                <span class="expand-stat-val critical">${focosRobados}</span>
-              </div>
-              <div class="expand-stat">
-                <span class="expand-stat-lbl">Quemados</span>
-                <span class="expand-stat-val warning">${focosQuemados}</span>
-              </div>
-              <div class="expand-stat">
                 <span class="expand-stat-lbl">Ubicación Mapa</span>
                 <span class="expand-stat-val">X ${tablero.posX}% · Y ${tablero.posY}%</span>
               </div>
             </div>
 
-             <!-- Lista de focos eliminada -->
           </div>
         </div>`
             : ""
