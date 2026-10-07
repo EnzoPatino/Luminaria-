@@ -1,15 +1,17 @@
-const { createAdminClient } = require('@supabase/server/core');
 const config = require('../config');
 
 let adminClient = null;
 
-function getSupabaseAdmin() {
+async function getSupabaseAdmin() {
   if (!adminClient) {
     if (!config.supabase.url || !config.supabase.secretKey) {
       console.warn('[Supabase] Credenciales incompletas en config.');
       return null;
     }
     try {
+      // Use the package's ESM entry point. Its CommonJS entry requires `jose`,
+      // which is ESM-only and crashes in Vercel's Node runtime.
+      const { createAdminClient } = await import('@supabase/server/core');
       adminClient = createAdminClient({
         supabaseUrl: config.supabase.url,
         secretKey: config.supabase.secretKey,
@@ -24,7 +26,7 @@ function getSupabaseAdmin() {
 
 async function checkSupabaseHealth() {
   try {
-    const client = getSupabaseAdmin();
+    const client = await getSupabaseAdmin();
     if (!client) {
       return { status: 'unconfigured', message: 'Variables de Supabase no configuradas' };
     }
