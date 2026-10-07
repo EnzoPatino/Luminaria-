@@ -15,12 +15,16 @@ async function handleChirpstackUplink(req, res, next) {
   try {
     const queryEvent = (req.query.event || '').toLowerCase();
     const headerEvent = (req.headers['x-chirpstack-event'] || '').toLowerCase();
-    const body = req.body || {};
+    
+    // Soporte si el webhook envía un arreglo de paquetes o un objeto directo
+    const rawBody = req.body;
+    const body = Array.isArray(rawBody) ? (rawBody[rawBody.length - 1] || {}) : (rawBody || {});
+    const bodyEvent = (body.event || body.type || '').toLowerCase();
 
-    // Determinar el tipo de evento ChirpStack
-    let eventType = queryEvent || headerEvent;
+    // Determinar el tipo de evento ChirpStack (v3 y v4)
+    let eventType = queryEvent || headerEvent || bodyEvent;
     if (!eventType) {
-      if (body.object || body.data || body.fPort !== undefined) {
+      if (body.object || body.objectJSON || body.data || body.fPort !== undefined) {
         eventType = 'up';
       } else if (body.devAddr && !body.data) {
         eventType = 'join';
@@ -78,15 +82,23 @@ async function handleChirpstackUplink(req, res, next) {
 
     console.log(`\x1b[34m[ChirpStack Uplink]\x1b[0m Recibido paquete de: \x1b[1m${meta.deviceName}\x1b[0m (DevEUI: ${meta.devEui})`);
     console.log(`                    -> Mapeado a Tablero: \x1b[33m${meta.idTablero}\x1b[0m | Tipo: ${normalizedEvent.tipo_evento}`);
-    console.log(`                    -> Tensión: ${normalizedEvent.datos.tension_medida_v}V | Corriente: ${normalizedEvent.datos.corriente_medida_ma}mA | RSSI: ${normalizedEvent.datos.rssi_lora}dBm`);
+    const potInfo = meta.rawPotenciometro !== undefined ? ` | ADC: ${meta.rawPotenciometro} (${meta.sensorVoltaje ?? ''}V sensor)` : '';
+    console.log(`                    -> Tensión: ${normalizedEvent.datos.tension_medida_v}V${potInfo} | Corriente: ${normalizedEvent.datos.corriente_medida_ma}mA | RSSI: ${normalizedEvent.datos.rssi_lora}dBm`);
 
     // Ingestar en la base de datos PostgreSQL mediante el servicio transaccional existente
-    const ingestionResult = await ingestEvent(normalizedEvent, {
-      source: 'chirpstack_http',
-      ip: req.ip,
-      devEui: meta.devEui,
-      deviceName: meta.deviceName,
-    });
+    let ingestionResult = null;
+    let dbStatus = 'skipped';
+    try {
+      ingestionResult = await ingestEvent(normalizedEvent, {
+        source: 'chirpstack_http',
+        ip: req.ip,
+        devEui: meta.devEui,
+        deviceName: meta.deviceName,
+      });
+      dbStatus = ingestionResult.duplicate ? 'duplicate' : 'persisted';
+    } catch (dbErr) {
+      console.warn(`\x1b[33m[ChirpStack Ingesta]\x1b[0m BD no disponible (${dbErr.message}). El paquete se procesó en memoria correctamente.`);
+    }
 
     lastReceivedPayload = {
       receivedAt: new Date().toISOString(),
@@ -104,8 +116,8 @@ async function handleChirpstackUplink(req, res, next) {
       },
     };
 
-    if (ingestionResult.duplicate) {
-      return res.status(202).json({
+    if (ingestionResult && ingestionResult.duplicate) {
+      return res.status(200).json({
         status: 'ok',
         event: 'up',
         ingestionStatus: 'duplicate',
@@ -114,12 +126,12 @@ async function handleChirpstackUplink(req, res, next) {
       });
     }
 
-    return res.status(201).json({
+    return res.status(200).json({
       status: 'ok',
       event: 'up',
-      ingestionStatus: 'persisted',
+      ingestionStatus: dbStatus,
       tablero: meta.idTablero,
-      data: ingestionResult,
+      data: ingestionResult || normalizedEvent,
     });
   } catch (error) {
     console.error('\x1b[31m[ChirpStack Error]\x1b[0m Error procesando webhook de ChirpStack:', error);

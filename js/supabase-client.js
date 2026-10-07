@@ -228,7 +228,13 @@
           .on("postgres_changes", { event: "*", schema: "public", table: "alertas" }, (payload) => {
             if (typeof onAlertChange === "function") onAlertChange(payload);
           })
+          .on("postgres_changes", { event: "*", schema: "public", table: "alerta" }, (payload) => {
+            if (typeof onAlertChange === "function") onAlertChange(payload);
+          })
           .on("postgres_changes", { event: "*", schema: "public", table: "tableros" }, (payload) => {
+            if (typeof onTableroChange === "function") onTableroChange(payload);
+          })
+          .on("postgres_changes", { event: "*", schema: "public", table: "tablero" }, (payload) => {
             if (typeof onTableroChange === "function") onTableroChange(payload);
           })
           .subscribe();

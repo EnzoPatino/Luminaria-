@@ -11,7 +11,10 @@ node_modules/
 gateway-*.json
 scratch/
 
-# Sistema operativo
+# Sistema operativo y herramientas
 .DS_Store
 .vercel
 .env*
+.gemini/
+.claude/
+.agents/

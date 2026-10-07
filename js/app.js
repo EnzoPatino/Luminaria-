@@ -234,10 +234,26 @@ document.addEventListener("DOMContentLoaded", () => {
           estado: ["ok", "robado", "quemado"].includes(foco.estado) ? foco.estado : "ok",
         };
       });
+    } else if (tablero.focos && typeof tablero.focos === "object") {
+      Object.entries(tablero.focos).forEach(([id, foco]) => {
+        focos[id] = {
+          id,
+          corriente_ma: toFiniteNumber(foco.corriente_ma || foco.corriente_medida_ma, 0),
+          estado: ["ok", "robado", "quemado"].includes(foco.estado) ? foco.estado : "ok",
+        };
+      });
     }
+
+    const rawId = tablero.id_tablero || tablero.codigo;
+    const computedId = rawId
+      ? String(rawId)
+      : tablero.id != null
+      ? `TABLERO_${String(tablero.id).padStart(2, "0")}`
+      : "TABLERO_01";
+
     return {
-      id: String(tablero.id_tablero),
-      nombre: tablero.nombre_tablero || tablero.id_tablero,
+      id: computedId,
+      nombre: tablero.nombre_tablero || tablero.nombre || computedId,
       ubicacion: tablero.ubicacion || "Ubicacion no informada",
       posX: Math.min(Math.max(toFiniteNumber(tablero.pos_x, 50), 0), 100),
       posY: Math.min(Math.max(toFiniteNumber(tablero.pos_y, 50), 0), 100),
@@ -250,20 +266,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function normalizarAlertaAPI(alerta) {
-    const tipo = alerta.tipo_alerta || "ALERTA";
+    const tipo = alerta.tipo_alerta || alerta.tipo_evento || alerta.tipo || "ALERTA";
     const severidad = ["CRITICA", "ADVERTENCIA", "INFO"].includes(alerta.prioridad)
       ? alerta.prioridad
       : "INFO";
+    const idTableroStr = alerta.id_tablero
+      ? String(alerta.id_tablero).startsWith("TABLERO_")
+        ? String(alerta.id_tablero)
+        : `TABLERO_${String(alerta.id_tablero).padStart(2, "0")}`
+      : alerta.id_tablero_num
+      ? `TABLERO_${String(alerta.id_tablero_num).padStart(2, "0")}`
+      : "TABLERO_01";
+
     return {
-      id: String(alerta.id_alerta),
+      id: String(alerta.id_alerta || alerta.id),
       tipo_evento: tipo,
       severidad,
-      titulo: `${tipo.replace(/_/g, " ")} en ${alerta.id_tablero || "tablero"}`,
-      timestamp: alerta.fecha_hora_generada || new Date().toISOString(),
+      titulo: alerta.titulo || `${tipo.replace(/_/g, " ")} en ${idTableroStr}`,
+      timestamp: alerta.fecha_hora_generada || alerta.fecha_hora || new Date().toISOString(),
       ubicacion: alerta.ubicacion || "Ubicacion no informada",
       datos: alerta.datos_json && typeof alerta.datos_json === "object" ? alerta.datos_json : {},
-      id_tablero: String(alerta.id_tablero || ""),
-      resuelta: alerta.estado_alerta === "resuelta",
+      id_tablero: idTableroStr,
+      resuelta: alerta.estado_alerta === "resuelta" || alerta.estado === "resuelta",
     };
   }
 
