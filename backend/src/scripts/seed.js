@@ -5,10 +5,17 @@ const path = require('path');
 const { pool, closePool } = require('../config/database');
 
 async function main() {
-  const file = path.join(__dirname, '..', 'db', 'seeds', '001_zonas_tableros.sql');
-  const sql = await fs.readFile(file, 'utf8');
-  await pool.query(sql);
-  console.log('[DB] Seed inicial ejecutado correctamente.');
+  const seedsDir = path.join(__dirname, '..', 'db', 'seeds');
+  const files = (await fs.readdir(seedsDir))
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+
+  for (const file of files) {
+    const filePath = path.join(seedsDir, file);
+    const sql = await fs.readFile(filePath, 'utf8');
+    await pool.query(sql);
+    console.log(`[DB] Seed ${file} ejecutado correctamente.`);
+  }
 }
 
 main()

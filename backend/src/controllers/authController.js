@@ -15,7 +15,7 @@ const registerSchema = z.object({
   nombre: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres.').max(120),
   email: z.string().email('Email inválido.'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.').max(128),
-  rol: z.enum(['admin', 'supervisor', 'tecnico']).optional().default('tecnico'),
+  rol: z.enum(['admin', 'tecnico']).optional().default('tecnico'),
 });
 
 async function handleLogin(req, res, next) {

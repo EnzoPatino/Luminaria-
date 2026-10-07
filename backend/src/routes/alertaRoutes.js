@@ -8,13 +8,13 @@ const router = express.Router();
 // GET /api/alertas — Público (lectura abierta para el dashboard)
 router.get('/', getAlertas);
 
-// PATCH /api/alertas/:id/resolver — Protegido: solo supervisor o admin pueden resolver alertas.
+// PATCH /api/alertas/:id/resolver — Protegido: admin o tecnico pueden resolver alertas.
 // BE-04: autenticación obligatoria + RBAC
 // SEC-03: auditoría de la resolución
 router.patch(
   '/:id/resolver',
   requireAuth,
-  requireRole('admin', 'supervisor'),
+  requireRole('admin', 'tecnico'),
   audit('RESOLVER_ALERTA', 'alertas', (req) => req.params.id),
   resolveAlerta
 );

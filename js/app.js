@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
   const appState = {
     selectedTableroId: "TABLERO_01",
-    userRole: "supervisor",
+    userRole: "admin",
     tableros: {
       TABLERO_01: {
         id: "TABLERO_01",
@@ -382,16 +382,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // GESTIÓN DE VISTAS POR ROL (SUPERVISOR / TÉCNICO)
+  // GESTIÓN DE VISTAS POR ROL (ADMINISTRADOR / TÉCNICO)
   // ==========================================
   const ROLE_STORAGE_KEY = "luminaria_user_role";
 
   function getStoredRole() {
     try {
       const r = localStorage.getItem(ROLE_STORAGE_KEY);
-      return r === "tecnico" || r === "supervisor" ? r : "supervisor";
+      return r === "tecnico" || r === "admin" ? r : "admin";
     } catch (e) {
-      return "supervisor";
+      return "admin";
     }
   }
 
@@ -411,7 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const roleToggleText = document.getElementById("roleToggleText");
     if (roleToggleText) {
-      roleToggleText.textContent = role === "supervisor" ? "Vista Supervisor" : "Vista Técnico";
+      roleToggleText.textContent = role === "admin" ? "Vista Administrador" : "Vista Técnico";
     }
     
     updateRoleIcon(role);
@@ -441,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.roleIcon.title = "Vista Técnico activa (monitoreo operativo)";
     } else {
       elements.roleIcon.className = "fas fa-user-shield role-icon";
-      elements.roleIcon.title = "Vista Supervisor activa (control total)";
+      elements.roleIcon.title = "Vista Administrador activa (control total)";
     }
   }
 
@@ -488,7 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // EVENT LISTENERS & DELEGACIÓN
   // ==========================================
   function setupEventListeners() {
-    // Cambio de Rol (Supervisor / Técnico)
+    // Cambio de Rol (Administrador / Técnico)
     if (elements.roleSelector) {
       elements.roleSelector.addEventListener("change", (e) => {
         setRole(e.target.value);
@@ -500,10 +500,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnRoleToggle && roleToggleText) {
       btnRoleToggle.addEventListener("click", () => {
         const currentRole = appState.userRole;
-        const nextRole = currentRole === "supervisor" ? "tecnico" : "supervisor";
+        const nextRole = currentRole === "admin" ? "tecnico" : "admin";
         setRole(nextRole);
         elements.roleSelector.value = nextRole;
-        roleToggleText.textContent = nextRole === "supervisor" ? "Vista Supervisor" : "Vista Técnico";
+        roleToggleText.textContent = nextRole === "admin" ? "Vista Administrador" : "Vista Técnico";
       });
     }
 
@@ -1394,7 +1394,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const btnResolve = card.querySelector(".btn-resolve");
       btnResolve.addEventListener("click", async () => {
         const tecnicoResponsable =
-          appState.userRole === "tecnico" ? "Técnico de Guardia" : "Supervisor Municipal";
+          appState.userRole === "tecnico" ? "Técnico de Guardia" : "Administrador Municipal";
 
         if (appState.apiAvailable) {
           if (alert.resuelta) return;

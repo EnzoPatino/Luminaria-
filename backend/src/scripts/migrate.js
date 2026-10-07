@@ -5,10 +5,17 @@ const path = require('path');
 const { pool, closePool } = require('../config/database');
 
 async function main() {
-  const file = path.join(__dirname, '..', 'db', 'migrations', '001_init_schema.sql');
-  const sql = await fs.readFile(file, 'utf8');
-  await pool.query(sql);
-  console.log('[DB] Migración 001 ejecutada correctamente.');
+  const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');
+  const files = (await fs.readdir(migrationsDir))
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+
+  for (const file of files) {
+    const filePath = path.join(migrationsDir, file);
+    const sql = await fs.readFile(filePath, 'utf8');
+    await pool.query(sql);
+    console.log(`[DB] Migración ${file} ejecutada correctamente.`);
+  }
 }
 
 main()

@@ -177,7 +177,7 @@ En entornos locales o servidores on-premise de la Municipalidad, la base de dato
 
 ### Migración 002 (`002_usuarios_y_audit.sql`):
 * **`usuarios`**: Operadores y personal técnico para autenticación JWT y control de acceso (RBAC).
-  * Columnas: `id_usuario`, `nombre`, `email`, `password_hash` (`scrypt`), `rol` (`'admin'`, `'supervisor'`, `'tecnico'`), `activo`, timestamps.
+  * Columnas: `id_usuario`, `nombre`, `email`, `password_hash` (`scrypt`), `rol` (`'admin'`, `'tecnico'`), `activo`, timestamps.
   * Restricción CHECK de roles y validación de formato de email.
 * **`audit_log`**: Registro inmutable de eventos de seguridad y acciones sensibles (logins exitosos/fallidos, altas de usuarios, resolución de alertas).
   * Columnas: `id_audit`, `timestamp`, `id_usuario`, `accion`, `recurso`, `id_recurso`, `ip_origen`, `detalles` (JSONB), `correlation_id`.

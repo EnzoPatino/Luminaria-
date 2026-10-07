@@ -41,7 +41,7 @@
 | **DO-06** | DevOps | Separación de Entornos Staging / Producción | 🟡 Parcial | 🟠 **ALTO** | 3 SP | `.env.example` versionado. Faltan archivos de entorno separados para staging y producción. |
 | **BE-08** | Backend | Health Check y Circuit Breaker | ✅ Implementado | 🟠 **ALTO** | 2 SP | `GET /api/health` con Circuit Breaker (estados closed, half-open, open), monitoreo de BD, estado MQTT en vivo y Supabase. ✔ |
 | **BE-04** | Backend | Autenticación JWT y Control de Acceso (RBAC) | ✅ Implementado | 🟡 **MODERADO** | 5 SP | Migración 002 `usuarios`, HMAC-SHA256 con scrypt, endpoints `/api/auth` (login/register/me) y middleware RBAC por rol. ✔ |
-| **FE-06** | Frontend | Modal de Autenticación (UI Login) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Depende de BE-04. Sin login, el switch de roles (Supervisor/Técnico) es solo decorativo. |
+| **FE-06** | Frontend | Modal de Autenticación (UI Login) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Depende de BE-04. Sin login, el switch de roles (Administrador/Técnico) es solo decorativo. |
 | **FE-05** | Frontend | Notificaciones Push Web (`Notification API`) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | El técnico de guardia no recibe alertas si no tiene la pestaña activa. |
 | **DO-04** | DevOps | Pipeline CI/CD (GitHub Actions / GitLab CI) | ❌ Pendiente | 🟡 **MODERADO** | 5 SP | Sin CI/CD, cada despliegue es manual y propenso a errores humanos. |
 | **DB-03** | DBA | Estrategia de Índices B-Tree Adicionales | ✅ Implementado | 🟡 **MODERADO** | 2 SP | Índices compuestos creados en la migración inicial. Consultas de dashboard y mapa con respuesta < 50ms esperada. ✔ |

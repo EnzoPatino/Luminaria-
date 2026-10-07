@@ -381,13 +381,13 @@ El backend opera como un servicio autónomo y resiliente, diseñado para alta co
 | `GET` | `/api/health` | Público | Health check integral con **Circuit Breaker** (BD, worker MQTT, Supabase Cloud y uptime). |
 | `GET` | `/api/config` | Público | Configuración pública de red y tópicos MQTT permitidos. |
 | `POST` | `/api/auth/login` | Público | Autenticación con email/password. Retorna JWT con claims de usuario y rol. Registra auditoría. |
-| `POST` | `/api/auth/register` | `admin` | Alta de nuevo operador (`admin`, `supervisor`, `tecnico`) con hashing seguro `scrypt`. |
+| `POST` | `/api/auth/register` | `admin` | Alta de nuevo operador (`admin`, `tecnico`) con hashing seguro `scrypt`. |
 | `GET` | `/api/auth/me` | Autenticado | Retorna los datos y rol del token JWT activo. |
 | `POST` | `/api/eventos` | Público / Red IoT | Ingesta transaccional con validación de contrato Zod, deduplicación SHA-256 y rate limiting por tablero. |
 | `POST` | `/api/uplink` | Red LoRaWAN | Receptor de tramas ChirpStack v4 decodificadas. |
 | `GET` | `/api/tableros` | Público | Listado de tableros con telemetría actual y severidad derivada. |
 | `GET` | `/api/alertas` | Público | Historial de alertas con filtros (`severidad`, `estado`) y paginación (`limit`, `offset`, `total`). |
-| `PATCH` | `/api/alertas/:id/resolver` | `admin`, `supervisor` | Resolución transaccional de alertas. Registra `resuelto_por` (ID de usuario) y emite log en `audit_log`. |
+| `PATCH` | `/api/alertas/:id/resolver` | `admin`, `tecnico` | Resolución transaccional de alertas. Registra `resuelto_por` (ID de usuario) y emite log en `audit_log`. |
 
 ### 9.2 Capa de Seguridad y Red
 
@@ -411,8 +411,7 @@ El backend opera como un servicio autónomo y resiliente, diseñado para alta co
 - **Almacenamiento de Contraseñas:** Hashing criptográfico mediante `scrypt` con salt aleatorio de 16 bytes y clave derivada de 64 bytes.
 - **Roles Implementados:**
   - `admin`: Control total, gestión de usuarios (`/api/auth/register`), resolución de alertas y mantenimiento.
-  - `supervisor`: Monitoreo y resolución de alertas críticas y advertencias.
-  - `tecnico`: Monitoreo, lectura de telemetría y diagnóstico.
+  - `tecnico`: Monitoreo, lectura de telemetría, diagnóstico y resolución de alertas en campo.
 - **Middlewares:**
   - `requireAuth`: Valida firma y expiración del JWT en `Authorization: Bearer <token>`. Inyecta `req.user`.
   - `requireRole(...roles)`: Valida que el rol del usuario posea los privilegios requeridos.

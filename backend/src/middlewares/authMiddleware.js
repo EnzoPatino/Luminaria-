@@ -43,7 +43,7 @@ function requireAuth(req, res, next) {
 
 /**
  * Middleware factory que restringe el acceso a roles específicos.
- * Uso: `requireRole('admin', 'supervisor')`
+ * Uso: `requireRole('admin', 'tecnico')`
  */
 function requireRole(...roles) {
   return (req, res, next) => {

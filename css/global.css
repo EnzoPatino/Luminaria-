@@ -376,6 +376,11 @@ html, body {
   display: none;
 }
 
+/* Ocultar elementos exclusivos de Administrador en Vista Técnico */
+[data-role="tecnico"] [data-role-restricted="admin"] {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
   .role-selector-wrap {
     width: 100%;

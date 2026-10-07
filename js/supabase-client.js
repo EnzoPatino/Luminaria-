@@ -173,7 +173,7 @@
       }
     }
 
-    async resolveAlerta(idAlerta, tecnico = "Supervisor") {
+    async resolveAlerta(idAlerta, tecnico = "Administrador") {
       if (!this.client || this.status !== "connected") return null;
       try {
         // Soporta tanto ID numérico de Supabase como ID temporal
