@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS public.gestiona (
 );
 
 -- Vista/Sinónimo admin_tecnico para compatibilidad
-CREATE OR REPLACE VIEW public.admin_tecnico AS
+CREATE OR REPLACE VIEW public.admin_tecnico WITH (security_invoker = true) AS
 SELECT id_admin, id_tecnico, fecha_asignacion FROM public.gestiona;
 
 -- 9. AUDIT_LOG
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS public.audit_log (
 );
 
 -- ====================================================================
--- ÍNDICES DE RENDIMIENTO
+-- ÍNDICES DE RENDIMIENTO (INCLUYENDO CUBRIENTES DE FK)
 -- ====================================================================
 CREATE INDEX IF NOT EXISTS idx_tablero_zona ON public.tablero(id_zona);
 CREATE INDEX IF NOT EXISTS idx_sensor_tablero ON public.sensor(id_tablero);
@@ -131,10 +131,19 @@ CREATE INDEX IF NOT EXISTS idx_tecnico_email ON public.tecnico(email);
 CREATE INDEX IF NOT EXISTS idx_admin_usuario ON public.admin(usuario);
 CREATE INDEX IF NOT EXISTS idx_admin_email ON public.admin(email);
 
+CREATE INDEX IF NOT EXISTS idx_fk_alerta_lectura ON public.alerta(id_lectura);
+CREATE INDEX IF NOT EXISTS idx_fk_alerta_tablero ON public.alerta(id_tablero);
+CREATE INDEX IF NOT EXISTS idx_fk_alerta_tecnico ON public.alerta(id_tecnico);
+CREATE INDEX IF NOT EXISTS idx_fk_gestiona_tecnico ON public.gestiona(id_tecnico);
+CREATE INDEX IF NOT EXISTS idx_fk_lectura_sensor ON public.lectura(id_sensor);
+CREATE INDEX IF NOT EXISTS idx_fk_lectura_tablero ON public.lectura(id_tablero);
+CREATE INDEX IF NOT EXISTS idx_fk_sensor_tablero ON public.sensor(id_tablero);
+CREATE INDEX IF NOT EXISTS idx_fk_tablero_zona ON public.tablero(id_zona);
+
 -- ====================================================================
--- VISTAS DE COMPATIBILIDAD PLURAL PARA LA UI Y CONSUMO REST
+-- VISTAS DE COMPATIBILIDAD PLURAL PARA LA UI Y CONSUMO REST (SECURITY INVOKER)
 -- ====================================================================
-CREATE OR REPLACE VIEW public.tableros AS 
+CREATE OR REPLACE VIEW public.tableros WITH (security_invoker = true) AS 
 SELECT 
   id,
   coalesce(codigo, 'TABLERO_' || lpad(id::text, 2, '0')) AS id_tablero,
@@ -150,7 +159,7 @@ SELECT
   ultima_modificacion AS ultima_actualizacion
 FROM public.tablero;
 
-CREATE OR REPLACE VIEW public.alertas AS
+CREATE OR REPLACE VIEW public.alertas WITH (security_invoker = true) AS
 SELECT
   id AS id_alerta,
   coalesce((SELECT codigo FROM public.tablero WHERE tablero.id = alerta.id_tablero), 'TABLERO_' || lpad(id_tablero::text, 2, '0')) AS id_tablero,
@@ -167,7 +176,7 @@ SELECT
 FROM public.alerta;
 
 -- Vista unificada de usuarios para autenticación
-CREATE OR REPLACE VIEW public.usuarios AS
+CREATE OR REPLACE VIEW public.usuarios WITH (security_invoker = true) AS
 SELECT 
   id AS id_usuario,
   id,
@@ -200,7 +209,9 @@ FROM public.tecnico;
 
 -- Triggers INSTEAD OF para permitir INSERT / UPDATE sobre las vistas
 CREATE OR REPLACE FUNCTION public.trg_alertas_view_insert()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
   v_id_tablero integer;
 BEGIN
@@ -242,7 +253,9 @@ INSTEAD OF INSERT ON public.alertas
 FOR EACH ROW EXECUTE FUNCTION public.trg_alertas_view_insert();
 
 CREATE OR REPLACE FUNCTION public.trg_alertas_view_update()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   UPDATE public.alerta
   SET 
@@ -260,7 +273,9 @@ INSTEAD OF UPDATE ON public.alertas
 FOR EACH ROW EXECUTE FUNCTION public.trg_alertas_view_update();
 
 CREATE OR REPLACE FUNCTION public.trg_tableros_view_update()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   UPDATE public.tablero
   SET
