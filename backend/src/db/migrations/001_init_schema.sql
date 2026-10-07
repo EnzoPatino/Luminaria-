@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS tableros (
   tension_nominal NUMERIC(6,2) NOT NULL DEFAULT 220.00,
   estado TEXT NOT NULL DEFAULT 'ok',
   fecha_instalacion DATE,
+  ultima_modificacion TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT tableros_fase_chk CHECK (fase IS NULL OR fase IN ('L1', 'L2', 'L3')),
   CONSTRAINT tableros_estado_chk CHECK (estado IN ('ok', 'advertencia', 'critico')),
   CONSTRAINT tableros_tension_nominal_chk CHECK (tension_nominal > 0)
@@ -26,7 +27,8 @@ CREATE TABLE IF NOT EXISTS tableros (
 
 CREATE TABLE IF NOT EXISTS sensores (
   id_sensor SERIAL PRIMARY KEY,
-  id_tablero TEXT NOT NULL REFERENCES tableros(id_tablero) ON DELETE CASCADE,
+  id_tablero TEXT NOT NULL UNIQUE REFERENCES tableros(id_tablero) ON DELETE CASCADE,
+  mac TEXT,
   mac_esp32 TEXT UNIQUE,
   modulo_lora_id TEXT,
   topico_mqtt TEXT,
@@ -34,6 +36,7 @@ CREATE TABLE IF NOT EXISTS sensores (
   umbral_tension_max NUMERIC(6,2),
   estado_sensor TEXT NOT NULL DEFAULT 'activo',
   fecha_instalacion DATE NOT NULL DEFAULT CURRENT_DATE,
+  ultima_modificacion TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT sensores_estado_chk CHECK (estado_sensor IN ('activo', 'inactivo', 'mantenimiento')),
   CONSTRAINT sensores_umbral_chk CHECK (
     umbral_tension_max IS NULL OR umbral_tension_max > umbral_tension_min
@@ -45,6 +48,9 @@ CREATE INDEX IF NOT EXISTS idx_sensores_tablero ON sensores(id_tablero);
 CREATE TABLE IF NOT EXISTS lecturas (
   id_lectura BIGSERIAL PRIMARY KEY,
   id_sensor INTEGER NOT NULL REFERENCES sensores(id_sensor) ON DELETE RESTRICT,
+  id_tablero TEXT REFERENCES tableros(id_tablero) ON DELETE SET NULL,
+  amperaje NUMERIC(8,2),
+  fecha_hora TIMESTAMPTZ NOT NULL DEFAULT now(),
   timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
   valor_tension NUMERIC(6,2),
   valor_corriente NUMERIC(8,2),
@@ -53,11 +59,14 @@ CREATE TABLE IF NOT EXISTS lecturas (
   estado_conexion TEXT,
   CONSTRAINT lecturas_tension_chk CHECK (valor_tension IS NULL OR valor_tension >= 0),
   CONSTRAINT lecturas_corriente_chk CHECK (valor_corriente IS NULL OR valor_corriente >= 0),
+  CONSTRAINT lecturas_amperaje_chk CHECK (amperaje IS NULL OR amperaje >= 0),
   CONSTRAINT lecturas_fase_chk CHECK (fase IS NULL OR fase IN ('L1', 'L2', 'L3'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_lecturas_sensor_timestamp
   ON lecturas(id_sensor, timestamp);
+CREATE INDEX IF NOT EXISTS idx_lecturas_tablero
+  ON lecturas(id_tablero);
 CREATE INDEX IF NOT EXISTS idx_lecturas_timestamp
   ON lecturas(timestamp);
 
@@ -65,11 +74,14 @@ CREATE TABLE IF NOT EXISTS alertas (
   id_alerta BIGSERIAL PRIMARY KEY,
   id_tablero TEXT NOT NULL REFERENCES tableros(id_tablero) ON DELETE RESTRICT,
   id_lectura BIGINT REFERENCES lecturas(id_lectura) ON DELETE SET NULL,
+  tipo TEXT,
   tipo_alerta TEXT NOT NULL,
   id_foco_afectado TEXT,
   ubicacion TEXT,
+  fecha_hora TIMESTAMPTZ NOT NULL DEFAULT now(),
   fecha_hora_generada TIMESTAMPTZ NOT NULL DEFAULT now(),
   prioridad TEXT NOT NULL,
+  estado TEXT NOT NULL DEFAULT 'activa',
   estado_alerta TEXT NOT NULL DEFAULT 'activa',
   fecha_resolucion TIMESTAMPTZ,
   es_persistente BOOLEAN NOT NULL DEFAULT FALSE,

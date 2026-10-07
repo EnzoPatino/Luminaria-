@@ -1,71 +1,158 @@
--- Migración 002: Tabla de usuarios (BE-04) y audit_log (SEC-03)
+-- Migración 002: Tablas TECNICO, ADMIN, ADMIN_TECNICO (según DER) y audit_log
 BEGIN;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- BE-04: Tabla de usuarios para autenticación JWT y control de acceso RBAC.
--- Los roles válidos son 'admin' y 'tecnico'.
+-- 1. TABLA: TECNICO (según DER)
+-- Campos: id, nom, apellido, dni, teléfono, email, usuario, contraseña
 -- ─────────────────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS usuarios (
-  id_usuario    SERIAL PRIMARY KEY,
-  nombre        TEXT NOT NULL,
-  email         TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  rol           TEXT NOT NULL DEFAULT 'tecnico',
-  activo        BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  CONSTRAINT usuarios_rol_chk CHECK (rol IN ('admin', 'tecnico')),
-  CONSTRAINT usuarios_email_chk CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}$')
+CREATE TABLE IF NOT EXISTS tecnico (
+  id          SERIAL PRIMARY KEY,
+  nom         TEXT NOT NULL,
+  apellido    TEXT NOT NULL,
+  dni         TEXT NOT NULL UNIQUE,
+  telefono    TEXT,
+  email       TEXT NOT NULL UNIQUE,
+  usuario     TEXT NOT NULL UNIQUE,
+  contraseña  TEXT NOT NULL,
+  activo      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Si la tabla ya existía con roles anteriores ('supervisor'), migrar registros y actualizar restricción
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'usuarios') THEN
-    UPDATE usuarios SET rol = 'tecnico' WHERE rol NOT IN ('admin', 'tecnico');
-    ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_chk;
-    ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_chk CHECK (rol IN ('admin', 'tecnico'));
-  END IF;
-END $$;
-
-CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
-CREATE INDEX IF NOT EXISTS idx_usuarios_rol   ON usuarios(rol);
-
--- Usuarios iniciales por defecto (admin y técnico)
--- Contraseña por defecto: password123 (scrypt)
-INSERT INTO usuarios (nombre, email, password_hash, rol)
-VALUES 
-  ('Administrador Municipal', 'admin@neuquen.gob.ar', 'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12', 'admin'),
-  ('Técnico de Guardia', 'tecnico@neuquen.gob.ar', 'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12', 'tecnico')
-ON CONFLICT (email) DO UPDATE SET
-  rol = EXCLUDED.rol;
+CREATE INDEX IF NOT EXISTS idx_tecnico_usuario ON tecnico(usuario);
+CREATE INDEX IF NOT EXISTS idx_tecnico_email   ON tecnico(email);
+CREATE INDEX IF NOT EXISTS idx_tecnico_dni     ON tecnico(dni);
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- SEC-03: Audit log para registrar acciones sensibles (logins, resolución de
--- alertas, cambios de rol, etc.). Permite trazabilidad completa.
+-- 2. TABLA: ADMIN (según DER)
+-- Campos: id, nombre, apellido, usuario, contraseña, dni, teléfono, email
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS admin (
+  id          SERIAL PRIMARY KEY,
+  nombre      TEXT NOT NULL,
+  apellido    TEXT NOT NULL,
+  usuario     TEXT NOT NULL UNIQUE,
+  contraseña  TEXT NOT NULL,
+  dni         TEXT NOT NULL UNIQUE,
+  telefono    TEXT,
+  email       TEXT NOT NULL UNIQUE,
+  activo      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_usuario ON admin(usuario);
+CREATE INDEX IF NOT EXISTS idx_admin_email   ON admin(email);
+CREATE INDEX IF NOT EXISTS idx_admin_dni     ON admin(dni);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 3. TABLA: ADMIN_TECNICO (Relación N:M "gestiona" entre ADMIN y TECNICO del DER)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS admin_tecnico (
+  id_admin         INTEGER NOT NULL REFERENCES admin(id) ON DELETE CASCADE,
+  id_tecnico       INTEGER NOT NULL REFERENCES tecnico(id) ON DELETE CASCADE,
+  fecha_asignacion TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id_admin, id_tecnico)
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_tecnico_admin   ON admin_tecnico(id_admin);
+CREATE INDEX IF NOT EXISTS idx_admin_tecnico_tecnico ON admin_tecnico(id_tecnico);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 4. VINCULACIÓN EN ALERTAS: FK id_tecnico (según DER: ALERTA es atendida por TECNICO)
+-- ─────────────────────────────────────────────────────────────────────────────
+ALTER TABLE alertas ADD COLUMN IF NOT EXISTS id_tecnico INTEGER REFERENCES tecnico(id) ON DELETE SET NULL;
+ALTER TABLE alertas ADD COLUMN IF NOT EXISTS resuelto_por INTEGER;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 5. VISTA UNIFICADA: usuarios (para compatibilidad de autenticación y RBAC)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE VIEW usuarios AS
+SELECT 
+  id AS id_usuario,
+  id,
+  nombre,
+  apellido,
+  dni,
+  telefono,
+  usuario,
+  email,
+  contraseña AS password_hash,
+  'admin'::text AS rol,
+  activo,
+  created_at,
+  updated_at
+FROM admin
+UNION ALL
+SELECT 
+  id AS id_usuario,
+  id,
+  nom AS nombre,
+  apellido,
+  dni,
+  telefono,
+  usuario,
+  email,
+  contraseña AS password_hash,
+  'tecnico'::text AS rol,
+  activo,
+  created_at,
+  updated_at
+FROM tecnico;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 6. AUDIT_LOG: Auditoría de eventos de seguridad y operaciones críticas
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS audit_log (
-  id_audit      BIGSERIAL PRIMARY KEY,
-  timestamp     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  id_usuario    INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
-  accion        TEXT NOT NULL,
-  recurso       TEXT NOT NULL,
-  id_recurso    TEXT,
-  ip_origen     TEXT,
-  detalles      JSONB,
+  id_audit       BIGSERIAL PRIMARY KEY,
+  timestamp      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  id_usuario     INTEGER,
+  rol_usuario    TEXT,
+  accion         TEXT NOT NULL,
+  recurso        TEXT NOT NULL,
+  id_recurso     TEXT,
+  ip_origen      TEXT,
+  detalles       JSONB,
   correlation_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp   ON audit_log(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_usuario      ON audit_log(id_usuario);
-CREATE INDEX IF NOT EXISTS idx_audit_accion       ON audit_log(accion);
-CREATE INDEX IF NOT EXISTS idx_audit_correlation  ON audit_log(correlation_id);
+CREATE INDEX IF NOT EXISTS idx_audit_usuario     ON audit_log(id_usuario);
+CREATE INDEX IF NOT EXISTS idx_audit_accion      ON audit_log(accion);
+CREATE INDEX IF NOT EXISTS idx_audit_correlation ON audit_log(correlation_id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Añadir columna de técnico resolutor a la tabla de alertas existente
--- para asociar quién resolvió cada alerta.
+-- 7. SEMILLAS POR DEFECTO: 1 Administrador y 1 Técnico iniciales (contraseña: password123)
 -- ─────────────────────────────────────────────────────────────────────────────
-ALTER TABLE alertas ADD COLUMN IF NOT EXISTS resuelto_por INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+INSERT INTO admin (nombre, apellido, usuario, contraseña, dni, telefono, email)
+VALUES (
+  'Administrador',
+  'Municipal',
+  'admin',
+  'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12',
+  '12345678',
+  '299-1234567',
+  'admin@neuquen.gob.ar'
+)
+ON CONFLICT (usuario) DO NOTHING;
+
+INSERT INTO tecnico (nom, apellido, dni, telefono, email, usuario, contraseña)
+VALUES (
+  'Técnico',
+  'De Guardia',
+  '87654321',
+  '299-7654321',
+  'tecnico@neuquen.gob.ar',
+  'tecnico',
+  'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12'
+)
+ON CONFLICT (usuario) DO NOTHING;
+
+-- Relación N:M: El Administrador (id 1) gestiona al Técnico (id 1)
+INSERT INTO admin_tecnico (id_admin, id_tecnico)
+SELECT a.id, t.id
+FROM admin a, tecnico t
+WHERE a.usuario = 'admin' AND t.usuario = 'tecnico'
+ON CONFLICT (id_admin, id_tecnico) DO NOTHING;
 
 COMMIT;

@@ -3,28 +3,31 @@ async function create(client, alert) {
     `INSERT INTO alertas (
        id_tablero,
        id_lectura,
+       tipo,
        tipo_alerta,
        id_foco_afectado,
        ubicacion,
+       fecha_hora,
        fecha_hora_generada,
        prioridad,
+       estado,
        estado_alerta,
        es_persistente,
        datos_json
      )
      VALUES (
-       $1, $2, $3, $4, $5,
-       COALESCE($6::timestamptz, now()),
-       $7, 'activa', $8, $9::jsonb
+       $1, $2, $3, $3, $4, $5,
+       COALESCE($6::timestamptz, now()), COALESCE($6::timestamptz, now()),
+       $7, 'activa', 'activa', $8, $9::jsonb
      )
      RETURNING *`,
     [
       alert.id_tablero,
       alert.id_lectura ?? null,
-      alert.tipo_alerta,
+      alert.tipo_alerta || alert.tipo,
       alert.id_foco_afectado ?? null,
       alert.ubicacion ?? null,
-      alert.fecha_hora_generada || null,
+      alert.fecha_hora_generada || alert.fecha_hora || null,
       alert.prioridad,
       alert.es_persistente,
       alert.datos_json == null ? null : JSON.stringify(alert.datos_json),
@@ -38,8 +41,10 @@ async function resolve(client, idAlerta, resuelto_por = null) {
   const result = await client.query(
     `UPDATE alertas
      SET estado_alerta = 'resuelta',
+         estado = 'resuelta',
          fecha_resolucion = COALESCE(fecha_resolucion, now()),
-         resuelto_por = COALESCE($2, resuelto_por)
+         resuelto_por = COALESCE($2, resuelto_por),
+         id_tecnico = COALESCE($2, id_tecnico)
      WHERE id_alerta = $1
      RETURNING *`,
     [idAlerta, resuelto_por]

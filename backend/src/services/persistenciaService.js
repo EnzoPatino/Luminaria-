@@ -34,9 +34,12 @@ function buildReading(event, sensor) {
 
   return {
     id_sensor: sensor.id_sensor,
+    id_tablero: sensor.id_tablero,
     timestamp: event.timestamp || null,
+    fecha_hora: event.timestamp || null,
     valor_tension: tension,
     valor_corriente: corriente,
+    amperaje: corriente,
     fase,
     rssi_lora: rssi,
     estado_conexion: estadoConexion,

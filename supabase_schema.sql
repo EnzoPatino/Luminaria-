@@ -130,38 +130,90 @@ ON CONFLICT (id_tablero) DO UPDATE SET
   fase = EXCLUDED.fase,
   tension_nominal = EXCLUDED.tension_nominal;
 
--- 7. TABLA: usuarios (BE-04: Autenticación y RBAC con roles 'admin' y 'tecnico')
-CREATE TABLE IF NOT EXISTS public.usuarios (
-  id_usuario SERIAL PRIMARY KEY,
-  nombre TEXT NOT NULL,
+-- 7. TABLA: TECNICO (según DER)
+CREATE TABLE IF NOT EXISTS public.tecnico (
+  id SERIAL PRIMARY KEY,
+  nom TEXT NOT NULL,
+  apellido TEXT NOT NULL,
+  dni TEXT NOT NULL UNIQUE,
+  telefono TEXT,
   email TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  rol TEXT NOT NULL DEFAULT 'tecnico',
+  usuario TEXT NOT NULL UNIQUE,
+  contraseña TEXT NOT NULL,
   activo BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT usuarios_rol_chk CHECK (rol IN ('admin', 'tecnico')),
-  CONSTRAINT usuarios_email_chk CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}$')
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Migración idempotente de roles si la tabla ya existía
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'usuarios') THEN
-    UPDATE public.usuarios SET rol = 'tecnico' WHERE rol NOT IN ('admin', 'tecnico');
-    ALTER TABLE public.usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_chk;
-    ALTER TABLE public.usuarios ADD CONSTRAINT usuarios_rol_chk CHECK (rol IN ('admin', 'tecnico'));
-  END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_tecnico_usuario ON public.tecnico(usuario);
+CREATE INDEX IF NOT EXISTS idx_tecnico_email   ON public.tecnico(email);
 
-CREATE INDEX IF NOT EXISTS idx_usuarios_email ON public.usuarios(email);
-CREATE INDEX IF NOT EXISTS idx_usuarios_rol ON public.usuarios(rol);
+-- 8. TABLA: ADMIN (según DER)
+CREATE TABLE IF NOT EXISTS public.admin (
+  id SERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  apellido TEXT NOT NULL,
+  usuario TEXT NOT NULL UNIQUE,
+  contraseña TEXT NOT NULL,
+  dni TEXT NOT NULL UNIQUE,
+  telefono TEXT,
+  email TEXT NOT NULL UNIQUE,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
--- 8. TABLA: audit_log (SEC-03: Auditoría y trazabilidad)
+CREATE INDEX IF NOT EXISTS idx_admin_usuario ON public.admin(usuario);
+CREATE INDEX IF NOT EXISTS idx_admin_email   ON public.admin(email);
+
+-- 9. TABLA: ADMIN_TECNICO (Relación N:M "gestiona" entre ADMIN y TECNICO)
+CREATE TABLE IF NOT EXISTS public.admin_tecnico (
+  id_admin INTEGER NOT NULL REFERENCES public.admin(id) ON DELETE CASCADE,
+  id_tecnico INTEGER NOT NULL REFERENCES public.tecnico(id) ON DELETE CASCADE,
+  fecha_asignacion TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id_admin, id_tecnico)
+);
+
+-- Vincular id_tecnico en alertas
+ALTER TABLE public.alertas ADD COLUMN IF NOT EXISTS id_tecnico INTEGER REFERENCES public.tecnico(id) ON DELETE SET NULL;
+
+-- 10. VISTA: usuarios (para compatibilidad de backend y JWT)
+CREATE OR REPLACE VIEW public.usuarios AS
+SELECT 
+  id AS id_usuario,
+  id,
+  nombre,
+  apellido,
+  dni,
+  telefono,
+  usuario,
+  email,
+  contraseña AS password_hash,
+  'admin'::text AS rol,
+  activo,
+  created_at
+FROM public.admin
+UNION ALL
+SELECT 
+  id AS id_usuario,
+  id,
+  nom AS nombre,
+  apellido,
+  dni,
+  telefono,
+  usuario,
+  email,
+  contraseña AS password_hash,
+  'tecnico'::text AS rol,
+  activo,
+  created_at
+FROM public.tecnico;
+
+-- 11. AUDIT_LOG
 CREATE TABLE IF NOT EXISTS public.audit_log (
   id_audit BIGSERIAL PRIMARY KEY,
   timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
-  id_usuario INTEGER REFERENCES public.usuarios(id_usuario) ON DELETE SET NULL,
+  id_usuario INTEGER,
   accion TEXT NOT NULL,
   recurso TEXT NOT NULL,
   id_recurso TEXT,
@@ -170,25 +222,48 @@ CREATE TABLE IF NOT EXISTS public.audit_log (
   correlation_id TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON public.audit_log(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_usuario ON public.audit_log(id_usuario);
-CREATE INDEX IF NOT EXISTS idx_audit_accion ON public.audit_log(accion);
-
--- 9. SEGURIDAD RLS PARA USUARIOS Y AUDIT
-ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
+-- 12. SEGURIDAD RLS
+ALTER TABLE public.tecnico ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_tecnico ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Lectura usuarios autenticados" ON public.usuarios;
-CREATE POLICY "Lectura usuarios autenticados" ON public.usuarios FOR SELECT TO authenticated, anon USING (true);
+DROP POLICY IF EXISTS "Lectura publica tecnico" ON public.tecnico;
+CREATE POLICY "Lectura publica tecnico" ON public.tecnico FOR SELECT TO authenticated, anon USING (true);
 
-DROP POLICY IF EXISTS "Lectura audit_log autenticados" ON public.audit_log;
-CREATE POLICY "Lectura audit_log autenticados" ON public.audit_log FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Lectura publica admin" ON public.admin;
+CREATE POLICY "Lectura publica admin" ON public.admin FOR SELECT TO authenticated, anon USING (true);
 
--- 10. SEMILLAS DE USUARIOS INICIALES (admin y técnico)
--- Contraseña por defecto: password123 (scrypt)
-INSERT INTO public.usuarios (nombre, email, password_hash, rol)
-VALUES 
-  ('Administrador Municipal', 'admin@neuquen.gob.ar', 'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12', 'admin'),
-  ('Técnico de Guardia', 'tecnico@neuquen.gob.ar', 'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12', 'tecnico')
-ON CONFLICT (email) DO UPDATE SET
-  rol = EXCLUDED.rol;
+DROP POLICY IF EXISTS "Lectura publica admin_tecnico" ON public.admin_tecnico;
+CREATE POLICY "Lectura publica admin_tecnico" ON public.admin_tecnico FOR SELECT TO authenticated, anon USING (true);
+
+-- 13. SEMILLAS INICIALES (admin y técnico)
+INSERT INTO public.admin (nombre, apellido, usuario, contraseña, dni, telefono, email)
+VALUES (
+  'Administrador',
+  'Municipal',
+  'admin',
+  'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12',
+  '12345678',
+  '299-1234567',
+  'admin@neuquen.gob.ar'
+)
+ON CONFLICT (usuario) DO NOTHING;
+
+INSERT INTO public.tecnico (nom, apellido, dni, telefono, email, usuario, contraseña)
+VALUES (
+  'Técnico',
+  'De Guardia',
+  '87654321',
+  '299-7654321',
+  'tecnico@neuquen.gob.ar',
+  'tecnico',
+  'a1b2c3d4e5f60718293a4b5c6d7e8f90:bd2a0d77b0b3bb3fb91967ef947b311b65783ebacd8eaaa0b773bee021252e0c186602982b6ef9824ffdac2449f9d5f9bdc892479778e2d6c2c9e748927e4c12'
+)
+ON CONFLICT (usuario) DO NOTHING;
+
+INSERT INTO public.admin_tecnico (id_admin, id_tecnico)
+SELECT a.id, t.id
+FROM public.admin a, public.tecnico t
+WHERE a.usuario = 'admin' AND t.usuario = 'tecnico'
+ON CONFLICT (id_admin, id_tecnico) DO NOTHING;
