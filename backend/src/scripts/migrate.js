@@ -7,12 +7,11 @@ const { pool, closePool } = require('../config/database');
 async function main() {
   const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');
   const files = (await fs.readdir(migrationsDir))
-    .filter((f) => f.endsWith('.sql'))
+    .filter((file) => /^\d+_.+\.sql$/.test(file))
     .sort();
 
   for (const file of files) {
-    const filePath = path.join(migrationsDir, file);
-    const sql = await fs.readFile(filePath, 'utf8');
+    const sql = await fs.readFile(path.join(migrationsDir, file), 'utf8');
     await pool.query(sql);
     console.log(`[DB] Migración ${file} ejecutada correctamente.`);
   }

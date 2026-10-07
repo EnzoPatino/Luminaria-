@@ -2,10 +2,10 @@ BEGIN;
 
 INSERT INTO zonas (nombre_zona, tipo_espacio, descripcion)
 VALUES
-  ('Centro / Palacio Municipal', 'via_publica', 'Centro de la ciudad y entorno del Palacio Municipal'),
-  ('Parque Norte', 'parque', 'Parque Norte'),
-  ('Paseo de la Costa', 'costanera', 'Paseo de la Costa - Río Limay'),
-  ('Avenida Argentina', 'via_publica', 'Avenida Argentina')
+  ('Parque Central', 'parque', 'Parque Central de Neuquén, sobre Avenida Olascoaga'),
+  ('Parque Jaime de Nevares', 'parque', 'Parque Jaime de Nevares, predio de la ex U9'),
+  ('Plaza de las Banderas', 'plaza', 'Plaza de las Banderas, extremo norte de Avenida Argentina'),
+  ('Paseo de la Costa', 'costanera', 'Paseo de la Costa - Río Limay')
 ON CONFLICT (nombre_zona) DO UPDATE SET
   tipo_espacio = EXCLUDED.tipo_espacio,
   descripcion = EXCLUDED.descripcion;
@@ -17,31 +17,31 @@ INSERT INTO tableros (
 VALUES
   (
     'TABLERO_01',
-    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Centro / Palacio Municipal'),
-    'Centro / Palacio Municipal',
-    'Centro / Palacio Municipal',
-    20, 45, 'L1', 220.00, 'ok'
+    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Parque Central'),
+    'Parque Central',
+    'Parque Central - Avenida Olascoaga',
+    26.7, 46.8, 'L1', 220.00, 'ok'
   ),
   (
     'TABLERO_02',
-    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Parque Norte'),
-    'Parque Norte',
-    'Parque Norte - Sector Canchas',
-    45, 30, 'L2', 220.00, 'ok'
+    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Parque Jaime de Nevares'),
+    'Parque Jaime de Nevares',
+    'Parque Jaime de Nevares - ex U9',
+    41.2, 56.6, 'L2', 220.00, 'ok'
   ),
   (
     'TABLERO_03',
-    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Paseo de la Costa'),
-    'Paseo de la Costa',
-    'Paseo de la Costa - Río Limay',
-    75, 75, 'L3', 220.00, 'ok'
+    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Plaza de las Banderas'),
+    'Plaza de las Banderas',
+    'Plaza de las Banderas - Avenida Argentina',
+    26.2, 84.5, 'L3', 220.00, 'ok'
   ),
   (
     'TABLERO_04',
-    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Avenida Argentina'),
-    'Avenida Argentina',
-    'Av. Argentina y Monolito',
-    55, 50, 'L1', 220.00, 'ok'
+    (SELECT id_zona FROM zonas WHERE nombre_zona = 'Paseo de la Costa'),
+    'Paseo de la Costa',
+    'Paseo de la Costa - Río Limay',
+    36.2, 8.7, 'L1', 220.00, 'ok'
   )
 ON CONFLICT (id_tablero) DO UPDATE SET
   id_zona = EXCLUDED.id_zona,

@@ -96,30 +96,30 @@ INSERT INTO public.tableros (
 ) VALUES 
 (
   'TABLERO_01', 
-  'Centro / Palacio Municipal', 
-  'Centro / Palacio Municipal', 
-  20, 45, 'L1', 220.00, 220.00, 'ok',
+  'Parque Central',
+  'Parque Central - Avenida Olascoaga',
+  26.7, 46.8, 'L1', 220.00, 220.00, 'ok',
   '{"FOCO_A1":{"id":"FOCO_A1","corriente_ma":450,"estado":"ok"},"FOCO_A2":{"id":"FOCO_A2","corriente_ma":450,"estado":"ok"},"FOCO_A3":{"id":"FOCO_A3","corriente_ma":450,"estado":"ok"},"FOCO_A4":{"id":"FOCO_A4","corriente_ma":450,"estado":"ok"}}'::jsonb
 ),
 (
   'TABLERO_02', 
-  'Parque Norte', 
-  'Parque Norte - Sector Canchas', 
-  45, 30, 'L2', 220.00, 220.00, 'ok',
+  'Parque Jaime de Nevares',
+  'Parque Jaime de Nevares - ex U9',
+  41.2, 56.6, 'L2', 220.00, 220.00, 'ok',
   '{"FOCO_B1":{"id":"FOCO_B1","corriente_ma":450,"estado":"ok"},"FOCO_B2":{"id":"FOCO_B2","corriente_ma":450,"estado":"ok"},"FOCO_B3":{"id":"FOCO_B3","corriente_ma":450,"estado":"ok"}}'::jsonb
 ),
 (
   'TABLERO_03', 
-  'Paseo de la Costa', 
-  'Paseo de la Costa - Río Limay', 
-  75, 75, 'L3', 220.00, 220.00, 'ok',
+  'Plaza de las Banderas',
+  'Plaza de las Banderas - Avenida Argentina',
+  26.2, 84.5, 'L3', 220.00, 220.00, 'ok',
   '{"FOCO_C1":{"id":"FOCO_C1","corriente_ma":450,"estado":"ok"},"FOCO_C2":{"id":"FOCO_C2","corriente_ma":450,"estado":"ok"}}'::jsonb
 ),
 (
   'TABLERO_04', 
-  'Avenida Argentina', 
-  'Av. Argentina y Monolito', 
-  55, 50, 'L1', 220.00, 220.00, 'ok',
+  'Paseo de la Costa',
+  'Paseo de la Costa - Río Limay',
+  36.2, 8.7, 'L1', 220.00, 220.00, 'ok',
   '{"FOCO_D1":{"id":"FOCO_D1","corriente_ma":450,"estado":"ok"},"FOCO_D2":{"id":"FOCO_D2","corriente_ma":450,"estado":"ok"}}'::jsonb
 )
 ON CONFLICT (id_tablero) DO UPDATE SET

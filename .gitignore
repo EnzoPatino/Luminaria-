@@ -13,3 +13,5 @@ scratch/
 
 # Sistema operativo
 .DS_Store
+.vercel
+.env*
