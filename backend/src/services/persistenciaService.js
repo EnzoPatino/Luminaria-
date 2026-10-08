@@ -85,7 +85,7 @@ async function persistEvent(event) {
            SET estado_alerta = 'resuelta',
                estado = 'resuelta',
                fecha_resolucion = now(),
-               resuelto_por = 'AUTO_RESTABLECIDO'
+               resuelto_por = NULL
            WHERE id_tablero = $1
              AND (
                tipo_alerta = 'BAJA_TENSION'
@@ -100,7 +100,7 @@ async function persistEvent(event) {
            SET estado_alerta = 'resuelta',
                estado = 'resuelta',
                fecha_resolucion = now(),
-               resuelto_por = 'AUTO_RESTABLECIDO'
+               resuelto_por = NULL
            WHERE id_tablero = $1
              AND tipo_alerta IN ('BAJA_TENSION', 'FOCO_QUEMADO', 'DESCONEXION_ABRUPTA_FOCO')
              AND estado_alerta = 'activa'`,
