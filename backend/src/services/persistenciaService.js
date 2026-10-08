@@ -83,8 +83,7 @@ async function persistEvent(event) {
         `UPDATE alertas
          SET estado_alerta = 'resuelta',
              estado = 'resuelta',
-             fecha_resolucion = now(),
-             resuelto_por = 'AUTO_RESTABLECIDO'
+             fecha_resolucion = now()
          WHERE id_tablero = $1
            AND tipo_alerta = 'BAJA_TENSION'
            AND estado_alerta = 'activa'`,
