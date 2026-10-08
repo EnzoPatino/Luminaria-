@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
     ports:
       - "1883:1883" # MQTT TCP para gateways / microcontroladores en red local
-      # Nota: WebSockets 9001 se expone de forma segura a traves de Nginx en /mqtt
+      - "9001:9001" # WebSockets directo para navegadores web
     volumes:
       - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - ./deploy/mosquitto/passwords:/mosquitto/config/passwords:ro
@@ -51,6 +51,9 @@ services:
         condition: service_healthy
       mosquitto:
         condition: service_started
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     environment:
       PORT: 3000
       NODE_ENV: production

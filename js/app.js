@@ -334,6 +334,22 @@ document.addEventListener("DOMContentLoaded", () => {
           .filter((tablero) => tablero && tablero.id_tablero != null)
           .map((tablero) => {
             const normalized = normalizarTableroAPI(tablero);
+            // Fallback de fecha si el backend aún no exponía ultima_lectura
+            if (!normalized.ultimaLectura && Array.isArray(alertasAPI)) {
+              const latestAlert = alertasAPI.find(
+                (a) => (a.id_tablero || a.id_tablero_num) === normalized.id
+              );
+              if (latestAlert && (latestAlert.fecha_hora_generada || latestAlert.fecha_hora)) {
+                normalized.ultimaLectura = latestAlert.fecha_hora_generada || latestAlert.fecha_hora;
+              }
+            }
+            // Preservar la lectura en memoria si es más reciente
+            const existing = appState.tableros[normalized.id];
+            if (existing && existing.ultimaLectura) {
+              if (!normalized.ultimaLectura || new Date(existing.ultimaLectura) > new Date(normalized.ultimaLectura)) {
+                normalized.ultimaLectura = existing.ultimaLectura;
+              }
+            }
             return [normalized.id, normalized];
           }),
       );

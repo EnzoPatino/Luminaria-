@@ -36,28 +36,52 @@ while True:
         tension = round(random.uniform(160.0, 188.0), 1)
         corriente = round(random.uniform(2.0, 6.0), 1)
         severidad = "CRITICA"
+        datos = {
+            "tension_medida_v": tension,
+            "tension_nominal_v": 220.0,
+            "umbral_minimo_v": 190.0,
+            "corriente_medida_ma": corriente * 1000,
+            "corriente_actual_ma": corriente * 1000,
+            "fase": tablero["fase"],
+            "rssi_lora": - random.randint(65, 105),
+            "estado_conexion": "ONLINE"
+        }
     elif tipo == "FOCO_QUEMADO":
         tension = round(random.uniform(216.0, 224.0), 1)
         corriente = round(random.uniform(0.1, 0.4), 1)
         severidad = "ADVERTENCIA"
+        datos = {
+            "id_foco": "FOCO_02",
+            "corriente_esperada_ma": 450.0,
+            "corriente_medida_ma": corriente * 1000,
+            "duracion_anomalia_s": 30,
+            "estado_circuito": "ACTIVO",
+            "tension_medida_v": tension,
+            "tension_nominal_v": 220.0,
+            "fase": tablero["fase"],
+            "rssi_lora": - random.randint(65, 105),
+            "estado_conexion": "ONLINE"
+        }
     else:
         tipo = "TELEMETRIA_NORMAL"
         tension = round(random.uniform(217.0, 223.0), 1)
         corriente = round(random.uniform(4.0, 8.5), 1)
         severidad = "INFO"
+        datos = {
+            "tension_medida_v": tension,
+            "tension_nominal_v": 220.0,
+            "corriente_medida_ma": corriente * 1000,
+            "corriente_actual_ma": corriente * 1000,
+            "fase": tablero["fase"],
+            "rssi_lora": - random.randint(65, 105),
+            "estado_conexion": "ONLINE"
+        }
 
     payload = {
         "tipo_evento": tipo,
         "id_tablero": tablero["id"],
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "datos": {
-            "tension_medida_v": tension,
-            "tension_nominal_v": 220.0,
-            "corriente_medida_ma": corriente * 1000,
-            "fase": tablero["fase"],
-            "rssi_lora": - random.randint(65, 105),
-            "estado_conexion": "ONLINE"
-        },
+        "datos": datos,
         "severidad": severidad,
         "ubicacion": tablero["nombre"]
     }

@@ -141,6 +141,7 @@ class LuminariaMQTTClient {
   handleConnectSuccess() {
     this.isConnected = true;
     this.isSimulationMode = false;
+    this._triedPort9001 = false;
     this.log(
       `¡Conectado exitosamente a Mosquitto MQTT! ClientID: ${this.config.clientId}`,
       "success",
@@ -161,7 +162,18 @@ class LuminariaMQTTClient {
   handleConnectFailure(error) {
     this.isConnected = false;
     const errMsg = error.errorMessage || error.message || "Broker no accesible";
-    this.log(`Fallo al conectar con Mosquitto: ${errMsg}`, "error");
+    this.log(`Fallo al conectar con Mosquitto (${this.config.host}:${this.config.port}${this.config.path}): ${errMsg}`, "error");
+
+    // Intento de fallback directo a puerto 9001 si el reverse proxy /mqtt en puerto 80 falló
+    if (Number(this.config.port) !== 9001 && !this._triedPort9001) {
+      this._triedPort9001 = true;
+      this.log("Intentando fallback directo al puerto 9001 (WebSockets de Mosquitto)...", "info");
+      this.config.port = 9001;
+      this.config.path = "";
+      setTimeout(() => this.connect(), 800);
+      return;
+    }
+
     this.enableSimulationMode(
       `Fallo de conexión (${errMsg}). Modo simulación activado.`,
     );
