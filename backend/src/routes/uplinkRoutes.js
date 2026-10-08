@@ -1,5 +1,6 @@
 const express = require('express');
 const { handleChirpstackUplink, getLastUplink } = require('../controllers/chirpstackController');
+const { requireAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
@@ -12,8 +13,8 @@ router.get('/', (req, res) => {
   });
 });
 
-// Endpoint para consultar el último payload recibido para depuración
-router.get('/last', getLastUplink);
+// Endpoint para consultar el último payload recibido (protegido con autenticación)
+router.get('/last', requireAuth, getLastUplink);
 
 // Endpoint principal para recibir webhooks de ChirpStack
 router.post('/', handleChirpstackUplink);
