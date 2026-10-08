@@ -66,6 +66,8 @@ services:
       MQTT_PORT: 1883
       RATE_LIMIT_WINDOW_MS: 60000
       RATE_LIMIT_MAX: 300
+      SUPABASE_URL: ${SUPABASE_URL:-https://rhnglkhvqfmapwdbcktm.supabase.co}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-sb_publishable_o3mrqL8225YgCj31CdfFzA_XMrLPMk7}
     expose:
       - "3000"
 
