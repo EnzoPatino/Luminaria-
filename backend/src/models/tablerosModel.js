@@ -126,11 +126,14 @@ async function findAll(client) {
        FROM (
          SELECT DISTINCT ON (a.id_foco_afectado)
            a.id_foco_afectado AS id_foco,
-           COALESCE(
-             NULLIF(a.datos_json ->> 'corriente_actual_ma', '')::numeric,
-             NULLIF(a.datos_json ->> 'corriente_medida_ma', '')::numeric,
-             0
-           ) AS corriente_medida_ma,
+           CASE
+             WHEN a.estado_alerta = 'resuelta' THEN 450.0
+             ELSE COALESCE(
+               NULLIF(a.datos_json ->> 'corriente_actual_ma', '')::numeric,
+               NULLIF(a.datos_json ->> 'corriente_medida_ma', '')::numeric,
+               0
+             )
+           END AS corriente_medida_ma,
            CASE
              WHEN a.estado_alerta = 'resuelta' THEN 'ok'
              WHEN a.tipo_alerta = 'DESCONEXION_ABRUPTA_FOCO' THEN 'robado'

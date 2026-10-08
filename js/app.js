@@ -279,6 +279,12 @@ document.addEventListener("DOMContentLoaded", () => {
       ? `TABLERO_${String(tablero.id).padStart(2, "0")}`
       : "TABLERO_01";
 
+    if (tablero.estado === "ok") {
+      Object.keys(focos).forEach((id) => {
+        focos[id].estado = "ok";
+      });
+    }
+
     return {
       id: computedId,
       nombre: tablero.nombre_tablero || tablero.nombre || computedId,
@@ -292,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
       estado: tablero.estado || "ok",
       ultimaLectura: tablero.ultima_lectura || tablero.ultimaLectura || null,
       estadoConexion: tablero.estado_conexion || tablero.estadoConexion || "ONLINE",
-      fallaActiva: tablero.fallaActiva || "",
+      fallaActiva: tablero.estado === "ok" ? "" : (tablero.fallaActiva || ""),
       focos,
     };
   }
@@ -1141,6 +1147,10 @@ document.addEventListener("DOMContentLoaded", () => {
       soundType = "warning";
     } else if (event.tipo_evento === "TELEMETRIA_NORMAL") {
       tablero.tension_v = toFiniteNumber(event.datos?.tension_medida_v, 220.0);
+      tablero.corriente_ma = toFiniteNumber(
+        event.datos?.corriente_actual_ma ?? event.datos?.corriente_medida_ma,
+        tablero.corriente_ma,
+      );
       if (event.datos?.focos_restaurados) {
         event.datos.focos_restaurados.forEach((fId) => {
           if (tablero.focos[fId]) {
@@ -1156,9 +1166,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       tablero.fallaActiva = "";
       tablero.estado = "ok";
-      // Auto-resolver alertas de baja tension activas previas de este tablero
+      // Auto-resolver alertas activas previas de este tablero al restablecerse la telemetría normal
       appState.alerts.forEach((a) => {
-        if (a.id_tablero === tableroId && a.tipo_evento === "BAJA_TENSION") {
+        if (
+          a.id_tablero === tableroId &&
+          (a.tipo_evento === "BAJA_TENSION" ||
+           a.tipo_evento === "FOCO_QUEMADO" ||
+           a.tipo_evento === "DESCONEXION_ABRUPTA_FOCO")
+        ) {
           a.resuelta = true;
         }
       });
@@ -1262,7 +1277,7 @@ document.addEventListener("DOMContentLoaded", () => {
         statusIcon = "fa-triangle-exclamation";
         statusLabel = [
           voltageCritical ? "Baja tensión" : "",
-          hayDesconexion ? "Falla de luminaria" : "",
+          hayDesconexion ? "Desconexión de luminaria" : "",
           isStale ? "(Transmisión detenida)" : "",
         ].filter(Boolean).join(" · ");
       } else if (voltageWarning || hayFallaLuminaria) {
@@ -1472,9 +1487,18 @@ document.addEventListener("DOMContentLoaded", () => {
           try {
             await resolveAlertaAPI(alert.id);
             alert.resuelta = true;
-            renderAlerts();
-            updateKPIs();
-            renderMapPins();
+            if (alert.id_tablero && appState.tableros[alert.id_tablero]) {
+              const tab = appState.tableros[alert.id_tablero];
+              const remainingActive = appState.alerts.filter(
+                (a) => a.id_tablero === alert.id_tablero && !a.resuelta && a.id !== alert.id
+              );
+              if (remainingActive.length === 0 && tab.tension_v >= 210.0) {
+                tab.estado = "ok";
+                tab.fallaActiva = "";
+                Object.values(tab.focos || {}).forEach((f) => { f.estado = "ok"; });
+              }
+            }
+            refreshAllViews();
           } catch (error) {
             console.warn("[Luminaria] No se pudo resolver la alerta en la API.", error);
             btnResolve.disabled = false;

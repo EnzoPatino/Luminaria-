@@ -79,16 +79,34 @@ async function persistEvent(event) {
     const data = event.datos && typeof event.datos === 'object' ? event.datos : {};
 
     if (event.tipo_evento === 'TELEMETRIA_NORMAL') {
-      await client.query(
-        `UPDATE alertas
-         SET estado_alerta = 'resuelta',
-             estado = 'resuelta',
-             fecha_resolucion = now()
-         WHERE id_tablero = $1
-           AND tipo_alerta = 'BAJA_TENSION'
-           AND estado_alerta = 'activa'`,
-        [tablero.id_tablero]
-      );
+      if (Array.isArray(data.focos_restaurados) && data.focos_restaurados.length > 0) {
+        await client.query(
+          `UPDATE alertas
+           SET estado_alerta = 'resuelta',
+               estado = 'resuelta',
+               fecha_resolucion = now(),
+               resuelto_por = 'AUTO_RESTABLECIDO'
+           WHERE id_tablero = $1
+             AND (
+               tipo_alerta = 'BAJA_TENSION'
+               OR (tipo_alerta IN ('FOCO_QUEMADO', 'DESCONEXION_ABRUPTA_FOCO') AND id_foco_afectado = ANY($2::text[]))
+             )
+             AND estado_alerta = 'activa'`,
+          [tablero.id_tablero, data.focos_restaurados.map(String)]
+        );
+      } else {
+        await client.query(
+          `UPDATE alertas
+           SET estado_alerta = 'resuelta',
+               estado = 'resuelta',
+               fecha_resolucion = now(),
+               resuelto_por = 'AUTO_RESTABLECIDO'
+           WHERE id_tablero = $1
+             AND tipo_alerta IN ('BAJA_TENSION', 'FOCO_QUEMADO', 'DESCONEXION_ABRUPTA_FOCO')
+             AND estado_alerta = 'activa'`,
+          [tablero.id_tablero]
+        );
+      }
     }
 
     const alerta = event.tipo_evento !== 'TELEMETRIA_NORMAL'
