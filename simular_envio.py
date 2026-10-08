@@ -52,7 +52,8 @@ def evento(tablero, tipo):
         }
     elif tipo == "FOCO_QUEMADO":
         tension = round(random.uniform(216.0, 224.0), 1)
-        corriente = round(random.uniform(0.1, 0.4), 1)
+        # El foco abierto deja de consumir corriente; la tensión de red sigue presente.
+        corriente = round(random.uniform(0.0, 0.05), 2)
         severidad = "ADVERTENCIA"
         datos = {
             "id_foco": "FOCO_02",

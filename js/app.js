@@ -1141,7 +1141,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       tablero.focos[focoId].corriente_ma = toFiniteNumber(event.datos?.corriente_medida_ma, 12.5);
       tablero.focos[focoId].estado = "quemado";
-      tablero.fallaActiva = "Falla de luminaria detectada en el tablero";
+      tablero.fallaActiva = `Foco quemado detectado: ${focoId}`;
       tablero.estado = "advertencia";
       alertTitle = `Anomalía de Consumo / Foco Quemado en ${tablero.nombre || tableroId}`;
       soundType = "warning";
@@ -1286,7 +1286,7 @@ document.addEventListener("DOMContentLoaded", () => {
         statusIcon = "fa-exclamation-circle";
         statusLabel = [
           voltageWarning ? "Tensión baja" : "",
-          hayFallaLuminaria ? "Falla de luminaria" : "",
+          hayFallaLuminaria ? "Foco quemado" : "",
           isStale ? "(Transmisión detenida)" : "",
         ].filter(Boolean).join(" · ");
       } else if (isStale) {
@@ -1301,7 +1301,17 @@ document.addEventListener("DOMContentLoaded", () => {
         fallasActivas.push(`${tablero.tension_v < 190 ? "Baja tensión" : "Tensión fuera de rango"}: ${fmtVoltage(tablero.tension_v)} V`);
       }
       if (hayDesconexion) fallasActivas.push("Desconexión detectada en el tablero");
-      if (hayFallaLuminaria) fallasActivas.push("Falla de luminaria detectada en el tablero");
+      if (hayFallaLuminaria) {
+        const focosQuemados = focos
+          .filter((foco) => foco.estado === "quemado")
+          .map((foco) => foco.id)
+          .filter(Boolean);
+        fallasActivas.push(
+          focosQuemados.length
+            ? `Foco quemado: ${focosQuemados.join(", ")}`
+            : "Foco quemado detectado",
+        );
+      }
 
       const isSelected = tablero.id === appState.selectedTableroId;
       const isExpanded = tablero.id === appState.expandedTableroId;
