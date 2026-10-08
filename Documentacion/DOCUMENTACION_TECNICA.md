@@ -391,19 +391,25 @@ El backend opera como un servicio autónomo y resiliente, diseñado para alta co
 
 ### 9.2 Capa de Seguridad y Red
 
-1. **Headers de Seguridad HTTP:**
+1. **Aislamiento de Puertos (Defensa en Profundidad):**
+   - El motor **PostgreSQL (puerto 5432)** está bindeado estrictamente a `127.0.0.1:5432` en el host; no es accesible desde internet ni desde la red externa.
+   - El puerto WebSockets de Mosquitto (`9001`) no se expone directamente; todo el tráfico web se canaliza a través de Nginx (`/mqtt`).
+   - El puerto `1883` permanece abierto únicamente para tráfico TCP de gateways y nodos de campo.
+2. **Reverse Proxy Nginx y Protección de Archivos Sensibles:**
+   - Denegación automática (`deny all`) para cualquier archivo o carpeta oculta (`/\.`, `.git`, `.env`).
+   - Bloqueo por extensión de archivos de desarrollo, schemas, scripts y documentación (`.sql`, `.md`, `.py`, `.sh`, `.yml`, `.json`).
+   - Ocultamiento de cabeceras de versión (`server_tokens off;`).
+3. **Headers de Seguridad HTTP:**
    - `X-Content-Type-Options: nosniff` (previene ataques MIME-sniffing).
-   - `X-Frame-Options: DENY` (inmunidad contra clickjacking).
-   - `X-XSS-Protection: 0` (según los estándares modernos OWASP).
+   - `X-Frame-Options: SAMEORIGIN` (protección contra clickjacking).
+   - `X-XSS-Protection: 1; mode=block`.
    - `Referrer-Policy: strict-origin-when-cross-origin`.
    - `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
-   - En entorno de producción (`NODE_ENV=production`): HSTS (`Strict-Transport-Security: max-age=31536000; includeSubDomains`) y CSP (`Content-Security-Policy`).
-2. **CORS con Lista Blanca:**
-   - Configurable mediante la variable `CORS_ORIGIN` en `.env`.
-   - Incluye orígenes locales predeterminados (`http://localhost:3000`, `http://localhost:5500`, `http://127.0.0.1:5500`).
-3. **Rate Limiting y Límite de Payload:**
-   - Límite global por IP (`express-rate-limit`, 100 peticiones por ventana configurable).
-   - Límite estricto de body JSON a 1MB para prevenir denegación de servicio por memoria.
+   - En entorno de producción (`NODE_ENV=production`): HSTS y CSP restrictivo.
+4. **CORS y Rate Limiting:**
+   - CORS controlado para peticiones autorizadas.
+   - Rate limiting perimetral en Nginx (`15r/s` con burst de 30) y en Express (`express-rate-limit`).
+   - Límite de carga útil JSON a 1MB en la API.
 
 ### 9.3 Autenticación y Autorización (RBAC)
 

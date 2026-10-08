@@ -27,40 +27,39 @@ La interfaz es **100% responsive**: en pantallas móviles la navegación se agru
 
 ## 3. Guía de Ejecución
 
-### Ejecución Directa
-Abra el archivo `index.html` directamente en cualquier navegador web. Por defecto, si no encuentra un broker Mosquitto activo, la interfaz iniciará en **Modo Simulación**.
+### Despliegue en Producción (Docker Compose)
+Levanta todos los servicios unificados (PostgreSQL 16, Mosquitto MQTT, Backend Node.js y Nginx):
 
-### Ejecución con Servidor HTTP Local
-Para servir la aplicación mediante HTTP:
 ```bash
-python3 -m http.server 8080
+docker compose up -d --build
 ```
-Luego ingrese a `http://localhost:8080` en su navegador.
+El panel web estará disponible inmediatamente en `http://<IP_O_DOMINIO>/` (puerto 80/443).
+
+### Ejecución de Desarrollo Local
+Para desarrollo y pruebas rápidas en máquina local:
+```bash
+# Frontend
+python3 -m http.server 8080
+
+# Backend
+cd backend && npm install && npm run dev
+```
 
 ---
 
-## 4. Integración con ChirpStack (LoRaWAN vía HTTP)
+## 4. Integración con ChirpStack (LoRaWAN vía Webhook)
 
-El backend recibe la telemetría de los nodos LoRaWAN directamente desde **ChirpStack** mediante un webhook HTTP:
+El backend recibe la telemetría enviada por los sensores y gateways a través de **ChirpStack** mediante un webhook HTTP:
 
-1. Iniciar el backend:
-   ```bash
-   cd backend
-   npm install
-   npm start
-   ```
-2. En otra terminal, levantar el túnel público:
-   ```bash
-   npx localtunnel --port 3000 --subdomain telemetria-epet14
-   ```
-3. La URL del webhook configurada en ChirpStack es:
-   ```
-   https://telemetria-epet14.loca.lt/api/uplink
-   ```
-4. **Verificar que esté activo:** abrir `http://localhost:3000/api/uplink` en el navegador.
-5. **Inspeccionar último dato recibido:** `http://localhost:3000/api/uplink/last`
+1. **Configuración del Webhook en ChirpStack:**
+   - Tipo de integración: **HTTP**
+   - URL del Endpoint: `http://<IP_O_DOMINIO_DEL_SERVIDOR>/api/uplink`
+   - Formato de payload: **JSON**
+   - Evento suscrito: **Uplink**
+2. **Endpoint de verificación:** `GET /api/uplink` (informa si el receptor está listo).
+3. **Inspección de diagnóstico:** `GET /api/uplink/last` (requiere token JWT de operador autorizado).
 
-El adaptador (`chirpstackAdapter.js`) mapea automáticamente el DevEUI del nodo al tablero correspondiente y clasifica la telemetría según umbrales de tensión.
+El adaptador (`chirpstackAdapter.js`) mapea el identificador del dispositivo (DevEUI) con el tablero asignado, clasifica los voltajes y persiste los registros tanto en PostgreSQL como en Supabase.
 
 ### Configuración de Mosquitto MQTT (opcional)
 

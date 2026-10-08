@@ -12,37 +12,37 @@ Aplicación web para monitoreo en tiempo real de tableros de iluminación públi
 
 ## 1. Comandos Comunes
 
-### Ejecutar el Frontend localmente
+### Despliegue Completo en Producción (Docker Compose)
+Levanta los 4 servicios integrados (PostgreSQL 16, Mosquitto MQTT, Backend Node.js y Nginx Reverse Proxy):
 
 ```bash
-# Opción A: abrir index.html directamente en el navegador
-# Opción B: servidor HTTP local
-python3 -m http.server 8080
-# Luego ir a http://localhost:8080
+docker compose up -d --build
+```
+- **Frontend web**: puerto `80` (o `443` con TLS).
+- **API REST**: `http://<host>/api/` (proxied a Node.js en contenedor).
+- **WebSockets MQTT**: `ws://<host>/mqtt` (proxied a Mosquitto).
+- **MQTT TCP (Gateways LoRa/ESP32)**: puerto `1883`.
+- **PostgreSQL**: accesible únicamente en `127.0.0.1:5432` del host (sellado contra accesos externos).
+
+Verificar estado y logs:
+```bash
+docker compose ps
+docker compose logs -f backend
 ```
 
-### Ejecutar el Backend (Node.js)
+### Ejecutar componentes por separado (Desarrollo local)
 
 ```bash
+# Frontend estático local:
+python3 -m http.server 8080
+
+# Backend Node.js:
 cd backend
 npm install
-npm start    # Modo producción
-npm run dev   # Modo desarrollo (con --watch)
-```
+npm run dev
 
-### Validar sintaxis JavaScript (si tenés Node)
-
-```bash
-node -c js/app.js
-node -c js/mqtt-client.js
-```
-
-### Levantar Mosquitto (opcional, solo si se quiere probar MQTT real)
-
-```bash
-docker compose up -d mosquitto
-# WebSocket listener: 9001 — TCP listener: 1883
-# Ver README_MQTT_UI.md para mosquitto.conf completo
+# Validar sintaxis JavaScript:
+node -c js/app.js && node -c js/mqtt-client.js
 ```
 
 ---
@@ -176,26 +176,24 @@ Default (en `mqtt-client.js`):
 
 ```js
 {
-  host: 'localhost',
-  port: 9001,        // WebSocket
+  host: window.location.hostname || 'localhost',
+  port: window.location.port || (window.location.protocol === 'https:' ? 443 : 80),
   path: '/mqtt',
-  topics: ['neuquen/iluminacion/#', 'api/evento'],
+  topics: ['neuquen/iluminacion/#', 'api/evento', 'sensores/#'],
   qos: 1
 }
 ```
 
-El usuario puede sobreescribir vía modal (botón "Servidor"). La config se guarda en `localStorage['luminaria_mqtt_config']`. Si no hay Paho en window, o falla el `connect()`, entra en simulación automáticamente.
+El cliente MQTT autodetecta el host y puerto web actual para conectarse a Mosquitto mediante el reverse proxy de Nginx (`/mqtt`). La configuración manual se persiste en `localStorage['luminaria_mqtt_config']`. Si falla o no hay conexión, conmuta transparentemente a simulación interna.
 
 ---
 
-## 7. Reglas de modificación
+## 7. Directrices de Seguridad y Despliegue Perimetral
 
-1. **No introducir frameworks ni toolchains de build en el frontend** (sin React/Vue/Tailwind/npm) salvo pedido explícito. El estilo actual es vanilla ejecutable desde `index.html`.
-2. **No cambiar nombres de claves JSON** del contrato de eventos — ya coordinados con hardware.
-3. **Preservar modo simulación.**
-4. **Preservar `escapeHtml()`** (o equivalente) al renderizar datos externos.
-5. **No mover `#mapPinsContainer` fuera de `.map-svg-wrapper`.**
-6. **No eliminar el script anti-flash** del `<head>` de `index.html`.
-7. **Usar variables CSS** en lugar de colores hardcodeados cuando agregues componentes nuevos, para que el tema claro funcione automáticamente.
-8. Si se agrega un backend real, documentarlo en `Documentacion/` **solo después de crear sus archivos** — la UI hoy es 100% cliente.
-9. Validar sintaxis antes de entregar: `node -c js/app.js && node -c js/mqtt-client.js`.
+1. **Aislamiento de Puertos:** PostgreSQL nunca debe exponerse en `0.0.0.0`. En `docker-compose.yml`, vincular exclusivamente a `127.0.0.1:5432:5432`.
+2. **Filtrado de Archivos Sensibles en Nginx:** El reverse proxy debe bloquear expresamente solicitudes a archivos ocultos (`/\.`), fuentes internas, schemas (`.sql`), configs (`.yml`, `.json`, `.env`) y documentación (`.md`).
+3. **Endpoints de Depuración:** Rutas como `/api/uplink/last` deben requerir autenticación JWT (`requireAuth`) para no fugar payloads en claro.
+4. **Rate Limiting:** El perimetro de Nginx y Express implementa limitación de tasa por IP y por tablero para mitigar ataques de denegación de servicio.
+5. **No introducir frameworks pesados en el frontend:** Mantener la ligereza con Vanilla JS y Paho MQTT.
+6. **Preservar el contrato JSON del hardware:** No renombrar claves de eventos coordinadas con los microcontroladores y ChirpStack.
+7. **Validar sintaxis antes de commit:** `node -c js/app.js && node -c js/mqtt-client.js`.
