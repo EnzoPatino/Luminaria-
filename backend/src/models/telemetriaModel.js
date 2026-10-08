@@ -4,13 +4,18 @@ const { pool } = require('../config/database');
  * Modelo para la recuperación de datos históricos de telemetría (BE-05).
  */
 
-async function getHistorico({ id_sensor, inicio, fin, limit, offset }) {
+async function getHistorico({ id_sensor, id_tablero, inicio, fin, limit, offset }) {
   const conditions = [];
   const values = [];
 
   if (id_sensor) {
     values.push(id_sensor);
     conditions.push(`id_sensor = $${values.length}`);
+  }
+
+  if (id_tablero) {
+    values.push(id_tablero);
+    conditions.push(`id_tablero = $${values.length}`);
   }
 
   if (inicio) {

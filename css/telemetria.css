@@ -360,3 +360,40 @@
   }
 }
 
+/* Panel de diagnóstico eléctrico: superficies planas y lectura de campo. */
+.telemetry-controls { display:flex; align-items:end; gap:1rem; padding:1rem; margin-bottom:1.1rem; background:var(--bg-card); border:1px solid var(--border-color); }
+.telemetry-control-label { display:flex; flex-direction:column; gap:.35rem; font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); }
+.telemetry-select { min-width:255px; min-height:44px; padding:.55rem .7rem; font:700 .86rem var(--font-mono); color:var(--text-main); background:var(--bg-input); border:1px solid var(--border-color); border-radius:4px; }
+.telemetry-window { margin-left:auto; display:flex; flex-direction:column; gap:.35rem; }
+.telemetry-range-buttons { display:flex; gap:.35rem; }
+.telemetry-range { min-height:44px; padding:.55rem .8rem; color:var(--text-muted); background:var(--bg-dark); border:1px solid var(--border-color); border-radius:4px; font:700 .8rem var(--font-sans); touch-action:manipulation; cursor:pointer; }
+.telemetry-range.active { color:var(--text-main); border-color:var(--color-accent-text); background:var(--color-accent-bg); }
+.sensor-kpi-card, .sensor-chart-card { border-radius:4px; box-shadow:none; }
+.sensor-kpi-card:hover { transform:none; }
+.sensor-kpi-icon { border-radius:4px; }
+.sensor-kpi-icon.voltage { color:var(--color-warning); background:var(--color-warning-bg); border-color:var(--color-warning-border); }
+.sensor-kpi-icon.current { color:var(--color-accent-text); background:var(--color-accent-bg); border-color:var(--color-accent-soft); }
+.sensor-kpi-icon.stats, .sensor-kpi-icon.signal { color:var(--color-ok); background:var(--color-ok-bg); border-color:var(--color-ok-border); }
+.sensor-range-badge { border-radius:3px; }
+.badge-neutral { color:var(--text-muted); background:var(--bg-dark); border:1px solid var(--border-color); }
+.telemetry-stat-row, .telemetry-stat-labels { display:grid; grid-template-columns:repeat(3, 1fr); gap:.4rem; }
+.telemetry-stat-row { margin-top:.55rem; font:800 1.05rem var(--font-mono); color:var(--text-main); }
+.telemetry-stat-labels { font-size:.72rem; color:var(--text-dim); }
+.signal-meter { height:8px; margin-top:.8rem; overflow:hidden; background:var(--meter-track-bg); border:1px solid var(--border-color); border-radius:2px; }
+.signal-meter-fill { display:block; height:100%; width:0; background:var(--color-critical); transition:width .2s ease, background-color .2s ease; }
+.sensor-charts-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.sensor-chart-card { min-height:345px; }
+.sensor-chart-body { min-height:245px; }
+@media (max-width: 900px) { .sensor-charts-grid { grid-template-columns:1fr; } }
+@media (max-width: 600px) {
+  #tabSensores { overflow-x:hidden; }
+  .telemetry-controls { align-items:stretch; flex-direction:column; gap:.8rem; padding:.8rem; }
+  .telemetry-select { width:100%; min-width:0; }
+  .telemetry-window { margin-left:0; }
+  .telemetry-range-buttons { display:grid; grid-template-columns:repeat(3, 1fr); }
+  .telemetry-range { padding:.5rem .25rem; font-size:.75rem; }
+  .sensor-kpi-grid { grid-template-columns:1fr; }
+  .sensor-chart-card { min-height:310px; padding:.9rem; }
+  .sensor-chart-body { min-height:210px; }
+  .sensor-chart-body canvas { max-height:none; }
+}

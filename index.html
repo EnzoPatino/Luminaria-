@@ -267,83 +267,92 @@
         <div class="pane-header">
           <div class="pane-title">
             <i class="fas fa-bolt-lightning"></i>
-            <h3>Telemetría de Sensores y Consumo Eléctrico</h3>
+            <h3>Diagnóstico eléctrico</h3>
           </div>
           <div class="sensor-header-actions">
             <span class="sensor-live-pill" id="sensorLivePill">
               <span class="status-dot connected" id="sensorStatusDot"></span>
-              <span id="sensorStatusText">Sensor Activo</span>
+              <span id="sensorStatusText">En espera de lectura</span>
             </span>
-            <button class="btn btn-secondary btn-sm" id="btnSimulateSensorMsg" title="Generar lectura demo de sensor">
-              <i class="fas fa-satellite-dish"></i> Lectura Demo
-            </button>
-            <button class="btn btn-sim btn-sm" id="btnSimAmpNormal" title="Simular consumo normal (3.5 A)">
-              <i class="fas fa-bolt"></i> Normal (3.5A)
-            </button>
-            <button class="btn btn-sim btn-sm" id="btnSimAmpAlto" title="Simular sobrecorriente (12.5 A)">
-              <i class="fas fa-triangle-exclamation"></i> Sobrecorriente (12.5A)
-            </button>
-            <button class="btn btn-sim btn-sm" id="btnSimAmpCero" title="Simular falta de consumo (0.0 A)">
-              <i class="fas fa-power-off"></i> Sin Consumo (0.0A)
-            </button>
           </div>
         </div>
 
-        <!-- NOTA INFORMATIVA DE TELEMETRÍA Y CONSUMO -->
-        <div class="sensor-demo-note">
-          <i class="fas fa-circle-info"></i>
-          <div>
-            <strong>Monitoreo de Telemetría y Consumo Eléctrico:</strong> Visualización en tiempo real de temperatura ambiental (°C) y consumo eléctrico en Amperios (A) transmitido mediante broker MQTT o simulación local (JSON: <code>ApiKey</code>, <code>Tem</code>, <code>Amp</code>).
+        <div class="telemetry-controls" aria-label="Filtros de telemetría">
+          <label class="telemetry-control-label" for="telemetryBoardSelect">Tablero eléctrico
+            <select id="telemetryBoardSelect" class="telemetry-select">
+              <option value="TABLERO_01">TABLERO_01 · Centro</option>
+              <option value="TABLERO_02">TABLERO_02 · Parque Norte</option>
+              <option value="TABLERO_03">TABLERO_03 · Paseo de la Costa</option>
+              <option value="TABLERO_04">TABLERO_04 · Avenida Argentina</option>
+            </select>
+          </label>
+          <div class="telemetry-window" role="group" aria-label="Ventana temporal">
+            <span class="telemetry-control-label">Período</span>
+            <div class="telemetry-range-buttons">
+              <button type="button" class="telemetry-range active" data-telemetry-range="1h">1 hora</button>
+              <button type="button" class="telemetry-range" data-telemetry-range="24h">24 horas</button>
+              <button type="button" class="telemetry-range" data-telemetry-range="7d">7 días</button>
+            </div>
           </div>
         </div>
 
         <!-- TARJETAS DE ESTADO ACTUAL DEL SENSOR Y CONSUMO -->
         <div class="sensor-kpi-grid">
-          <div class="sensor-kpi-card" id="sensorAmpCard">
+          <div class="sensor-kpi-card" id="telemetryVoltageCard">
             <div class="sensor-kpi-top">
-              <div class="sensor-kpi-icon amp"><i class="fas fa-bolt"></i></div>
-              <span class="sensor-range-badge badge-ok" id="sensorAmpBadge">Consumo Normal</span>
+              <div class="sensor-kpi-icon voltage"><i class="fas fa-bolt"></i></div>
+              <span class="sensor-range-badge badge-neutral" id="telemetryVoltageBadge">Sin lectura</span>
             </div>
             <div class="sensor-kpi-data">
-              <span class="sensor-kpi-label">Consumo Eléctrico</span>
+              <span class="sensor-kpi-label">Tensión actual RMS</span>
               <div class="sensor-kpi-value-row">
-                <span class="sensor-kpi-value" id="sensorCurrentAmp">3.6</span>
+                <span class="sensor-kpi-value" id="telemetryVoltageValue">--</span>
+                <span class="sensor-kpi-unit">V</span>
+              </div>
+              <div class="sensor-kpi-meta">
+                <span>Admisible: <strong>198 V a 242 V</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sensor-kpi-card" id="telemetryCurrentCard">
+            <div class="sensor-kpi-top">
+              <div class="sensor-kpi-icon current"><i class="fas fa-gauge-high"></i></div>
+              <span class="sensor-range-badge badge-neutral">Línea</span>
+            </div>
+            <div class="sensor-kpi-data">
+              <span class="sensor-kpi-label">Corriente de línea</span>
+              <div class="sensor-kpi-value-row">
+                <span class="sensor-kpi-value" id="telemetryCurrentValue">--</span>
                 <span class="sensor-kpi-unit">A</span>
               </div>
               <div class="sensor-kpi-meta">
-                <span>Rango Normal: <strong>1.0 A — 10.0 A</strong></span>
+                <span>Última lectura: <strong id="telemetryLastUpdate">--:--</strong></span>
               </div>
             </div>
           </div>
 
-          <div class="sensor-kpi-card" id="sensorTempCard">
+          <div class="sensor-kpi-card">
             <div class="sensor-kpi-top">
-              <div class="sensor-kpi-icon temp"><i class="fas fa-temperature-half"></i></div>
-              <span class="sensor-range-badge badge-ok" id="sensorTempBadge">Rango Aceptable</span>
+              <div class="sensor-kpi-icon stats"><i class="fas fa-chart-column"></i></div>
+              <span class="sensor-range-badge badge-neutral">Ventana</span>
             </div>
             <div class="sensor-kpi-data">
-              <span class="sensor-kpi-label">Temperatura Medida</span>
-              <div class="sensor-kpi-value-row">
-                <span class="sensor-kpi-value" id="sensorCurrentTemp">23.0</span>
-                <span class="sensor-kpi-unit">°C</span>
-              </div>
-              <div class="sensor-kpi-meta">
-                <span>Rango Aceptable: <strong>18.0°C — 35.0°C</strong></span>
-              </div>
+              <span class="sensor-kpi-label">Tensión: promedio / mínima / máxima</span>
+              <div class="telemetry-stat-row"><span id="telemetryAverageValue">--</span><span id="telemetryMinimumValue">--</span><span id="telemetryMaximumValue">--</span></div>
+              <div class="telemetry-stat-labels"><span>Prom.</span><span>Mín.</span><span>Máx.</span></div>
             </div>
           </div>
 
-          <div class="sensor-kpi-card sensor-device-card">
+          <div class="sensor-kpi-card">
             <div class="sensor-kpi-top">
-              <div class="sensor-kpi-icon device"><i class="fas fa-key"></i></div>
-              <span class="sensor-token-badge" id="sensorTokenBadge">ESP32 / Sensor</span>
+              <div class="sensor-kpi-icon signal"><i class="fas fa-tower-broadcast"></i></div>
+              <span class="sensor-range-badge badge-neutral" id="telemetryConnectionState">Sin enlace</span>
             </div>
             <div class="sensor-kpi-data">
-              <span class="sensor-kpi-label">ApiKey / Identificador</span>
-              <div class="sensor-kpi-key" id="sensorApiKey" title="Token de autenticación del sensor">ClaveUnicaParaSensoresToken123</div>
-              <div class="sensor-kpi-meta">
-                <span>Última lectura: <strong id="sensorLastUpdate">--:--:--</strong></span>
-              </div>
+              <span class="sensor-kpi-label">Fase y enlace LoRaWAN</span>
+              <div class="sensor-kpi-value-row"><span class="sensor-kpi-value" id="telemetryPhaseValue">--</span><span class="sensor-kpi-unit" id="telemetryRssiValue">-- dBm</span></div>
+              <div class="signal-meter" aria-label="Calidad de señal"><span class="signal-meter-fill" id="telemetrySignalFill"></span></div>
             </div>
           </div>
         </div>
@@ -356,17 +365,13 @@
               <div class="sensor-chart-title">
                 <i class="fas fa-chart-line" style="color: var(--color-accent-text);"></i>
                 <div>
-                  <h4>1. Historial en Tiempo Real (Líneas)</h4>
-                  <p>Evolución de Temperatura (°C) y Consumo Eléctrico (A)</p>
+                  <h4>Tensión RMS en el tiempo</h4>
+                  <p>Límites de servicio: 198 V a 242 V · Nominal: 220 V</p>
                 </div>
-              </div>
-              <div class="sensor-chart-legend-custom">
-                <span class="legend-indicator temp-dot"></span> <span class="legend-text">Temp (°C)</span>
-                <span class="legend-indicator amp-dot"></span> <span class="legend-text">Consumo (A)</span>
               </div>
             </div>
             <div class="sensor-chart-body">
-              <canvas id="sensorLineChart" height="260" role="img" aria-label="Gráfico de líneas con historial de temperatura y consumo eléctrico"></canvas>
+              <canvas id="sensorLineChart" role="img" aria-label="Gráfico de tensión RMS en volts a través del tiempo"></canvas>
             </div>
           </div>
 
@@ -374,25 +379,15 @@
           <div class="sensor-chart-card">
             <div class="sensor-chart-header">
               <div class="sensor-chart-title">
-                <i class="fas fa-chart-simple" style="color: var(--color-gold);"></i>
+                <i class="fas fa-wave-square" style="color: var(--color-gold);"></i>
                 <div>
-                  <h4>2. Comparativa de Parámetros vs. Rangos Normales</h4>
-                  <p>Mediciones actuales de Temperatura (°C) y Consumo (A) contra sus límites admisibles</p>
+                  <h4>Perfil de corriente</h4>
+                  <p>Variación de corriente para detectar maniobras y anomalías.</p>
                 </div>
               </div>
             </div>
             <div class="sensor-chart-body">
-              <canvas id="sensorBarChart" height="260" role="img" aria-label="Gráfico de barras mostrando parámetros con sus rangos aceptables"></canvas>
-            </div>
-            <div class="sensor-ranges-footer">
-              <div class="range-info-pill">
-                <span class="range-pill-color amp"></span>
-                <span><strong>Consumo Normal:</strong> 1.0 A a 10.0 A (Alerta si &lt;1.0 A o &gt;10.0 A)</span>
-              </div>
-              <div class="range-info-pill">
-                <span class="range-pill-color temp"></span>
-                <span><strong>Temp. Aceptable:</strong> 18°C a 35°C (Alerta si &lt;18°C o &gt;35°C)</span>
-              </div>
+              <canvas id="sensorBarChart" role="img" aria-label="Gráfico de corriente de línea en amperes a través del tiempo"></canvas>
             </div>
           </div>
         </div>

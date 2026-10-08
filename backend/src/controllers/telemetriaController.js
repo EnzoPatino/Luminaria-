@@ -7,6 +7,7 @@ const telemetriaModel = require('../models/telemetriaModel');
 
 const historicoSchema = z.object({
   id_sensor: z.string().regex(/^\d+$/).transform(Number).optional(),
+  id_tablero: z.string().trim().min(1).max(80).optional(),
   inicio: z.string().datetime().optional(),
   fin: z.string().datetime().optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).default('100').pipe(z.number().max(1000)),

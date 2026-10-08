@@ -87,6 +87,12 @@ document.addEventListener("DOMContentLoaded", () => {
         amp: { min: 1.0, max: 10.0, unit: "A" },
       },
     },
+    telemetry: {
+      selectedTableroId: "TABLERO_01",
+      range: "1h",
+      readings: {},
+      maxHistoryPoints: 720,
+    },
   };
 
   // Instancias de Chart.js
@@ -173,11 +179,12 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAlerts();
     updateKPIs();
     renderMapPins();
-    initSensorCharts();
-    updateSensorUI();
+    initTelemetryCharts();
+    updateTelemetryUI();
 
     // Conectar a MQTT o Modo Simulación
     await loadInitialData();
+    await loadTelemetryHistory();
     if (window.luminariaMQTT) window.luminariaMQTT.connect();
   }
 
@@ -514,6 +521,21 @@ document.addEventListener("DOMContentLoaded", () => {
   // EVENT LISTENERS & DELEGACIÓN
   // ==========================================
   function setupEventListeners() {
+    const telemetryBoardSelect = document.getElementById("telemetryBoardSelect");
+    if (telemetryBoardSelect) {
+      telemetryBoardSelect.addEventListener("change", async (event) => {
+        appState.telemetry.selectedTableroId = event.target.value;
+        await loadTelemetryHistory();
+      });
+    }
+    document.querySelectorAll("[data-telemetry-range]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        appState.telemetry.range = button.dataset.telemetryRange;
+        document.querySelectorAll("[data-telemetry-range]").forEach((item) => item.classList.toggle("active", item === button));
+        await loadTelemetryHistory();
+      });
+    });
+
     // Cambio de Rol (Administrador / Técnico)
     if (elements.roleSelector) {
       elements.roleSelector.addEventListener("change", (e) => {
@@ -1004,6 +1026,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function processIncomingEvent(event) {
     if (!event) return;
+
+    if (isElectricalTelemetryEvent(event)) {
+      processElectricalTelemetry(event);
+      if (event.tipo_evento === "TELEMETRIA_NORMAL") return;
+    }
 
     // 1. Detectar si es un mensaje de telemetría de sensor ambiental
     // Formato broker: {"ApiKey":"ClaveUnicaParaSensoresToken123","Tem":"23.0","Hum":"40.0"}
@@ -1723,7 +1750,8 @@ document.addEventListener("DOMContentLoaded", () => {
       playAlertAudioSound("warning");
     }
 
-    updateSensorUI();
+    // Los paquetes ambientales heredados se conservan para compatibilidad del
+    // broker, pero no reemplazan la vista de diagnóstico eléctrico.
   }
 
   function getChartThemeColors() {
@@ -2098,6 +2126,11 @@ document.addEventListener("DOMContentLoaded", () => {
         sensorLineChartInstance.options.scales.x.grid.color = theme.gridColor;
         sensorLineChartInstance.options.scales.x.ticks.color = theme.textDim;
       }
+      if (sensorLineChartInstance.options.scales.y) {
+        sensorLineChartInstance.options.scales.y.grid.color = theme.gridColor;
+        sensorLineChartInstance.options.scales.y.ticks.color = theme.textDim;
+        sensorLineChartInstance.options.scales.y.title.color = theme.textColor;
+      }
       if (sensorLineChartInstance.options.scales.yTemp) {
         sensorLineChartInstance.options.scales.yTemp.grid.color =
           theme.gridColor;
@@ -2133,6 +2166,158 @@ document.addEventListener("DOMContentLoaded", () => {
         sensorBarChartInstance.options.scales.y.title.color = theme.textColor;
       }
       sensorBarChartInstance.update();
+    }
+  }
+
+  // ==========================================
+  // TELEMETRÍA ELÉCTRICA OPERATIVA
+  // ==========================================
+  function isElectricalTelemetryEvent(event) {
+    return Boolean(event && event.datos && (
+      event.datos.tension_medida_v !== undefined ||
+      event.datos.corriente_medida_ma !== undefined ||
+      event.datos.rssi_lora !== undefined
+    ));
+  }
+
+  function formatTelemetryTime(timestamp) {
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? "--:--" : date.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function normaliseElectricalReading(event) {
+    const data = event.datos || event;
+    const tension = Number(data.tension_medida_v ?? data.valor_tension);
+    const currentRaw = Number(data.corriente_medida_ma ?? data.valor_corriente);
+    return {
+      timestamp: event.timestamp || data.timestamp || new Date().toISOString(),
+      tension: Number.isFinite(tension) ? tension : null,
+      corriente: Number.isFinite(currentRaw) ? currentRaw / 1000 : null,
+      fase: data.fase || "--",
+      rssi: Number.isFinite(Number(data.rssi_lora)) ? Number(data.rssi_lora) : null,
+      conexion: data.estado_conexion || "ONLINE",
+    };
+  }
+
+  function processElectricalTelemetry(event) {
+    const tableroId = event.id_tablero || appState.telemetry.selectedTableroId;
+    const reading = normaliseElectricalReading(event);
+    if (!appState.telemetry.readings[tableroId]) appState.telemetry.readings[tableroId] = [];
+    const readings = appState.telemetry.readings[tableroId];
+    readings.push(reading);
+    if (readings.length > appState.telemetry.maxHistoryPoints) readings.splice(0, readings.length - appState.telemetry.maxHistoryPoints);
+
+    if (appState.tableros[tableroId] && reading.tension !== null) {
+      appState.tableros[tableroId].tension_v = reading.tension;
+      appState.tableros[tableroId].fase = reading.fase;
+    }
+    if (tableroId === appState.telemetry.selectedTableroId) {
+      updateTelemetryUI();
+      if (reading.tension !== null && reading.tension < 190 && appState.soundEnabled) playAlertAudioSound("critical");
+    }
+  }
+
+  function telemetryStartDate() {
+    const hours = { "1h": 1, "24h": 24, "7d": 168 }[appState.telemetry.range] || 1;
+    return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  }
+
+  async function loadTelemetryHistory() {
+    const tableroId = appState.telemetry.selectedTableroId;
+    try {
+      const params = new URLSearchParams({ id_tablero: tableroId, inicio: telemetryStartDate(), limit: "720" });
+      const data = await requestAPI(`/telemetria/historico?${params.toString()}`);
+      if (Array.isArray(data)) {
+        appState.telemetry.readings[tableroId] = data.reverse().map((row) => normaliseElectricalReading({ ...row, timestamp: row.timestamp, datos: row })).filter((reading) => reading.tension !== null || reading.corriente !== null);
+      }
+    } catch (error) {
+      console.warn("No se pudo cargar el historial de telemetría:", error.message);
+    }
+    updateTelemetryUI();
+  }
+
+  function getSelectedTelemetryReadings() {
+    const start = new Date(telemetryStartDate()).getTime();
+    return (appState.telemetry.readings[appState.telemetry.selectedTableroId] || []).filter((reading) => new Date(reading.timestamp).getTime() >= start);
+  }
+
+  function voltageStatus(voltage) {
+    if (!Number.isFinite(voltage)) return { label: "Sin lectura", className: "badge-neutral" };
+    if (voltage < 198) return { label: "Baja tensión", className: "badge-critical" };
+    if (voltage > 242) return { label: "Sobretensión", className: "badge-warning" };
+    return { label: "Normal", className: "badge-ok" };
+  }
+
+  function setTelemetryText(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  }
+
+  function updateTelemetryUI() {
+    const readings = getSelectedTelemetryReadings();
+    const latest = readings[readings.length - 1];
+    const voltages = readings.map((reading) => reading.tension).filter(Number.isFinite);
+    const voltage = latest?.tension;
+    const status = voltageStatus(voltage);
+    setTelemetryText("telemetryVoltageValue", Number.isFinite(voltage) ? voltage.toFixed(1) : "--");
+    setTelemetryText("telemetryCurrentValue", Number.isFinite(latest?.corriente) ? latest.corriente.toFixed(2) : "--");
+    setTelemetryText("telemetryLastUpdate", latest ? formatTelemetryTime(latest.timestamp) : "--:--");
+    setTelemetryText("telemetryAverageValue", voltages.length ? `${(voltages.reduce((sum, value) => sum + value, 0) / voltages.length).toFixed(1)} V` : "--");
+    setTelemetryText("telemetryMinimumValue", voltages.length ? `${Math.min(...voltages).toFixed(1)} V` : "--");
+    setTelemetryText("telemetryMaximumValue", voltages.length ? `${Math.max(...voltages).toFixed(1)} V` : "--");
+    const phaseNames = { L1: "L1 / R", L2: "L2 / S", L3: "L3 / T" };
+    setTelemetryText("telemetryPhaseValue", phaseNames[latest?.fase] || latest?.fase || "--");
+    setTelemetryText("telemetryRssiValue", Number.isFinite(latest?.rssi) ? `${latest.rssi} dBm` : "-- dBm");
+    setTelemetryText("telemetryConnectionState", latest?.conexion === "ONLINE" ? "En servicio" : latest?.conexion || "Sin enlace");
+    const badge = document.getElementById("telemetryVoltageBadge");
+    if (badge) { badge.className = `sensor-range-badge ${status.className}`; badge.textContent = status.label; }
+    const rssiFill = document.getElementById("telemetrySignalFill");
+    if (rssiFill) {
+      const quality = Number.isFinite(latest?.rssi) ? Math.max(0, Math.min(100, ((latest.rssi + 120) / 50) * 100)) : 0;
+      rssiFill.style.width = `${quality}%`;
+      rssiFill.style.backgroundColor = quality >= 60 ? "var(--color-ok)" : quality >= 25 ? "var(--color-warning)" : "var(--color-critical)";
+    }
+    const statusText = document.getElementById("sensorStatusText");
+    if (statusText) statusText.textContent = latest?.conexion === "ONLINE" ? "Telemetría en línea" : "Sin enlace";
+    updateTelemetryCharts(readings);
+  }
+
+  function initTelemetryCharts() {
+    if (typeof Chart === "undefined") return;
+    const theme = getChartThemeColors();
+    const buildLineOptions = (title, min, max) => ({ responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { backgroundColor: theme.tooltipBg, titleColor: theme.tooltipText, bodyColor: theme.tooltipText, borderColor: theme.tooltipBorder, borderWidth: 1, callbacks: { title: (items) => {
+      const timestamp = items[0]?.chart.$telemetryTimestamps?.[items[0].dataIndex];
+      return timestamp ? new Date(timestamp).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : items[0]?.label || "";
+    } } } }, scales: { x: { grid: { color: theme.gridColor }, ticks: { color: theme.textDim, maxTicksLimit: 5, font: { family: "JetBrains Mono", size: 10 } } }, y: { min, max, title: { display: true, text: title, color: theme.textColor }, grid: { color: theme.gridColor }, ticks: { color: theme.textDim, font: { family: "JetBrains Mono", size: 10 } } } } });
+    const voltageCanvas = document.getElementById("sensorLineChart");
+    const currentCanvas = document.getElementById("sensorBarChart");
+    if (voltageCanvas) sensorLineChartInstance = new Chart(voltageCanvas, { type: "line", data: { labels: [], datasets: [
+      { label: "Tensión RMS", data: [], borderColor: "#4fb3e0", borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 },
+      { label: "Límite inferior", data: [], borderColor: "#ef4444", borderWidth: 1, pointRadius: 0, borderDash: [5, 4] },
+      { label: "Nominal", data: [], borderColor: "#10b981", borderWidth: 1, pointRadius: 0, borderDash: [3, 3] },
+      { label: "Límite superior", data: [], borderColor: "#f59e0b", borderWidth: 1, pointRadius: 0, borderDash: [5, 4] }
+    ] }, options: buildLineOptions("Tensión (V)", 160, 260) });
+    if (currentCanvas) sensorBarChartInstance = new Chart(currentCanvas, { type: "line", data: { labels: [], datasets: [{ label: "Corriente de línea", data: [], borderColor: "#d8b45c", backgroundColor: "rgba(216, 180, 92, .12)", fill: true, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 }] }, options: buildLineOptions("Corriente (A)", 0, 20) });
+  }
+
+  function updateTelemetryCharts(readings) {
+    const labels = readings.map((reading) => formatTelemetryTime(reading.timestamp));
+    if (sensorLineChartInstance) {
+      sensorLineChartInstance.$telemetryTimestamps = readings.map((reading) => reading.timestamp);
+      sensorLineChartInstance.data.labels = labels;
+      sensorLineChartInstance.data.datasets[0].data = readings.map((reading) => reading.tension);
+      sensorLineChartInstance.data.datasets[1].data = readings.map(() => 198);
+      sensorLineChartInstance.data.datasets[2].data = readings.map(() => 220);
+      sensorLineChartInstance.data.datasets[3].data = readings.map(() => 242);
+      sensorLineChartInstance.update("none");
+    }
+    if (sensorBarChartInstance) {
+      sensorBarChartInstance.$telemetryTimestamps = readings.map((reading) => reading.timestamp);
+      sensorBarChartInstance.data.labels = labels;
+      sensorBarChartInstance.data.datasets[0].data = readings.map((reading) => reading.corriente);
+      const peakCurrent = Math.max(0, ...readings.map((reading) => reading.corriente || 0));
+      sensorBarChartInstance.options.scales.y.max = Math.max(20, Math.ceil(peakCurrent * 1.2));
+      sensorBarChartInstance.update("none");
     }
   }
 
