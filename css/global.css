@@ -477,6 +477,15 @@ html, body {
   animation: pulse-icon 1.5s infinite alternate;
 }
 
+.status-banner.neutral {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+.status-banner.neutral .banner-icon {
+  color: var(--text-muted);
+}
+
 @keyframes pulse-icon {
   0% { transform: scale(1); }
   100% { transform: scale(1.12); }

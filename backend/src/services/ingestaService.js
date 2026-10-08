@@ -3,6 +3,7 @@ const config = require('../config');
 const { IngestionError } = require('../errors/ingestionError');
 const { persistEvent } = require('./persistenciaService');
 const { validateAndNormalizeEvent } = require('../validators/eventSchema');
+const { broadcastEvent } = require('./mqttPublisher');
 
 const dedupeCache = new Map();
 const tableroRateBuckets = new Map();
@@ -125,6 +126,9 @@ async function ingestValidatedEvent(event, metadata = {}) {
     consumeTableroRateLimit(event.id_tablero, now);
     const data = await persistEvent(event);
     confirmDedupeSlot(reservation.key);
+
+    // Difundir inmediatamente por Mosquitto MQTT para actualizar la UI en vivo
+    broadcastEvent(event);
 
     return {
       status: 'persisted',

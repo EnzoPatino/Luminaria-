@@ -186,6 +186,25 @@ document.addEventListener("DOMContentLoaded", () => {
     await loadInitialData();
     await loadTelemetryHistory();
     if (window.luminariaMQTT) window.luminariaMQTT.connect();
+
+    // Sincronización periódica automática (resguardo cada 5 segundos sin necesidad de F5)
+    setInterval(async () => {
+      if (document.visibilityState !== "hidden") {
+        await loadInitialData();
+        const telemetryView = document.getElementById("view-sensores");
+        if (telemetryView && telemetryView.classList.contains("active")) {
+          await loadTelemetryHistory();
+        }
+      }
+    }, 5000);
+
+    // Reloj para recalcular enlace activo o transmisión inactiva cada 5 segundos
+    setInterval(() => {
+      if (document.visibilityState !== "hidden") {
+        renderTablerosGrid();
+        updateKPIs();
+      }
+    }, 5000);
   }
 
   // REST remains optional: this timeout-bound helper makes local simulation a
@@ -268,8 +287,12 @@ document.addEventListener("DOMContentLoaded", () => {
       posY: Math.min(Math.max(toFiniteNumber(tablero.pos_y, 50), 0), 100),
       tension_v: toFiniteNumber(tablero.tension_medida_v, toFiniteNumber(tablero.tension_nominal, 220)),
       tension_nominal_v: toFiniteNumber(tablero.tension_nominal, 220),
+      corriente_ma: toFiniteNumber(tablero.corriente_medida_ma ?? tablero.corriente_ma, 0),
       fase: tablero.fase || "L1",
       estado: tablero.estado || "ok",
+      ultimaLectura: tablero.ultima_lectura || tablero.ultimaLectura || null,
+      estadoConexion: tablero.estado_conexion || tablero.estadoConexion || "ONLINE",
+      fallaActiva: tablero.fallaActiva || "",
       focos,
     };
   }
@@ -1029,7 +1052,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isElectricalTelemetryEvent(event)) {
       processElectricalTelemetry(event);
-      if (event.tipo_evento === "TELEMETRIA_NORMAL") return;
     }
 
     // 1. Detectar si es un mensaje de telemetría de sensor ambiental
@@ -1057,6 +1079,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const tablero = appState.tableros[tableroId];
     if (event.ubicacion) tablero.ubicacion = event.ubicacion;
+    tablero.ultimaLectura = event.timestamp || new Date().toISOString();
 
     let alertTitle = "";
     let soundType = "info";
@@ -1066,6 +1089,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tablero.tension_v = tension;
       tablero.fase = event.datos?.fase || "L1";
       tablero.fallaActiva = `Baja tensión: ${tension.toFixed(1)} V`;
+      tablero.estado = "critico";
       alertTitle = `Baja Tensión Detectada: ${tension}V (Umbral: ${event.datos?.umbral_minimo_v || 190}V)`;
       soundType = "critical";
     } else if (event.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") {
@@ -1081,6 +1105,7 @@ document.addEventListener("DOMContentLoaded", () => {
         event.datos?.corriente_actual_ma || 0.0;
       tablero.focos[focoId].estado = "robado";
       tablero.fallaActiva = "Desconexión detectada en el tablero";
+      tablero.estado = "critico";
       alertTitle = `Desconexión Abrupta / Posible Robo en ${tablero.nombre || tableroId}`;
       soundType = "critical";
     } else if (event.tipo_evento === "FOCO_QUEMADO") {
@@ -1095,6 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tablero.focos[focoId].corriente_ma = toFiniteNumber(event.datos?.corriente_medida_ma, 12.5);
       tablero.focos[focoId].estado = "quemado";
       tablero.fallaActiva = "Falla de luminaria detectada en el tablero";
+      tablero.estado = "advertencia";
       alertTitle = `Anomalía de Consumo / Foco Quemado en ${tablero.nombre || tableroId}`;
       soundType = "warning";
     } else if (event.tipo_evento === "TELEMETRIA_NORMAL") {
@@ -1113,41 +1139,51 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
       tablero.fallaActiva = "";
+      tablero.estado = "ok";
+      // Auto-resolver alertas de baja tension activas previas de este tablero
+      appState.alerts.forEach((a) => {
+        if (a.id_tablero === tableroId && a.tipo_evento === "BAJA_TENSION") {
+          a.resuelta = true;
+        }
+      });
       alertTitle = `Telemetría Normal Restablecida en ${tablero.nombre || tableroId}`;
       soundType = "info";
     }
 
-    const alertRecord = {
-      id: "ALR-" + Math.random().toString(36).substr(2, 6).toUpperCase(),
-      tipo_evento: event.tipo_evento,
-      severidad: event.severidad || "INFO",
-      titulo: alertTitle,
-      timestamp: event.timestamp || new Date().toISOString(),
-      ubicacion: event.ubicacion || tablero.ubicacion,
-      datos: event.datos || {},
-      id_tablero: tableroId,
-      resuelta: false,
-    };
+    // Registrar en la lista de avisos solo si es una anomalía
+    if (event.tipo_evento !== "TELEMETRIA_NORMAL") {
+      const alertRecord = {
+        id: "ALR-" + Math.random().toString(36).substr(2, 6).toUpperCase(),
+        tipo_evento: event.tipo_evento,
+        severidad: event.severidad || "INFO",
+        titulo: alertTitle,
+        timestamp: event.timestamp || new Date().toISOString(),
+        ubicacion: event.ubicacion || tablero.ubicacion,
+        datos: event.datos || {},
+        id_tablero: tableroId,
+        resuelta: false,
+      };
 
-    appState.alerts.unshift(alertRecord);
+      appState.alerts.unshift(alertRecord);
 
-    // Persistir alerta y actualizar tablero en Supabase Cloud si está disponible
-    if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
-      window.luminariaSupabase.insertAlerta(alertRecord).then((persisted) => {
-        if (persisted && persisted.id_alerta) {
-          alertRecord.id = String(persisted.id_alerta);
-        }
-      }).catch((err) => console.warn("[Supabase] No se pudo persistir alerta:", err));
+      // Persistir alerta y actualizar tablero en Supabase Cloud si está disponible
+      if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
+        window.luminariaSupabase.insertAlerta(alertRecord).then((persisted) => {
+          if (persisted && persisted.id_alerta) {
+            alertRecord.id = String(persisted.id_alerta);
+          }
+        }).catch((err) => console.warn("[Supabase] No se pudo persistir alerta:", err));
 
-      window.luminariaSupabase.updateTablero(tableroId, {
-        tension_medida_v: tablero.tension_v,
-        estado: tablero.estado,
-        focos: tablero.focos,
-      }).catch(() => {});
-    }
+        window.luminariaSupabase.updateTablero(tableroId, {
+          tension_medida_v: tablero.tension_v,
+          estado: tablero.estado,
+          focos: tablero.focos,
+        }).catch(() => {});
+      }
 
-    if (appState.soundEnabled) {
-      playAlertAudioSound(soundType);
+      if (appState.soundEnabled) {
+        playAlertAudioSound(soundType);
+      }
     }
 
     refreshAllViews();
@@ -1173,28 +1209,37 @@ document.addEventListener("DOMContentLoaded", () => {
     container.innerHTML = "";
 
     Object.values(appState.tableros).forEach((tablero) => {
-      let statusClass = "ok";
-      let statusLabel = "Funcionamiento Normal";
-      let statusBadgeClass = "badge-ok";
-      let statusIcon = "fa-check-circle";
-
-      if (tablero.tension_v < 190.0) {
-        statusClass = "critical";
-        statusLabel = "Baja Tensión (<190V)";
-        statusBadgeClass = "badge-critical";
-        statusIcon = "fa-triangle-exclamation";
-      } else if (tablero.tension_v < 210.0) {
-        statusClass = "warning";
-        statusLabel = "Tensión Borde (Baja)";
-        statusBadgeClass = "badge-warning";
-        statusIcon = "fa-exclamation-triangle";
+      // Detección de enlace activo o transmisión inactiva
+      let isStale = false;
+      let timeAgoText = "Sin enlace";
+      if (tablero.ultimaLectura) {
+        const diffMs = Date.now() - new Date(tablero.ultimaLectura).getTime();
+        const diffSec = Math.floor(diffMs / 1000);
+        if (diffSec < 60) {
+          timeAgoText = `Hace ${Math.max(1, diffSec)}s`;
+        } else if (diffSec < 3600) {
+          timeAgoText = `Hace ${Math.floor(diffSec / 60)} min`;
+        } else {
+          timeAgoText = `Hace ${Math.floor(diffSec / 3600)} h`;
+        }
+        if (diffSec > 60) {
+          isStale = true;
+        }
+      } else {
+        isStale = true;
       }
+
+      let statusClass = "ok";
+      let statusLabel = isStale ? `Enlace Inactivo (${timeAgoText})` : "En servicio (En vivo)";
+      let statusBadgeClass = isStale ? "badge-neutral" : "badge-ok";
+      let statusIcon = isStale ? "fa-satellite-dish" : "fa-check-circle";
 
       const voltageCritical = tablero.tension_v < 190.0;
       const voltageWarning = tablero.tension_v >= 190.0 && tablero.tension_v < 210.0;
       const focos = Object.values(tablero.focos || {});
       const hayDesconexion = focos.some((foco) => foco.estado === "robado");
       const hayFallaLuminaria = focos.some((foco) => foco.estado === "quemado");
+
       if (voltageCritical || hayDesconexion) {
         statusClass = "critical";
         statusBadgeClass = "badge-critical";
@@ -1202,6 +1247,7 @@ document.addEventListener("DOMContentLoaded", () => {
         statusLabel = [
           voltageCritical ? "Baja tensión" : "",
           hayDesconexion ? "Falla de luminaria" : "",
+          isStale ? "(Transmisión detenida)" : "",
         ].filter(Boolean).join(" · ");
       } else if (voltageWarning || hayFallaLuminaria) {
         statusClass = "warning";
@@ -1210,7 +1256,13 @@ document.addEventListener("DOMContentLoaded", () => {
         statusLabel = [
           voltageWarning ? "Tensión baja" : "",
           hayFallaLuminaria ? "Falla de luminaria" : "",
+          isStale ? "(Transmisión detenida)" : "",
         ].filter(Boolean).join(" · ");
+      } else if (isStale) {
+        statusClass = "neutral";
+        statusBadgeClass = "badge-neutral";
+        statusIcon = "fa-satellite-dish";
+        statusLabel = `Enlace Inactivo (${timeAgoText})`;
       }
 
       const fallasActivas = [];
@@ -1249,17 +1301,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <div class="tablero-meter-section">
           <div class="meter-head">
-            <span class="meter-lbl">Amper</span>
-            <span class="meter-val ${statusClass}">${fmtVoltage(tablero.tension_v)} <span class="meter-unit">Amper</span></span>
+            <span class="meter-lbl">Tensión RMS</span>
+            <span class="meter-val ${statusClass}">${fmtVoltage(tablero.tension_v)} <span class="meter-unit">V</span></span>
           </div>
           <div class="meter-track">
-            <div class="meter-danger-line" title="Límite mínimo 190V"></div>
+            <div class="meter-danger-line" title="Límite mínimo 190V (IRAM 2001)"></div>
             <div class="meter-fill ${statusClass}" style="width: ${pctVoltage}%;"></div>
           </div>
           <div class="meter-ticks">
-            <span>0A</span>
-            <span class="danger-tick">190A Min</span>
-            <span>220A normal</span>
+            <span>0V</span>
+            <span class="danger-tick">190V Mín</span>
+            <span>220V Nominal</span>
           </div>
         </div>
 
@@ -1269,8 +1321,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="info-cell-val">${escapeHtml(tablero.fase || "L1")}</span>
           </div>
           <div class="info-cell">
-            <span class="info-cell-lbl">Estado del tablero</span>
-            <span class="info-cell-val">${hayDesconexion || hayFallaLuminaria ? "Requiere revisión" : statusClass === "ok" ? "Operativo" : "Requiere revisión"}</span>
+            <span class="info-cell-lbl">Telemetría / Enlace</span>
+            <span class="info-cell-val">${isStale ? `<i class="fas fa-clock"></i> ${timeAgoText} (Inactivo)` : `<i class="fas fa-circle text-success pulse"></i> ${timeAgoText} (En vivo)`}</span>
           </div>
         </div>
 
@@ -1290,6 +1342,14 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Tensión Nominal</span>
                 <span class="expand-stat-val">${fmtVoltage(tablero.tension_nominal_v || 220.0)} V</span>
+              </div>
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Corriente Reportada</span>
+                <span class="expand-stat-val">${(toFiniteNumber(tablero.corriente_ma, 0) / 1000).toFixed(2)} A</span>
+              </div>
+              <div class="expand-stat">
+                <span class="expand-stat-lbl">Último Reporte</span>
+                <span class="expand-stat-val">${tablero.ultimaLectura ? new Date(tablero.ultimaLectura).toLocaleTimeString("es-AR") : "Nunca"}</span>
               </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Ubicación Mapa</span>
@@ -1570,24 +1630,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const bannerTitle = document.getElementById("generalStatusTitle");
     const bannerDesc = document.getElementById("generalStatusDesc");
 
+    const anyActiveTransmission = activeTableros.some((t) => {
+      if (!t.ultimaLectura) return false;
+      return (Date.now() - new Date(t.ultimaLectura).getTime()) < 65000;
+    });
+
     if (banner && bannerTitle && bannerDesc) {
       if (criticasCount > 0) {
         banner.className = "status-banner red";
         if (bannerIcon) bannerIcon.className = "fas fa-triangle-exclamation";
         bannerTitle.textContent =
           "ALERTA URGENTE: REVISAR TABLERO INMEDIATAMENTE";
-        bannerDesc.textContent = `Se detectaron ${criticasCount} problema(s) crítico(s) de caída de tensión o desconexión en la red.`;
+        bannerDesc.textContent = `Se detectaron ${criticasCount} problema(s) crítico(s) de caída de tensión o anomalía eléctrica en la red.`;
       } else if (advertenciasCount > 0) {
         banner.className = "status-banner yellow";
         if (bannerIcon) bannerIcon.className = "fas fa-triangle-exclamation";
         bannerTitle.textContent = "ATENCIÓN: REVISIÓN DE RED REQUERIDA";
         bannerDesc.textContent = `Se registraron ${advertenciasCount} anomalías de consumo o fallas en luminarias.`;
+      } else if (!anyActiveTransmission) {
+        banner.className = "status-banner neutral";
+        if (bannerIcon) bannerIcon.className = "fas fa-satellite-dish";
+        bannerTitle.textContent = "RED EN ESPERA / SIN TELEMETRÍA ACTIVA";
+        bannerDesc.textContent =
+          "No se registran datos recientes en los últimos 60 segundos. Transmisión inactiva o nodos apagados.";
       } else {
         banner.className = "status-banner green";
         if (bannerIcon) bannerIcon.className = "fas fa-check-circle";
         bannerTitle.textContent = "FUNCIONAMIENTO NORMAL";
         bannerDesc.textContent =
-          "Todos los tableros eléctricos de la ciudad operan sin anomalías.";
+          "Todos los tableros eléctricos de la ciudad operan sin anomalías en tiempo real.";
       }
     }
   }
@@ -2210,6 +2281,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (appState.tableros[tableroId] && reading.tension !== null) {
       appState.tableros[tableroId].tension_v = reading.tension;
       appState.tableros[tableroId].fase = reading.fase;
+      appState.tableros[tableroId].ultimaLectura = reading.timestamp;
+      if (reading.corriente !== null) {
+        appState.tableros[tableroId].corriente_ma = reading.corriente * 1000;
+      }
     }
     if (tableroId === appState.telemetry.selectedTableroId) {
       updateTelemetryUI();
@@ -2268,7 +2343,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const phaseNames = { L1: "L1 / R", L2: "L2 / S", L3: "L3 / T" };
     setTelemetryText("telemetryPhaseValue", phaseNames[latest?.fase] || latest?.fase || "--");
     setTelemetryText("telemetryRssiValue", Number.isFinite(latest?.rssi) ? `${latest.rssi} dBm` : "-- dBm");
-    setTelemetryText("telemetryConnectionState", latest?.conexion === "ONLINE" ? "En servicio" : latest?.conexion || "Sin enlace");
+    const isLatestStale = !latest || (Date.now() - new Date(latest.timestamp).getTime()) > 60000;
+    const connectionText = isLatestStale
+      ? (latest ? `Inactivo (${formatTelemetryTime(latest.timestamp)})` : "Sin enlace")
+      : (latest?.conexion === "ONLINE" ? "En servicio (En vivo)" : latest?.conexion || "En servicio");
+
+    setTelemetryText("telemetryConnectionState", connectionText);
     const badge = document.getElementById("telemetryVoltageBadge");
     if (badge) { badge.className = `sensor-range-badge ${status.className}`; badge.textContent = status.label; }
     const rssiFill = document.getElementById("telemetrySignalFill");
@@ -2278,7 +2358,7 @@ document.addEventListener("DOMContentLoaded", () => {
       rssiFill.style.backgroundColor = quality >= 60 ? "var(--color-ok)" : quality >= 25 ? "var(--color-warning)" : "var(--color-critical)";
     }
     const statusText = document.getElementById("sensorStatusText");
-    if (statusText) statusText.textContent = latest?.conexion === "ONLINE" ? "Telemetría en línea" : "Sin enlace";
+    if (statusText) statusText.textContent = isLatestStale ? "Transmisión inactiva / Sin enlace" : (latest?.conexion === "ONLINE" ? "Telemetría en línea (En vivo)" : "Sin enlace");
     updateTelemetryCharts(readings);
   }
 

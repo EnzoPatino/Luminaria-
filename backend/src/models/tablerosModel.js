@@ -102,10 +102,13 @@ async function findAll(client) {
        t.tension_nominal,
        t.estado,
        latest.valor_tension AS tension_medida_v,
+       latest.valor_corriente AS corriente_medida_ma,
+       latest.timestamp AS ultima_lectura,
+       latest.estado_conexion,
        COALESCE(focos.focos, '[]'::jsonb) AS focos
      FROM tableros t
      LEFT JOIN LATERAL (
-       SELECT l.valor_tension
+       SELECT l.valor_tension, l.valor_corriente, l.timestamp, l.estado_conexion
        FROM sensores s
        JOIN lecturas l ON l.id_sensor = s.id_sensor
        WHERE s.id_tablero = t.id_tablero

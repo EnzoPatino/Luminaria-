@@ -163,6 +163,30 @@ class MqttTcpClient extends EventEmitter {
     });
   }
 
+  publish(topic, payload, qos = 0, retain = false) {
+    if (!this.connected || !this.socket || this.socket.destroyed) {
+      return false;
+    }
+
+    const payloadBuffer = Buffer.isBuffer(payload)
+      ? payload
+      : Buffer.from(typeof payload === 'object' ? JSON.stringify(payload) : String(payload), 'utf8');
+
+    const flags = ((qos & 0x03) << 1) | (retain ? 0x01 : 0);
+    const variableHeader = encodeString(topic);
+
+    let packetIdBuffer = Buffer.alloc(0);
+    if (qos > 0) {
+      const packetId = this.nextPacketId();
+      packetIdBuffer = Buffer.alloc(2);
+      packetIdBuffer.writeUInt16BE(packetId, 0);
+    }
+
+    const body = Buffer.concat([variableHeader, packetIdBuffer, payloadBuffer]);
+    this.writePacket(buildPacket(3, flags, body));
+    return true;
+  }
+
   handleData(chunk) {
     this.buffer = Buffer.concat([this.buffer, chunk]);
 

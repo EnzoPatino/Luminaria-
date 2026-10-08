@@ -78,17 +78,33 @@ async function persistEvent(event) {
 
     const data = event.datos && typeof event.datos === 'object' ? event.datos : {};
 
-    const alerta = await alertasModel.create(client, {
-      id_tablero: tablero.id_tablero,
-      id_lectura: lectura ? lectura.id_lectura : null,
-      tipo_alerta: event.tipo_evento,
-      id_foco_afectado: data.id_foco != null ? String(data.id_foco) : null,
-      ubicacion: event.ubicacion ? String(event.ubicacion) : tablero.ubicacion,
-      fecha_hora_generada: event.timestamp || null,
-      prioridad: event.severidad,
-      es_persistente: isPersistentSeverity(event.severidad),
-      datos_json: data,
-    });
+    if (event.tipo_evento === 'TELEMETRIA_NORMAL') {
+      await client.query(
+        `UPDATE alertas
+         SET estado_alerta = 'resuelta',
+             estado = 'resuelta',
+             fecha_resolucion = now(),
+             resuelto_por = 'AUTO_RESTABLECIDO'
+         WHERE id_tablero = $1
+           AND tipo_alerta = 'BAJA_TENSION'
+           AND estado_alerta = 'activa'`,
+        [tablero.id_tablero]
+      );
+    }
+
+    const alerta = event.tipo_evento !== 'TELEMETRIA_NORMAL'
+      ? await alertasModel.create(client, {
+          id_tablero: tablero.id_tablero,
+          id_lectura: lectura ? lectura.id_lectura : null,
+          tipo_alerta: event.tipo_evento,
+          id_foco_afectado: data.id_foco != null ? String(data.id_foco) : null,
+          ubicacion: event.ubicacion ? String(event.ubicacion) : tablero.ubicacion,
+          fecha_hora_generada: event.timestamp || null,
+          prioridad: event.severidad,
+          es_persistente: isPersistentSeverity(event.severidad),
+          datos_json: data,
+        })
+      : null;
 
     const tableroActualizado = await tablerosModel.updateDerivedState(client, tablero.id_tablero);
 

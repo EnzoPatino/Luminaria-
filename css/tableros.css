@@ -101,6 +101,12 @@
   border: 1px solid var(--color-critical-border);
 }
 
+.badge-neutral {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
 .tablero-location {
   font-size: 0.82rem;
   color: var(--text-muted);
