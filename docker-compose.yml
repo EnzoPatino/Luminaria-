@@ -55,7 +55,7 @@ services:
       PORT: 3000
       NODE_ENV: production
       CORS_ORIGIN: "*"
-      TRUST_PROXY: "true"
+      TRUST_PROXY: "loopback"
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: ${POSTGRES_DB:-luminaria}
