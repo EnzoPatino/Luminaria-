@@ -10,10 +10,15 @@ class LuminariaMQTTClient {
     this.isConnected = false;
     this.isSimulationMode = true; // Por defecto inicia en modo simulación
 
-    // Configuración por defecto de Mosquitto MQTT en local
+    const isBrowser = typeof window !== "undefined";
+    const defaultHost = isBrowser && window.location.hostname ? window.location.hostname : "localhost";
+    const isHttps = isBrowser && window.location.protocol === "https:";
+    const defaultPort = isBrowser && window.location.port ? Number(window.location.port) : (isHttps ? 443 : 80);
+
+    // Configuración por defecto de Mosquitto MQTT
     this.config = {
-      host: "localhost",
-      port: 9001, // Puerto estándar de Mosquitto con WebSockets activado
+      host: defaultHost,
+      port: defaultPort,
       path: "/mqtt",
       clientId: "luminaria_web_" + Math.random().toString(16).substring(2, 8),
       topics: ["neuquen/iluminacion/#", "api/evento", "sensores/#"],
@@ -37,7 +42,13 @@ class LuminariaMQTTClient {
     try {
       const saved = localStorage.getItem("luminaria_mqtt_config");
       if (saved) {
-        this.config = { ...this.config, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        // Si antes se guardó 'localhost' pero ahora estamos navegando desde una IP o dominio real, descartar el localhost obsoleto
+        if (parsed.host === "localhost" && typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost") {
+          delete parsed.host;
+          delete parsed.port;
+        }
+        this.config = { ...this.config, ...parsed };
       }
     } catch (e) {
       console.warn("No se pudo cargar la configuración guardada de MQTT:", e);
