@@ -5,7 +5,9 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
-  const API_BASE_URL = "http://localhost:3000/api";
+  const API_BASE_URL = window.location.protocol === "file:"
+    ? "http://localhost:3000/api"
+    : `${window.location.origin}/api`;
   const API_TIMEOUT_MS = 5000;
   // ==========================================
   // ESTADO DE LA APLICACIÓN

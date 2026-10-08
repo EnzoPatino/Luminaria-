@@ -80,17 +80,22 @@ class LuminariaMQTTClient {
       this.enableSimulationMode("Paho MQTT no disponible");
       return;
     }
-    g;
     try {
+      const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+      const targetHost = this.config.host || (typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost");
+      const defaultPort = isHttps ? 443 : (typeof window !== "undefined" && window.location.port ? Number(window.location.port) : 80);
+      const targetPort = Number(this.config.port) || defaultPort;
+      const wsProtocol = isHttps ? "wss" : "ws";
+
       this.log(
-        `Conectando a broker Mosquitto en ws://${this.config.host}:${this.config.port}${this.config.path}...`,
+        `Conectando a broker Mosquitto en ${wsProtocol}://${targetHost}:${targetPort}${this.config.path}...`,
         "info",
       );
       this.notifyStatusChange("connecting", "Conectando a Mosquitto...");
 
       this.client = new Paho.MQTT.Client(
-        this.config.host,
-        Number(this.config.port),
+        targetHost,
+        targetPort,
         this.config.path,
         this.config.clientId,
       );
@@ -105,6 +110,7 @@ class LuminariaMQTTClient {
         timeout: 5,
         keepAliveInterval: this.config.keepAlive,
         cleanSession: this.config.cleanSession,
+        useSSL: isHttps,
         onSuccess: () => this.handleConnectSuccess(),
         onFailure: (err) => this.handleConnectFailure(err),
       };

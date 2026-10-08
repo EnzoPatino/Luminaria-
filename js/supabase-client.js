@@ -49,7 +49,10 @@
 
       // Intentar sincronizar credenciales actualizadas desde el backend
       try {
-        const res = await fetch("http://localhost:3000/api/config", {
+        const configUrl = window.location.protocol === "file:"
+          ? "http://localhost:3000/api/config"
+          : "/api/config";
+        const res = await fetch(configUrl, {
           signal: AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined,
         });
         if (res.ok) {
