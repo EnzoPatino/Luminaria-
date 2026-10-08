@@ -66,6 +66,22 @@ def evento(tablero, tipo):
             "rssi_lora": -random.randint(65, 105),
             "estado_conexion": "ONLINE",
         }
+    elif tipo == "DESCONEXION_ABRUPTA_FOCO":
+        tension = round(random.uniform(*TENSION_NORMAL), 1)
+        corriente = round(random.uniform(0.0, 0.1), 1)
+        severidad = "CRITICA"
+        datos = {
+            "id_foco": "FOCO_02",
+            "corriente_previa_ma": round(random.uniform(400.0, 500.0), 1),
+            "corriente_actual_ma": corriente * 1000,
+            "tiempo_caida_ms": random.randint(20, 250),
+            "estado_circuito": "INACTIVO",
+            "tension_medida_v": tension,
+            "tension_nominal_v": 220.0,
+            "fase": tablero["fase"],
+            "rssi_lora": -random.randint(65, 105),
+            "estado_conexion": "ONLINE",
+        }
     else:
         tipo = "TELEMETRIA_NORMAL"
         tension = round(random.uniform(*TENSION_NORMAL), 1)
@@ -114,7 +130,7 @@ def dibujar(stdscr, valores, alertas, estados, ultimo_envio, mensaje):
     linea(0, "LUMINARIA | Simulador interactivo de telemetría")
     linea(1, f"Destino: {SERVER_URL}")
     linea(2, "Normal: tensión 217–223 V, corriente 4.0–8.5 A (umbral de baja tensión: 190 V)")
-    linea(3, "Teclas: 1–4 seleccionan tablero; b = baja tensión, f = foco quemado; la misma tecla alterna normal/alerta.")
+    linea(3, "Teclas: 1–4 seleccionan tablero; b = baja tensión, f = foco quemado, d = desconexión abrupta; misma tecla alterna.")
     linea(4, "q = salir. Las mediciones se envían a todos los tableros cada 2 s.")
     linea(6, f"{'TABLERO':<13} {'ESTADO':<18} {'TENSIÓN':>9} {'CORRIENTE':>12}  ÚLTIMO ENVÍO")
     linea(7, "─" * min(ancho - 1, 105))
@@ -145,8 +161,13 @@ def ejecutar(stdscr):
         if ord("1") <= tecla <= ord("4"):
             seleccion = tecla - ord("1")
             mensaje = f"Seleccionado {TABLEROS[seleccion]['id']}"
-        elif tecla in (ord("b"), ord("B"), ord("f"), ord("F")):
-            tipo = "BAJA_TENSION" if tecla in (ord("b"), ord("B")) else "FOCO_QUEMADO"
+        elif tecla in (ord("b"), ord("B"), ord("f"), ord("F"), ord("d"), ord("D")):
+            if tecla in (ord("b"), ord("B")):
+                tipo = "BAJA_TENSION"
+            elif tecla in (ord("f"), ord("F")):
+                tipo = "FOCO_QUEMADO"
+            else:
+                tipo = "DESCONEXION_ABRUPTA_FOCO"
             if alertas.get(seleccion) == tipo:
                 del alertas[seleccion]
                 mensaje = f"{TABLEROS[seleccion]['id']}: vuelve a medición normal"
