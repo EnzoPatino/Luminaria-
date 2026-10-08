@@ -109,19 +109,51 @@ async function persistEvent(event) {
       }
     }
 
-    const alerta = event.tipo_evento !== 'TELEMETRIA_NORMAL'
-      ? await alertasModel.create(client, {
+    let alerta = null;
+    if (event.tipo_evento !== 'TELEMETRIA_NORMAL') {
+      const idFoco = data.id_foco != null ? String(data.id_foco) : null;
+      const activas = await client.query(
+        `SELECT *
+         FROM alertas
+         WHERE id_tablero = $1
+           AND tipo_alerta = $2
+           AND id_foco_afectado IS NOT DISTINCT FROM $3
+           AND estado_alerta = 'activa'
+         ORDER BY id_alerta ASC
+         FOR UPDATE`,
+        [tablero.id_tablero, event.tipo_evento, idFoco]
+      );
+
+      if (activas.rowCount > 0) {
+        // Una condición persistente conserva una sola alerta activa aunque
+        // lleguen muchos ticks o ya hubiera duplicados activos anteriores.
+        alerta = activas.rows[0];
+        const duplicadas = activas.rows.slice(1).map((item) => item.id_alerta);
+        if (duplicadas.length > 0) {
+          await client.query(
+            `UPDATE alertas
+             SET estado_alerta = 'resuelta',
+                 estado = 'resuelta',
+                 fecha_resolucion = now(),
+                 resuelto_por = NULL
+             WHERE id_alerta = ANY($1::bigint[])`,
+            [duplicadas]
+          );
+        }
+      } else {
+        alerta = await alertasModel.create(client, {
           id_tablero: tablero.id_tablero,
           id_lectura: lectura ? lectura.id_lectura : null,
           tipo_alerta: event.tipo_evento,
-          id_foco_afectado: data.id_foco != null ? String(data.id_foco) : null,
+          id_foco_afectado: idFoco,
           ubicacion: event.ubicacion ? String(event.ubicacion) : tablero.ubicacion,
           fecha_hora_generada: event.timestamp || null,
           prioridad: event.severidad,
           es_persistente: isPersistentSeverity(event.severidad),
           datos_json: data,
-        })
-      : null;
+        });
+      }
+    }
 
     const tableroActualizado = await tablerosModel.updateDerivedState(client, tablero.id_tablero);
 

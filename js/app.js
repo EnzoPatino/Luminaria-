@@ -1035,7 +1035,12 @@ document.addEventListener("DOMContentLoaded", () => {
           (payload) => {
             if (payload.eventType === "INSERT" && payload.new) {
               const incomingAlert = normalizarAlertaAPI(payload.new);
-              if (!appState.alerts.some((a) => String(a.id) === String(incomingAlert.id))) {
+              if (
+                !appState.alerts.some((a) =>
+                  String(a.id) === String(incomingAlert.id) ||
+                  esMismaAlertaActiva(a, incomingAlert)
+                )
+              ) {
                 appState.alerts.unshift(incomingAlert);
                 renderAlerts();
                 updateKPIs();
@@ -1067,6 +1072,16 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
     });
+  }
+
+  function esMismaAlertaActiva(a, b) {
+    if (!a || !b || a.resuelta || b.resuelta) return false;
+    if (a.id_tablero !== b.id_tablero || a.tipo_evento !== b.tipo_evento) return false;
+    if (!["FOCO_QUEMADO", "DESCONEXION_ABRUPTA_FOCO"].includes(b.tipo_evento)) return true;
+
+    const focoA = a.datos?.id_foco ?? a.id_foco_afectado ?? "";
+    const focoB = b.datos?.id_foco ?? b.id_foco_afectado ?? "";
+    return String(focoA) === String(focoB);
   }
 
   function processIncomingEvent(event) {
@@ -1167,14 +1182,27 @@ document.addEventListener("DOMContentLoaded", () => {
       tablero.fallaActiva = "";
       tablero.estado = "ok";
       // Auto-resolver alertas activas previas de este tablero al restablecerse la telemetría normal
+      const focosRestaurados = Array.isArray(event.datos?.focos_restaurados)
+        ? event.datos.focos_restaurados.map(String)
+        : [];
       appState.alerts.forEach((a) => {
         if (
+          !a.resuelta &&
           a.id_tablero === tableroId &&
           (a.tipo_evento === "BAJA_TENSION" ||
-           a.tipo_evento === "FOCO_QUEMADO" ||
-           a.tipo_evento === "DESCONEXION_ABRUPTA_FOCO")
+            ((a.tipo_evento === "FOCO_QUEMADO" ||
+              a.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") &&
+             (focosRestaurados.length === 0 ||
+              focosRestaurados.includes(String(a.datos?.id_foco ?? a.id_foco_afectado ?? "")))))
         ) {
           a.resuelta = true;
+          if (
+            !appState.apiAvailable &&
+            window.luminariaSupabase?.status === "connected" &&
+            /^\d+$/.test(String(a.id))
+          ) {
+            window.luminariaSupabase.resolveAlerta(a.id, "AUTO_RESTABLECIDO");
+          }
         }
       });
       alertTitle = `Telemetría Normal Restablecida en ${tablero.nombre || tableroId}`;
@@ -1195,24 +1223,32 @@ document.addEventListener("DOMContentLoaded", () => {
         resuelta: false,
       };
 
-      appState.alerts.unshift(alertRecord);
+      const yaActiva = appState.alerts.some((a) => esMismaAlertaActiva(a, alertRecord));
+      if (!yaActiva) {
+        appState.alerts.unshift(alertRecord);
 
-      // Persistir alerta y actualizar tablero en Supabase Cloud si está disponible
-      if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
-        window.luminariaSupabase.insertAlerta(alertRecord).then((persisted) => {
-          if (persisted && persisted.id_alerta) {
-            alertRecord.id = String(persisted.id_alerta);
-          }
-        }).catch((err) => console.warn("[Supabase] No se pudo persistir alerta:", err));
+        if (appState.apiAvailable) {
+          // El backend persistió el evento antes de publicarlo por MQTT.
+          fetchAlertasFromAPI().then((alertas) => {
+            appState.alerts = alertas.map(normalizarAlertaAPI);
+            refreshAllViews();
+          }).catch(() => {});
+        } else if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
+          window.luminariaSupabase.insertAlerta(alertRecord).then((persisted) => {
+            if (persisted && persisted.id_alerta) {
+              alertRecord.id = String(persisted.id_alerta);
+            }
+          }).catch((err) => console.warn("[Supabase] No se pudo persistir alerta:", err));
 
-        window.luminariaSupabase.updateTablero(tableroId, {
-          tension_medida_v: tablero.tension_v,
-          estado: tablero.estado,
-          focos: tablero.focos,
-        }).catch(() => {});
+          window.luminariaSupabase.updateTablero(tableroId, {
+            tension_medida_v: tablero.tension_v,
+            estado: tablero.estado,
+            focos: tablero.focos,
+          }).catch(() => {});
+        }
       }
 
-      if (appState.soundEnabled) {
+      if (!yaActiva && appState.soundEnabled) {
         playAlertAudioSound(soundType);
       }
     }
