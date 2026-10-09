@@ -581,7 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
       submit.disabled = true;
       if (message) { message.textContent = "Creando cuenta…"; message.className = "login-message"; }
       try {
-        const response = await requestAPI("/auth/register", {
+        const response = await window.luminariaRequest("/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nombre: nameInput.value.trim() }),
