@@ -5,6 +5,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Logs y dumps temporales de red
 *.log

@@ -10,6 +10,8 @@ cp .env.production.example .env
 chmod 600 .env
 ```
 
+Si `cp` responde que no encuentra `.env.production.example`, ejecutá `git pull --ff-only` para traer la revisión que publica este ejemplo. No hace falta crear ningún directorio.
+
 3. Editá `.env`. Definí valores únicos para `POSTGRES_PASSWORD`, `JWT_SECRET` y `BOOTSTRAP_ADMIN_PASSWORD`. Podés generar secretos con:
 
 ```bash
