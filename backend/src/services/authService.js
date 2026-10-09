@@ -7,8 +7,12 @@ const auditLogModel = require('../models/auditLogModel');
 // Se usa HMAC-SHA256 para firmar tokens sin dependencias externas.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const JWT_SECRET = process.env.JWT_SECRET || 'luminaria-dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'luminaria-local-development-only');
 const JWT_EXPIRES_IN_SECONDS = Number(process.env.JWT_EXPIRES_IN_SECONDS) || 28800; // 8 horas
+
+if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET debe estar definido y tener al menos 32 caracteres en producción.');
+}
 
 // ── Hashing de contraseñas con scrypt (nativo de Node.js) ───────────────────
 
@@ -149,11 +153,19 @@ async function login(email, password, ip) {
 }
 
 async function register(userData, ip) {
-  const password_hash = await hashPassword(userData.password);
+  // Las credenciales se emiten una sola vez al administrador. La contraseña
+  // combina mayúsculas, minúsculas y números, sin caracteres confusos.
+  const password = userData.password || generatePassword();
+  const password_hash = await hashPassword(password);
 
   const usuario = await usuariosModel.create({
     nombre: userData.nombre,
-    email: userData.email,
+    apellido: userData.apellido,
+    usuario: userData.usuario,
+    dni: userData.dni,
+    telefono: userData.telefono,
+    id_admin: userData.id_admin,
+    email: userData.email || `${userData.usuario}@luminaria.local`,
     password_hash,
     rol: userData.rol || 'tecnico',
   });
@@ -167,7 +179,22 @@ async function register(userData, ip) {
     detalles: { rol: usuario.rol },
   });
 
-  return usuario;
+  return { ...usuario, password, usuario: userData.usuario };
+}
+
+function generatePassword(length = 14) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const digits = '23456789';
+  const pick = (chars) => chars[crypto.randomInt(chars.length)];
+  const chars = [pick(upper), pick(lower), pick(digits)];
+  while (chars.length < length) chars.push(pick(alphabet));
+  for (let index = chars.length - 1; index > 0; index -= 1) {
+    const target = crypto.randomInt(index + 1);
+    [chars[index], chars[target]] = [chars[target], chars[index]];
+  }
+  return chars.join('');
 }
 
 module.exports = {
@@ -177,4 +204,5 @@ module.exports = {
   verifyJwt,
   hashPassword,
   verifyPassword,
+  generatePassword,
 };

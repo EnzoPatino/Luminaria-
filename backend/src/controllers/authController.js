@@ -17,8 +17,8 @@ const registerSchema = z.object({
   usuario: z.string().trim().min(3, 'El usuario debe tener al menos 3 caracteres.').optional(),
   dni: z.string().trim().optional(),
   telefono: z.string().trim().optional(),
-  email: z.string().email('Email inválido.'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.').max(128),
+  email: z.string().email('Email inválido.').optional(),
+  password: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.').max(128).optional(),
   rol: z.enum(['admin', 'tecnico']).optional().default('tecnico'),
 });
 
@@ -62,7 +62,15 @@ async function handleRegister(req, res, next) {
       });
     }
 
-    const usuario = await register(parsed.data, req.ip);
+    const baseUsuario = (parsed.data.usuario || parsed.data.nombre)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '')
+      .slice(0, 24) || 'usuario';
+    const usuario = await register({
+      ...parsed.data,
+      usuario: parsed.data.usuario || `${baseUsuario}.${require('crypto').randomInt(100, 1000)}`,
+      id_admin: req.user.id_usuario,
+    }, req.ip);
 
     return res.status(201).json({
       status: 'ok',

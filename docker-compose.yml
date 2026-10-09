@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-luminaria}
       POSTGRES_USER: ${POSTGRES_USER:-luminaria}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-luminaria_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definir POSTGRES_PASSWORD en .env}
     ports:
       - "127.0.0.1:5432:5432" # Accesible solo internamente desde el host, no desde internet
     volumes:
@@ -57,13 +57,18 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
-      CORS_ORIGIN: "*"
+      CORS_ORIGIN: ${CORS_ORIGIN:?Definir CORS_ORIGIN en .env}
+      JWT_SECRET: ${JWT_SECRET:?Definir JWT_SECRET en .env}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:?Definir BOOTSTRAP_ADMIN_USERNAME en .env}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Definir BOOTSTRAP_ADMIN_PASSWORD en .env}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:?Definir BOOTSTRAP_ADMIN_NAME en .env}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?Definir BOOTSTRAP_ADMIN_EMAIL en .env}
       TRUST_PROXY: "loopback"
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: ${POSTGRES_DB:-luminaria}
       PGUSER: ${POSTGRES_USER:-luminaria}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-luminaria_dev}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Definir POSTGRES_PASSWORD en .env}
       MQTT_SUBSCRIBER_ENABLED: "false"
       MQTT_HOST: mosquitto
       MQTT_PORT: 1883

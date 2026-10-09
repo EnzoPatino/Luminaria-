@@ -1,0 +1,36 @@
+body.session-required .app-wrapper, body.session-required .modal-overlay { display: none !important; }
+.login-screen { display: none; min-height: 100vh; padding: 24px; background: #f7f7f8; color: #182230; }
+body.session-required .login-screen { display: grid; place-items: center; }
+.login-panel { width: min(940px, 100%); min-height: 540px; display: grid; grid-template-columns: .9fr 1.1fr; background: #fff; border: 1px solid #dce1e8; }
+.login-brand { background: #002fa7; color: #fff; padding: clamp(32px, 7vw, 72px); display: flex; flex-direction: column; justify-content: space-between; }
+.login-brand img { width: 64px; height: 64px; object-fit: cover; border-radius: 0; background: #fff; padding: 5px; }
+.login-brand h1 { margin: 28px 0 12px; font-size: clamp(2.1rem, 4vw, 3.75rem); line-height: .96; letter-spacing: -.06em; }
+.login-brand p { max-width: 25ch; line-height: 1.55; opacity: .86; }
+.login-folio { border-top: 1px solid rgba(255,255,255,.45); padding-top: 14px; font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; }
+.login-form-wrap { padding: clamp(32px, 7vw, 88px); display: flex; flex-direction: column; justify-content: center; }
+.login-form-wrap h2 { font-size: 2rem; letter-spacing: -.04em; margin-bottom: 8px; }
+.login-form-wrap > p { color: #536171; margin-bottom: 32px; }
+.login-field { display: grid; gap: 8px; margin-bottom: 20px; font-weight: 600; font-size: .9rem; }
+.login-field input { height: 48px; border: 1px solid #aeb8c4; padding: 0 13px; font: inherit; color: #182230; background: #fff; border-radius: 0; }
+.login-field input:focus { outline: 3px solid rgba(0,47,167,.18); border-color: #002fa7; }
+.login-submit { width: 100%; min-height: 48px; border: 0; border-radius: 0; background: #002fa7; color: #fff; font: 600 1rem var(--font-sans); cursor: pointer; }
+.login-submit:hover { background: #001f73; }
+.login-submit:disabled { opacity: .65; cursor: wait; }
+.login-message { min-height: 1.3rem; margin-top: 16px; font-size: .9rem; }
+.login-message.error { color: #ba1a1a; } .login-message.success { color: #0b6b43; }
+.session-user { display: flex; align-items: center; gap: 10px; padding-left: 12px; border-left: 1px solid var(--border-color); }
+.session-user i { color: var(--color-accent-text); font-size: 1.1rem; }
+.session-user-text { display: grid; line-height: 1.2; }
+.session-user-text strong { font-size: .85rem; } .session-user-text span { font-size: .72rem; color: var(--text-dim); }
+.logout-btn { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 8px; font-size: 1rem; }
+.logout-btn:hover { color: var(--color-critical); }
+.user-admin-card { border: 1px solid var(--border-color); background: var(--bg-card); padding: 24px; max-width: 720px; }
+.user-admin-card h4 { font-size: 1.3rem; margin-bottom: 6px; } .user-admin-card > p { color: var(--text-muted); margin-bottom: 24px; }
+.user-create-form { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; }
+.user-create-form label { display: grid; gap: 8px; color: var(--text-muted); font-size: .88rem; }
+.user-create-form input { min-height: 44px; padding: 0 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font: inherit; }
+.credential-result { display: none; margin-top: 22px; padding: 18px; border-left: 4px solid var(--color-ok); background: var(--color-ok-bg); }
+.credential-result.visible { display: block; } .credential-result p { margin-bottom: 10px; }
+.credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.credential-grid div { background: var(--bg-card); padding: 10px; } .credential-grid span { display:block; font-size:.78rem; color:var(--text-dim); } .credential-grid strong { font-family: var(--font-mono); }
+@media (max-width: 680px) { .login-screen { padding: 0; } .login-panel { min-height: 100vh; grid-template-columns: 1fr; } .login-brand { min-height: 240px; padding: 32px; } .login-brand h1 { font-size: 2.25rem; margin-top: 22px; } .login-form-wrap { padding: 40px 28px; } .user-create-form { grid-template-columns: 1fr; } }

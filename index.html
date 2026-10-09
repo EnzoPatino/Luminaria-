@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="css/consola.css">
   <link rel="stylesheet" href="css/modales.css">
   <link rel="stylesheet" href="css/telemetria.css">
+  <link rel="stylesheet" href="css/auth.css">
 
   <!-- Librería MQTT Paho para WebSockets -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
@@ -43,17 +44,39 @@
             document.documentElement.classList.add('light-mode');
           }
         }
-        var r = localStorage.getItem('luminaria_user_role');
-        if (r === 'tecnico' || r === 'admin') {
-          document.documentElement.setAttribute('data-role', r);
-        } else {
-          document.documentElement.setAttribute('data-role', 'admin');
-        }
+        document.documentElement.setAttribute('data-role', 'tecnico');
       } catch (e) {}
     })();
   </script>
 </head>
-<body>
+<body class="session-required">
+
+  <section class="login-screen" aria-label="Acceso al sistema">
+    <div class="login-panel">
+      <aside class="login-brand">
+        <div>
+          <img src="Img/8eXZqn71_400x400.jpg" alt="Municipalidad de Neuquén">
+          <h1>Alumbrado<br>Público</h1>
+          <p>Panel de monitoreo de tableros eléctricos de la Municipalidad de Neuquén.</p>
+        </div>
+        <span class="login-folio">Sistema Luminaria · Acceso interno</span>
+      </aside>
+      <div class="login-form-wrap">
+        <h2>Ingresar</h2>
+        <p>Usá las credenciales entregadas por el administrador.</p>
+        <form id="loginForm" novalidate>
+          <label class="login-field" for="loginIdentifier">Usuario
+            <input id="loginIdentifier" name="identifier" autocomplete="username" required autofocus>
+          </label>
+          <label class="login-field" for="loginPassword">Contraseña
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="login-submit" id="loginSubmit" type="submit">Ingresar</button>
+          <p class="login-message" id="loginMessage" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+  </section>
 
   <div class="app-wrapper">
     <!-- ==========================================
@@ -86,16 +109,10 @@
         </button>
 
         <div class="header-actions" id="headerActions">
-          <div class="role-selector-wrap" title="Seleccionar vista de usuario (Administrador / Técnico)">
-            <i class="fas fa-user-shield role-icon" id="roleIcon"></i>
-            <button id="btnRoleToggle" class="role-toggle-btn" aria-label="Alternar rol de usuario">
-              <span id="roleToggleText">Vista Administrador</span>
-              <i class="fas fa-chevron-right arrow-icon"></i>
-            </button>
-            <select id="roleSelector" class="role-select" aria-label="Seleccionar modo de vista de usuario">
-              <option value="admin">Vista Administrador</option>
-              <option value="tecnico">Vista Técnico</option>
-            </select>
+          <div class="session-user" aria-label="Sesión actual">
+            <i class="fas fa-user-circle" aria-hidden="true"></i>
+            <span class="session-user-text"><strong id="sessionUserName">Usuario</strong><span id="sessionUserRole">Técnico</span></span>
+            <button type="button" class="logout-btn" id="logoutButton" title="Cerrar sesión" aria-label="Cerrar sesión"><i class="fas fa-right-from-bracket"></i></button>
           </div>
 
           <button class="btn btn-sim" id="btnOpenSimModal" data-role-restricted="admin" title="Simular pruebas técnicas">
@@ -200,6 +217,10 @@
       <button class="nav-tab" data-tab="consola" data-role-restricted="admin" role="tab" aria-selected="false">
         <i class="fas fa-terminal"></i>
         <span>Consola<span class="tab-text-extra"> MQTT</span></span>
+      </button>
+      <button class="nav-tab" data-tab="usuarios" data-role-restricted="admin" role="tab" aria-selected="false">
+        <i class="fas fa-user-plus"></i>
+        <span>Crear usuario</span>
       </button>
     </nav>
 
@@ -412,6 +433,33 @@
           </div>
         </div>
       </section>
+
+      <section class="tab-pane" id="tabUsuarios" role="tabpanel">
+        <div class="pane-header">
+          <div class="pane-title">
+            <i class="fas fa-user-plus"></i>
+            <h3>Crear usuario</h3>
+          </div>
+        </div>
+        <div class="user-admin-card">
+          <h4>Nueva cuenta de acceso</h4>
+          <p>Ingresá el nombre de la persona. El sistema generará un usuario y una contraseña segura que deberás entregar de forma privada.</p>
+          <form class="user-create-form" id="createUserForm">
+            <label for="newUserName">Nombre completo
+              <input id="newUserName" name="nombre" minlength="2" maxlength="120" autocomplete="name" required placeholder="Ej. Ana Pérez">
+            </label>
+            <button class="btn btn-primary" id="createUserSubmit" type="submit"><i class="fas fa-user-plus"></i> Crear usuario</button>
+          </form>
+          <div class="credential-result" id="credentialResult" aria-live="polite">
+            <p><strong>Cuenta creada.</strong> Copiá estos datos ahora: la contraseña no volverá a mostrarse.</p>
+            <div class="credential-grid">
+              <div><span>Usuario</span><strong id="createdUsername"></strong></div>
+              <div><span>Contraseña temporal</span><strong id="createdPassword"></strong></div>
+            </div>
+          </div>
+          <p class="login-message" id="createUserMessage" aria-live="polite"></p>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -529,6 +577,7 @@
   
   <script src="js/mqtt-client.js"></script>
   <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

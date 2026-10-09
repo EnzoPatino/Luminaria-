@@ -15,5 +15,5 @@ EXPOSE 3000
 # Variable de entorno por defecto
 ENV NODE_ENV=production
 
-# Script de arranque (ejecuta migraciones + seed y levanta el servidor)
-CMD ["sh", "-c", "npm run db:migrate && npm run db:seed && npm start"]
+# Script de arranque: aplica esquema, crea el administrador configurado y levanta la API.
+CMD ["sh", "-c", "npm run db:migrate && npm run db:seed && npm run bootstrap:admin && npm start"]

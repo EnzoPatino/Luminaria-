@@ -35,6 +35,8 @@ docker compose up -d --build
 ```
 El panel web estará disponible inmediatamente en `http://<IP_O_DOMINIO>/` (puerto 80/443).
 
+Antes del primer despliegue, configurá los secretos requeridos y el administrador inicial siguiendo [DEPLOY_PRODUCCION.md](DEPLOY_PRODUCCION.md). Para producción, el panel debe publicarse detrás de HTTPS.
+
 ### Ejecución de Desarrollo Local
 Para desarrollo y pruebas rápidas en máquina local:
 ```bash

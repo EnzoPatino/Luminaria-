@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupMqttCallbacks();
     setupSupabaseIntegration();
     applyStoredTheme();
-    applyStoredRole();
+    applyAuthenticatedRole();
     updateTableroUI();
     renderAlerts();
     updateKPIs();
@@ -215,7 +215,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
-        headers: { Accept: "application/json", ...(options.headers || {}) },
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${window.luminariaAuth?.token || localStorage.getItem("luminaria_access_token") || ""}`,
+          ...(options.headers || {}),
+        },
         signal: controller.signal,
       });
       if (!response.ok) throw new Error(`API ${response.status}: ${path}`);
@@ -462,27 +466,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
   // GESTIÓN DE VISTAS POR ROL (ADMINISTRADOR / TÉCNICO)
   // ==========================================
-  const ROLE_STORAGE_KEY = "luminaria_user_role";
-
-  function getStoredRole() {
-    try {
-      const r = localStorage.getItem(ROLE_STORAGE_KEY);
-      return r === "tecnico" || r === "admin" ? r : "admin";
-    } catch (e) {
-      return "admin";
-    }
-  }
-
   function setRole(role) {
+    const authenticatedRole = window.luminariaAuth?.user?.rol;
+    if (authenticatedRole && role !== authenticatedRole) role = authenticatedRole;
     appState.userRole = role;
     document.documentElement.setAttribute("data-role", role);
     if (document.body) {
       document.body.setAttribute("data-role", role);
     }
-    try {
-      localStorage.setItem(ROLE_STORAGE_KEY, role);
-    } catch (e) {}
-
     if (elements.roleSelector && elements.roleSelector.value !== role) {
       elements.roleSelector.value = role;
     }
@@ -506,10 +497,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function applyStoredRole() {
-    const current =
-      document.documentElement.getAttribute("data-role") || getStoredRole();
-    setRole(current);
+  function applyAuthenticatedRole() {
+    setRole(window.luminariaAuth?.user?.rol || "tecnico");
   }
 
   function updateRoleIcon(role) {
@@ -581,24 +570,33 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // Cambio de Rol (Administrador / Técnico)
-    if (elements.roleSelector) {
-      elements.roleSelector.addEventListener("change", (e) => {
-        setRole(e.target.value);
-      });
-    }
-
-    const btnRoleToggle = document.getElementById("btnRoleToggle");
-    const roleToggleText = document.getElementById("roleToggleText");
-    if (btnRoleToggle && roleToggleText) {
-      btnRoleToggle.addEventListener("click", () => {
-        const currentRole = appState.userRole;
-        const nextRole = currentRole === "admin" ? "tecnico" : "admin";
-        setRole(nextRole);
-        elements.roleSelector.value = nextRole;
-        roleToggleText.textContent = nextRole === "admin" ? "Vista Administrador" : "Vista Técnico";
-      });
-    }
+    const createUserForm = document.getElementById("createUserForm");
+    createUserForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const nameInput = document.getElementById("newUserName");
+      const message = document.getElementById("createUserMessage");
+      const submit = document.getElementById("createUserSubmit");
+      const result = document.getElementById("credentialResult");
+      if (!nameInput?.value.trim()) return;
+      submit.disabled = true;
+      if (message) { message.textContent = "Creando cuenta…"; message.className = "login-message"; }
+      try {
+        const response = await requestAPI("/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: nameInput.value.trim() }),
+        });
+        const body = await response.json();
+        if (!response.ok || !body?.data) throw new Error(body?.message || "No se pudo crear la cuenta.");
+        document.getElementById("createdUsername").textContent = body.data.usuario;
+        document.getElementById("createdPassword").textContent = body.data.password;
+        result?.classList.add("visible");
+        nameInput.value = "";
+        if (message) { message.textContent = "Entregá estas credenciales por un canal privado."; message.className = "login-message success"; }
+      } catch (error) {
+        if (message) { message.textContent = error.message || "No se pudo crear la cuenta."; message.className = "login-message error"; }
+      } finally { submit.disabled = false; }
+    });
 
     // Cambio en selector hidden si existiera
     if (elements.selectTablero) {
@@ -2487,5 +2485,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  init();
+  window.addEventListener("luminaria:authenticated", init, { once: true });
 });

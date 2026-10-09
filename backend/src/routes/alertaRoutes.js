@@ -6,12 +6,12 @@ const { audit } = require('../middlewares/auditMiddleware');
 const router = express.Router();
 
 // GET /api/alertas — Público (lectura abierta para el dashboard)
-router.get('/', getAlertas);
+router.get('/', requireAuth, getAlertas);
 
 // PATCH /api/alertas/:id/resolver — Resuelve alertas desde dashboard o técnicos autorizados
 router.patch(
   '/:id/resolver',
-  optionalAuth,
+  requireAuth,
   audit('RESOLVER_ALERTA', 'alertas', (req) => req.params.id),
   resolveAlerta
 );

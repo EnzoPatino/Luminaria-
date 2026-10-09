@@ -9,6 +9,7 @@
     "worker:mqtt": "node src/workers/mqttSubscriber.js",
     "db:migrate": "node src/scripts/migrate.js",
     "db:seed": "node src/scripts/seed.js",
+    "bootstrap:admin": "node src/scripts/bootstrapAdmin.js",
     "db:maintenance": "node src/scripts/mantenimiento.js"
   },
   "dependencies": {

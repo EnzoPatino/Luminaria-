@@ -1,9 +1,10 @@
 const express = require('express');
 const config = require('../config');
+const { requireAuth } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', requireAuth, (req, res) => {
   res.json({
     status: 'ok',
     data: {

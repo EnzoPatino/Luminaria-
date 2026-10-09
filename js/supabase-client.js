@@ -53,6 +53,7 @@
           ? "http://localhost:3000/api/config"
           : "/api/config";
         const res = await fetch(configUrl, {
+          headers: { Authorization: `Bearer ${window.luminariaAuth?.token || ""}` },
           signal: AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined,
         });
         if (res.ok) {
