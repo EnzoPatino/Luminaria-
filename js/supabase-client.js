@@ -49,9 +49,12 @@
 
       // Intentar sincronizar credenciales actualizadas desde el backend
       try {
-        const configUrl = window.location.protocol === "file:"
-          ? "http://localhost:3000/api/config"
-          : "/api/config";
+        const apiBase = window.LUMINARIA_CONFIG?.apiBaseUrl?.trim()
+          ? `${window.LUMINARIA_CONFIG.apiBaseUrl.trim().replace(/\/$/, "")}/api`
+          : window.location.protocol === "file:"
+            ? "http://localhost:3000/api"
+            : "/api";
+        const configUrl = `${apiBase}/config`;
         const res = await fetch(configUrl, {
           headers: { Authorization: `Bearer ${window.luminariaAuth?.token || ""}` },
           signal: AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined,

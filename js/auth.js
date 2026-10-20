@@ -2,7 +2,14 @@
 (function () {
   const TOKEN_KEY = 'luminaria_access_token';
   const USER_KEY = 'luminaria_session_user';
-  const apiBase = () => window.location.protocol === 'file:' ? 'http://localhost:3000/api' : '/api';
+  const apiBase = () => {
+    const configured = window.LUMINARIA_CONFIG?.apiBaseUrl?.trim();
+    if (configured) return `${configured.replace(/\/$/, '')}/api`;
+    return window.location.protocol === 'file:' ? 'http://localhost:3000/api' : '/api';
+  };
+  const isLocalDevelopment = () => window.location.protocol === 'file:' ||
+    ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+  const devUser = { id: 'local-dev', nombre: 'Desarrollo local', rol: 'admin' };
 
   function getToken() { return localStorage.getItem(TOKEN_KEY); }
   function clearSession() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
@@ -30,6 +37,7 @@
   }
 
   async function verifySession() {
+    if (isLocalDevelopment()) return showApp(devUser);
     const token = getToken();
     if (!token) return showLogin();
     try {
@@ -48,6 +56,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('loginForm');
     const button = document.getElementById('loginSubmit');
+    document.getElementById('loginGuest')?.addEventListener('click', () => {
+      clearSession();
+      showApp({ id: 'guest-viewer', nombre: 'Visitante', rol: 'tecnico' });
+    });
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const identifier = document.getElementById('loginIdentifier').value.trim();
@@ -55,12 +67,20 @@
       button.disabled = true;
       button.textContent = 'Ingresando…';
       setMessage('');
+      if (isLocalDevelopment()) {
+        showApp(devUser);
+        form.reset();
+        button.disabled = false;
+        button.textContent = 'Ingresar';
+        return;
+      }
       try {
         const response = await fetch(`${apiBase()}/auth/login`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: identifier, password }),
         });
-        const body = await response.json();
+        const body = await response.json().catch(() => null);
+        if (!body) throw new Error('La API devolvió una página HTML. Revisá apiBaseUrl en js/config.js.');
         if (!response.ok || !body?.data?.token) throw new Error(body?.message || 'No se pudo iniciar sesión.');
         localStorage.setItem(TOKEN_KEY, body.data.token);
         localStorage.setItem(USER_KEY, JSON.stringify(body.data.usuario));

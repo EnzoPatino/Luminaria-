@@ -47,6 +47,12 @@ python3 -m http.server 8080
 cd backend && npm install && npm run dev
 ```
 
+### Frontend estático y desarrollo local
+
+El login se omite automáticamente solo al abrir el frontend en `localhost`, `127.0.0.1` o `file://`; usa el rol administrador local para probar la interfaz. Ese modo no crea una sesión válida en el backend.
+
+Si GitHub Pages y el backend están en dominios distintos, configurar `apiBaseUrl` en `js/config.js` con el origen público del backend (sin `/api` al final). El backend también debe permitir el origen `https://<usuario>.github.io` en `CORS_ORIGIN`. En producción el login sigue validándose contra el backend.
+
 ---
 
 ## 4. Integración con ChirpStack (LoRaWAN vía Webhook)

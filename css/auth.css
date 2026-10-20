@@ -16,6 +16,9 @@ body.session-required .login-screen { display: grid; place-items: center; }
 .login-submit { width: 100%; min-height: 48px; border: 0; border-radius: 0; background: #002fa7; color: #fff; font: 600 1rem var(--font-sans); cursor: pointer; }
 .login-submit:hover { background: #001f73; }
 .login-submit:disabled { opacity: .65; cursor: wait; }
+.login-guest { width: 100%; min-height: 44px; margin-top: 10px; border: 1px solid #002fa7; background: #fff; color: #002fa7; font: 600 .95rem var(--font-sans); cursor: pointer; }
+.login-guest:hover { background: #f0f4ff; }
+.login-guest-note { margin: 8px 0 0; color: #536171; font-size: .78rem; line-height: 1.4; }
 .login-message { min-height: 1.3rem; margin-top: 16px; font-size: .9rem; }
 .login-message.error { color: #ba1a1a; } .login-message.success { color: #0b6b43; }
 .session-user { display: flex; align-items: center; gap: 10px; padding-left: 12px; border-left: 1px solid var(--border-color); }
