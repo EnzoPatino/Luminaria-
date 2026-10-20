@@ -482,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const roleToggleText = document.getElementById("roleToggleText");
     if (roleToggleText) {
-      roleToggleText.textContent = role === "admin" ? "Vista Administrador" : "Vista Técnico";
+      roleToggleText.textContent = role === "admin" ? "Vista Administrador" : role === "supervisor" ? "Vista Supervisor (demo)" : "Vista Técnico";
     }
     
     updateRoleIcon(role);
@@ -508,6 +508,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (role === "tecnico") {
       elements.roleIcon.className = "fas fa-user-gear role-icon";
       elements.roleIcon.title = "Vista Técnico activa (monitoreo operativo)";
+    } else if (role === "supervisor") {
+      elements.roleIcon.className = "fas fa-eye role-icon";
+      elements.roleIcon.title = "Vista Supervisor de demostración (solo visualización)";
     } else {
       elements.roleIcon.className = "fas fa-user-shield role-icon";
       elements.roleIcon.title = "Vista Administrador activa (control total)";

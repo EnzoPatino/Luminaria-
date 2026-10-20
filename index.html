@@ -217,11 +217,11 @@
         <i class="fas fa-chart-line"></i>
         <span>Sensores<span class="tab-text-extra"> (Telemetría)</span></span>
       </button>
-      <button class="nav-tab" data-tab="consola" data-role-restricted="admin" role="tab" aria-selected="false">
+      <button class="nav-tab" data-tab="consola" data-role-restricted="admin" data-demo-visible="true" role="tab" aria-selected="false">
         <i class="fas fa-terminal"></i>
         <span>Consola<span class="tab-text-extra"> MQTT</span></span>
       </button>
-      <button class="nav-tab" data-tab="usuarios" data-role-restricted="admin" role="tab" aria-selected="false">
+      <button class="nav-tab" data-tab="usuarios" data-role-restricted="admin" data-demo-visible="true" role="tab" aria-selected="false">
         <i class="fas fa-user-plus"></i>
         <span>Crear usuario</span>
       </button>
@@ -429,10 +429,13 @@
           </button>
         </div>
 
-        <div class="terminal-body" id="mqttConsoleLog">
-          <div class="log-row">
-            <span class="log-time">[00:00:00]</span>
-            <span class="log-text">Consola lista. Esperando datos del servidor MQTT Mosquitto...</span>
+        <p class="demo-panel-note" data-demo-note hidden>Vista de demostración: la consola es solo visual.</p>
+        <div id="terminalDemoContent">
+          <div class="terminal-body" id="mqttConsoleLog">
+            <div class="log-row">
+              <span class="log-time">[00:00:00]</span>
+              <span class="log-text">Consola lista. Esperando datos del servidor MQTT Mosquitto...</span>
+            </div>
           </div>
         </div>
       </section>
@@ -444,7 +447,8 @@
             <h3>Crear usuario</h3>
           </div>
         </div>
-        <div class="user-admin-card">
+        <p class="demo-panel-note" data-demo-note hidden>Vista de demostración: la creación de usuarios está deshabilitada.</p>
+        <div class="user-admin-card" id="userAdminDemoContent">
           <h4>Nueva cuenta de acceso</h4>
           <p>Ingresá el nombre de la persona. El sistema generará un usuario y una contraseña segura que deberás entregar de forma privada.</p>
           <form class="user-create-form" id="createUserForm">

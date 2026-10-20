@@ -381,6 +381,11 @@ html, body {
   display: none !important;
 }
 
+/* La vista de supervisor demo expone solo las dos pestañas solicitadas. */
+[data-role="supervisor"] [data-role-restricted="admin"]:not([data-demo-visible="true"]) {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
   .role-selector-wrap {
     width: 100%;

@@ -19,6 +19,7 @@ body.session-required .login-screen { display: grid; place-items: center; }
 .login-guest { width: 100%; min-height: 44px; margin-top: 10px; border: 1px solid #002fa7; background: #fff; color: #002fa7; font: 600 .95rem var(--font-sans); cursor: pointer; }
 .login-guest:hover { background: #f0f4ff; }
 .login-guest-note { margin: 8px 0 0; color: #536171; font-size: .78rem; line-height: 1.4; }
+.demo-panel-note { margin: 0 0 12px; padding: 10px 12px; border-left: 3px solid #64748b; background: #f1f5f9; color: #334155; font-size: .85rem; }
 .login-message { min-height: 1.3rem; margin-top: 16px; font-size: .9rem; }
 .login-message.error { color: #ba1a1a; } .login-message.success { color: #0b6b43; }
 .session-user { display: flex; align-items: center; gap: 10px; padding-left: 12px; border-left: 1px solid var(--border-color); }

@@ -32,7 +32,17 @@
     const name = document.getElementById('sessionUserName');
     const role = document.getElementById('sessionUserRole');
     if (name) name.textContent = user.nombre;
-    if (role) role.textContent = user.rol === 'admin' ? 'Administrador' : 'Técnico';
+    if (role) role.textContent = user.rol === 'admin' ? 'Administrador' : user.rol === 'supervisor' ? 'Supervisor (demo)' : 'Técnico';
+    const demoMode = user.demo === true;
+    document.querySelectorAll('[data-demo-note]').forEach((node) => { node.hidden = !demoMode; });
+    const terminalContent = document.getElementById('terminalDemoContent');
+    const userContent = document.getElementById('userAdminDemoContent');
+    const clearConsole = document.getElementById('btnClearConsole');
+    if (terminalContent) terminalContent.inert = false;
+    userContent?.querySelectorAll('input, button, select, textarea').forEach((control) => {
+      control.disabled = demoMode;
+    });
+    if (clearConsole) clearConsole.disabled = demoMode;
     window.dispatchEvent(new CustomEvent('luminaria:authenticated', { detail: user }));
   }
 
@@ -58,7 +68,7 @@
     const button = document.getElementById('loginSubmit');
     document.getElementById('loginGuest')?.addEventListener('click', () => {
       clearSession();
-      showApp({ id: 'guest-viewer', nombre: 'Visitante', rol: 'tecnico' });
+      showApp({ id: 'guest-viewer', nombre: 'Visitante', rol: 'supervisor', demo: true });
     });
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
