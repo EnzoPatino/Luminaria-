@@ -34,6 +34,7 @@
     if (name) name.textContent = user.nombre;
     if (role) role.textContent = user.rol === 'admin' ? 'Administrador' : user.rol === 'supervisor' ? 'Supervisor (demo)' : 'Técnico';
     const demoMode = user.demo === true;
+    document.body.classList.toggle('supervisor-demo-mode', demoMode);
     document.querySelectorAll('[data-demo-note]').forEach((node) => { node.hidden = !demoMode; });
     const terminalContent = document.getElementById('terminalDemoContent');
     const userContent = document.getElementById('userAdminDemoContent');
@@ -47,7 +48,12 @@
   }
 
   async function verifySession() {
-    if (isLocalDevelopment()) return showApp(devUser);
+    if (isLocalDevelopment()) {
+      if (new URLSearchParams(window.location.search).get('demo') === 'supervisor') {
+        return showApp({ id: 'guest-viewer', nombre: 'Visitante', rol: 'supervisor', demo: true });
+      }
+      return showApp(devUser);
+    }
     const token = getToken();
     if (!token) return showLogin();
     try {
