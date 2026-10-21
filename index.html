@@ -31,9 +31,6 @@
   <!-- Librería Chart.js para Gráficos Ligeros y Accesibles -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Librería Cliente Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <!-- Anti-flash: aplica el tema y rol guardado antes de que renderice la página -->
   <script>
     (function() {
@@ -73,8 +70,6 @@
             <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
           </label>
           <button class="login-submit" id="loginSubmit" type="submit">Ingresar</button>
-          <button class="login-guest" id="loginGuest" type="button">Entrar como visitante</button>
-          <p class="login-guest-note">Acceso de solo visualización. Las operaciones protegidas requieren iniciar sesión.</p>
           <p class="login-message" id="loginMessage" aria-live="polite"></p>
         </form>
       </div>
@@ -102,11 +97,6 @@
           <span id="mqttStatusText">Conectando al servidor...</span>
         </div>
 
-        <div class="supabase-status-pill" id="supabaseStatusPill" title="Estado de conexión Supabase">
-          <span class="status-dot disconnected" id="supabaseStatusDot"></span>
-          <span id="supabaseStatusText">Supabase Conectando...</span>
-        </div>
-
         <button class="header-hamburger-btn" id="btnHeaderMenu" aria-label="Abrir menú de opciones" aria-expanded="false" aria-controls="headerActions" title="Menú de opciones">
           <i class="fas fa-bars"></i>
         </button>
@@ -117,11 +107,6 @@
             <span class="session-user-text"><strong id="sessionUserName">Usuario</strong><span id="sessionUserRole">Técnico</span></span>
             <button type="button" class="logout-btn" id="logoutButton" title="Cerrar sesión" aria-label="Cerrar sesión"><i class="fas fa-right-from-bracket"></i></button>
           </div>
-
-          <button class="btn btn-sim" id="btnOpenSimModal" data-role-restricted="admin" title="Simular pruebas técnicas">
-            <i class="fas fa-vial"></i>
-            <span>Simulador</span>
-          </button>
 
           <button class="btn btn-secondary" id="btnOpenMqttModal" data-role-restricted="admin" title="Configurar conexión MQTT">
             <i class="fas fa-network-wired"></i>
@@ -179,22 +164,10 @@
         <div class="kpi-icon-wrap green"><i class="fas fa-cubes"></i></div>
         <div class="kpi-data">
           <span class="kpi-name">Tableros</span>
-          <span class="kpi-num" id="kpiTotalTableros">4</span>
+          <span class="kpi-num" id="kpiTotalTableros">0</span>
         </div>
       </div>
     </section>
-
-    <!-- Elementos para retrocompatibilidad interna JS -->
-    <select id="selectTablero" style="display: none;">
-      <option value="TABLERO_01">TABLERO_01</option>
-      <option value="TABLERO_02">TABLERO_02</option>
-      <option value="TABLERO_03">TABLERO_03</option>
-      <option value="TABLERO_04">TABLERO_04</option>
-    </select>
-    <div id="tableroUbicacion" style="display: none;"></div>
-    <div id="voltageGaugeNum" style="display: none;">220.0</div>
-    <div id="voltageGaugeFill" style="display: none;"></div>
-    <div id="voltageStatusTag" style="display: none;"></div>
 
     <!-- ==========================================
          NAVEGACIÓN POR PESTAÑAS (TABS)
@@ -217,11 +190,11 @@
         <i class="fas fa-chart-line"></i>
         <span>Sensores<span class="tab-text-extra"> (Telemetría)</span></span>
       </button>
-      <button class="nav-tab" data-tab="consola" data-role-restricted="admin" data-demo-visible="true" role="tab" aria-selected="false">
+      <button class="nav-tab" data-tab="consola" data-role-restricted="admin" role="tab" aria-selected="false">
         <i class="fas fa-terminal"></i>
         <span>Consola<span class="tab-text-extra"> MQTT</span></span>
       </button>
-      <button class="nav-tab" data-tab="usuarios" data-role-restricted="admin" data-demo-visible="true" role="tab" aria-selected="false">
+      <button class="nav-tab" data-tab="usuarios" data-role-restricted="admin" role="tab" aria-selected="false">
         <i class="fas fa-user-plus"></i>
         <span>Crear usuario</span>
       </button>
@@ -304,10 +277,7 @@
         <div class="telemetry-controls" aria-label="Filtros de telemetría">
           <label class="telemetry-control-label" for="telemetryBoardSelect">Tablero eléctrico
             <select id="telemetryBoardSelect" class="telemetry-select">
-              <option value="TABLERO_01">TABLERO_01 · Centro</option>
-              <option value="TABLERO_02">TABLERO_02 · Parque Norte</option>
-              <option value="TABLERO_03">TABLERO_03 · Paseo de la Costa</option>
-              <option value="TABLERO_04">TABLERO_04 · Avenida Argentina</option>
+
             </select>
           </label>
           <div class="telemetry-window" role="group" aria-label="Ventana temporal">
@@ -429,14 +399,11 @@
           </button>
         </div>
 
-        <p class="demo-panel-note" data-demo-note hidden>Vista de demostración: la consola es solo visual.</p>
-        <div id="terminalDemoContent">
-          <div class="terminal-body" id="mqttConsoleLog">
+        <div class="terminal-body" id="mqttConsoleLog">
             <div class="log-row">
               <span class="log-time">[00:00:00]</span>
               <span class="log-text">Consola lista. Esperando datos del servidor MQTT Mosquitto...</span>
             </div>
-          </div>
         </div>
       </section>
 
@@ -447,8 +414,7 @@
             <h3>Crear usuario</h3>
           </div>
         </div>
-        <p class="demo-panel-note" data-demo-note hidden>Vista de demostración: la creación de usuarios está deshabilitada.</p>
-        <div class="user-admin-card" id="userAdminDemoContent">
+        <div class="user-admin-card">
           <h4>Nueva cuenta de acceso</h4>
           <p>Ingresá el nombre de la persona. El sistema generará un usuario y una contraseña segura que deberás entregar de forma privada.</p>
           <form class="user-create-form" id="createUserForm">
@@ -507,74 +473,9 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="btnUseSimMode">Modo Prueba</button>
           <button type="submit" class="btn btn-primary" id="btnConnectMosquitto">Conectar a Mosquitto</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- MODAL 2: SIMULADOR DE ALERTAS -->
-  <div class="modal-overlay" id="simModal" role="dialog" aria-modal="true">
-    <div class="modal-box">
-      <div class="modal-head">
-        <h3><i class="fas fa-vial" style="color: var(--color-accent-text);"></i> Simulador de Pruebas Técnicas</h3>
-        <button class="close-btn" id="closeSimModal">&times;</button>
-      </div>
-
-      <p class="modal-hint">
-        Seleccione una prueba para simular la respuesta del sistema en vivo:
-      </p>
-
-      <div class="sim-grid">
-        <button class="sim-option" id="simBajaTension">
-          <div class="sim-option-content">
-            <h4 style="color: #ef4444;"><i class="fas fa-bolt"></i> Caída de Voltaje (Baja Tensión)</h4>
-            <p>Tensión cae a 185 Volts en el tablero activo (Dispara Alerta Roja Urgente).</p>
-          </div>
-          <i class="fas fa-chevron-right"></i>
-        </button>
-
-        <button class="sim-option" id="simDesconexionAbrupta">
-          <div class="sim-option-content">
-            <h4 style="color: #ef4444;"><i class="fas fa-triangle-exclamation"></i> Desconexión Abrupta / Posible Robo</h4>
-            <p>Desconexión rápida en 85 ms (Dispara Alerta Roja Urgente).</p>
-          </div>
-          <i class="fas fa-chevron-right"></i>
-        </button>
-
-        <button class="sim-option" id="simFocoQuemado">
-          <div class="sim-option-content">
-            <h4 style="color: #f59e0b;"><i class="fas fa-lightbulb"></i> Foco Quemado / Consumo Anómalo</h4>
-            <p>Consumo cae a 12.5 mA por más de 30s (Dispara Advertencia Amarilla).</p>
-          </div>
-          <i class="fas fa-chevron-right"></i>
-        </button>
-
-        <button class="sim-option" id="simTelemetriaNormal">
-          <div class="sim-option-content">
-            <h4 style="color: #10b981;"><i class="fas fa-circle-check"></i> Restablecimiento Normal Tableros</h4>
-            <p>Red retorna a 220 Volts con tableros operando normalmente.</p>
-          </div>
-          <i class="fas fa-chevron-right"></i>
-        </button>
-
-        <button class="sim-option" id="simSensorNormal">
-          <div class="sim-option-content">
-            <h4 style="color: #0284c7;"><i class="fas fa-satellite-dish"></i> Sensor Ambiente Normal (23°C / 40%)</h4>
-            <p>Envía JSON <code>{"ApiKey":"...","Tem":"23.0","Hum":"40.0"}</code> en rango aceptable.</p>
-          </div>
-          <i class="fas fa-chevron-right"></i>
-        </button>
-
-        <button class="sim-option" id="simSensorAlerta">
-          <div class="sim-option-content">
-            <h4 style="color: #f59e0b;"><i class="fas fa-fire-flame-curved"></i> Sensor Fuera de Rango (39.5°C / 82%)</h4>
-            <p>Envía JSON con alta temperatura y humedad por encima del rango seguro.</p>
-          </div>
-          <i class="fas fa-chevron-right"></i>
-        </button>
-      </div>
     </div>
   </div>
 
@@ -583,7 +484,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   
   <script src="js/mqtt-client.js"></script>
-  <script src="js/supabase-client.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>

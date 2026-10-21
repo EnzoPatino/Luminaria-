@@ -128,6 +128,6 @@ Se emite cuando la corriente medida se mantiene significativamente baja (por deb
 
 ---
 
-## 5. Modo Simulacion Integrado
+## 5. Disponibilidad de conexión
 
-La UI incluye un simulador local que emite estos mismos eventos JSON directamente a traves de la logica interna de JavaScript cuando no hay una conexion activa con Mosquitto. Esto permite validar el correcto funcionamiento de la interfaz y la respuesta visual ante anomalias durante el desarrollo o demostraciones tecnicas.
+La interfaz requiere una conexión activa con Mosquitto para recibir mensajes. Si el broker no está disponible, el estado MQTT aparece desconectado y el cliente reintenta automáticamente; los mensajes no se procesan localmente.

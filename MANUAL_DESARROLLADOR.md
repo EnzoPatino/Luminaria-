@@ -4,7 +4,7 @@
 
 **Municipalidad de Neuquén**
 
-Aplicación web para monitoreo en tiempo real de tableros de iluminación pública. El frontend es una aplicación estática (HTML + CSS + JavaScript vanilla) que consume eventos MQTT desde un broker Mosquitto (vía WebSockets) o funciona en **modo simulación**. El backend está implementado en Node.js + Express para gestión de datos y persistencia.
+Aplicación web para monitoreo en tiempo real de tableros de iluminación pública. El frontend es una aplicación estática (HTML + CSS + JavaScript vanilla) que consume eventos MQTT desde un broker Mosquitto (vía WebSockets) y datos persistidos desde PostgreSQL por la API local. El backend está implementado en Node.js + Express para gestión de datos y persistencia.
 
 > La documentación detallada de arquitectura se encuentra en `Documentacion/CONTEXTO_TECNICO.md` y `Documentacion/DOCUMENTACION_TECNICA.md`. Este documento resume las guías operativas de desarrollo.
 
@@ -34,16 +34,15 @@ docker compose logs -f backend
 
 ```bash
 # Frontend estático local:
-python3 -m http.server 8080
+python3 -m http.server 5500
 
 # Backend Node.js:
 cd backend
 npm install
 npm run dev
 
-# Validar sintaxis JavaScript:
-node -c js/app.js && node -c js/mqtt-client.js
 ```
+Para este modo, establecer temporalmente `apiBaseUrl: "http://localhost:3000"` en `js/config.js`; el login y los datos requieren el backend y PostgreSQL.
 
 ---
 
@@ -60,8 +59,8 @@ index.html ──► carga css/styles.css + lib Paho MQTT (CDN)
 
 **Responsabilidades por archivo:**
 
-- **`index.html`** — Estructura DOM: header institucional, banner de estado, barra de KPIs, 4 tabs (`tableros`, `mapa`, `alertas`, `consola`), modal de config MQTT, modal de simulación. El header incluye un botón `#btnToggleTheme` (icono luna/sol) que alterna el tema. Algunos IDs hidden existen solo por retrocompatibilidad (`#selectTablero`, `#voltageGaugeNum`, etc.).
-- **`js/mqtt-client.js`** — Clase `LuminariaMQTTClient` instanciada como `window.luminariaMQTT`. Maneja conexión Paho, suscripción a topics, persistencia en `localStorage` bajo la clave `luminaria_mqtt_config`, y notifica vía 3 callbacks: `onStatusChangeCallback`, `onMessageCallback`, `onLogCallback`. Si Paho no está disponible o la conexión falla, activa **modo simulación** y los `publish()` se procesan internamente como mensajes recibidos.
+- **`index.html`** — Estructura DOM: header institucional, banner de estado, barra de KPIs, seis tabs (`tableros`, `mapa`, `alertas`, `sensores`, `consola`, `usuarios`) y modal de configuración MQTT. El header incluye un botón `#btnToggleTheme` (icono luna/sol) que alterna el tema.
+- **`js/mqtt-client.js`** — Clase `LuminariaMQTTClient` instanciada como `window.luminariaMQTT`. Maneja conexión Paho, suscripción a topics, persistencia en `localStorage` bajo la clave `luminaria_mqtt_config`, y notifica vía 3 callbacks: `onStatusChangeCallback`, `onMessageCallback`, `onLogCallback`. Si Paho no está disponible o la conexión falla, informa estado desconectado y reintenta la conexión; nunca procesa mensajes localmente.
 - **`js/app.js`** — Toda la lógica de UI. Mantiene un objeto `appState` (no global, vive dentro del `DOMContentLoaded`) con `tableros`, `alerts`, `activeFilter`, `soundEnabled`, `selectedTableroId`. Renderiza grilla de tableros, mapa de pines SVG, lista de alertas, KPIs, banner y consola. Procesa eventos MQTT entrantes con `processIncomingEvent()`. Maneja el toggle de tema claro/oscuro con persistencia en `localStorage` clave `luminaria_theme`.
 - **`css/styles.css`** — Tema oscuro industrial por defecto (`:root`) y tema claro (`[data-theme="light"]`). Variables CSS en `:root` para todos los colores. Estados semáforo (`ok`, `warning`, `critical`). Responsive con media queries (menú flotante en móvil, mapa de 200px en `max-width: 560px`).
 
@@ -131,7 +130,7 @@ Payloads completos de ejemplo en `Documentacion/CONTEXTO_TECNICO.md` (sección 5
 }
 ```
 
-Tableros iniciales hardcodeados: `TABLERO_01` (Centro / Palacio Municipal, fase L1), `TABLERO_02` (Parque Norte, L2), `TABLERO_03` (Paseo de la Costa, L3), `TABLERO_04` (Av. Argentina, L1). Si un evento llega con un `id_tablero` desconocido, `processIncomingEvent()` lo crea automáticamente con `posX: 50, posY: 50`.
+Los tableros se cargan desde la API respaldada por PostgreSQL. Si un evento llega para un tablero desconocido, se registra en la consola y no se inventa un tablero para representarlo.
 
 ---
 
@@ -162,11 +161,7 @@ Hay un botón en el header (`#btnToggleTheme`) que alterna entre los temas. La p
 ### Sanitización
 
 - `escapeHtml()` en `app.js` debe seguir aplicándose a todo dato dinámico antes de insertarse en `innerHTML`. Si se introduce un nuevo render de strings externos, sanitizar.
-- El id de alerta usa `Math.random()` (suficiente para demo local; no usar como identificador de seguridad).
-
-### Modo simulación
-
-Preservar siempre. Es el modo por defecto al cargar y el que permite validar la UI sin hardware ni broker.
+- Los IDs temporales de alertas usan `Math.random()` y se reemplazan por los IDs del backend tras la persistencia.
 
 ---
 
@@ -184,7 +179,7 @@ Default (en `mqtt-client.js`):
 }
 ```
 
-El cliente MQTT autodetecta el host y puerto web actual para conectarse a Mosquitto mediante el reverse proxy de Nginx (`/mqtt`). La configuración manual se persiste en `localStorage['luminaria_mqtt_config']`. Si falla o no hay conexión, conmuta transparentemente a simulación interna.
+El cliente MQTT autodetecta el host y puerto web actual para conectarse a Mosquitto mediante el reverse proxy de Nginx (`/mqtt`). La configuración manual se persiste en `localStorage['luminaria_mqtt_config']`. Si falla o no hay conexión, mantiene el estado desconectado y reintenta.
 
 ---
 

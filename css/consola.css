@@ -38,8 +38,7 @@
   color: var(--text-main);
 }
 
-.log-type-sim, .log-type-simulated { color: var(--color-warning); }
 .log-type-err, .log-type-error { color: var(--color-critical); }
 .log-type-incoming { color: var(--color-accent-text); }
 .log-type-outgoing { color: #a78bfa; }
-
+

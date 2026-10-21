@@ -10,7 +10,7 @@
 
 El repositorio contiene una aplicación web estática hecha con HTML, CSS y JavaScript vanilla. No hay backend, base de datos, Docker Compose ni API REST implementados actualmente.
 
-La UI consume eventos MQTT mediante Paho MQTT por WebSockets. Si no puede conectarse a Mosquitto o no está disponible la librería Paho, activa modo simulación y procesa eventos localmente.
+La UI consume eventos MQTT mediante Paho MQTT por WebSockets y datos persistidos desde la API local. Si el broker o la librería Paho no están disponibles, muestra desconexión y reintenta sin procesar datos localmente.
 
 La aplicación soporta dos temas visuales (claro y oscuro) seleccionables desde el header. El modo oscuro es el predeterminado; la preferencia se persiste en `localStorage` con la clave `luminaria_theme`.
 
@@ -53,7 +53,6 @@ Define:
 - barra de KPIs;
 - tabs `tableros`, `mapa`, `alertas`, `consola`;
 - modal de configuracion MQTT;
-- modal de simulacion;
 - **script anti-flash inline en el `<head>`** que aplica `data-theme` desde `localStorage` antes de que pinte la pagina. No eliminarlo.
 
 ### `css/styles.css`
@@ -69,7 +68,7 @@ Responsabilidades:
 - cargar y guardar configuracion en `localStorage` con clave `luminaria_mqtt_config`;
 - conectar con Paho MQTT por WebSockets;
 - suscribirse a topics configurados;
-- publicar eventos reales o simulados;
+- publicar eventos de operación;
 - notificar estado, logs y mensajes mediante callbacks.
 
 Configuracion por defecto:
@@ -100,7 +99,6 @@ Funciones relevantes:
 
 - `setupTabNavigation()`
 - `setupEventListeners()`
-- `setupSimulationPresets()`
 - `setupMqttCallbacks()`
 - `processIncomingEvent(event)`
 - `renderTablerosGrid()`
@@ -232,7 +230,7 @@ Los focos usan ids como `FOCO_A1`, `FOCO_B1`, `FOCO_C1`, etc. El estado de foco 
 
 1. Mantener JavaScript y CSS vanilla salvo instruccion explicita.
 2. No cambiar nombres de claves JSON ya coordinadas con hardware.
-3. Preservar el modo simulacion.
+3. Mantener una conexión real con el broker; sin conexión, informar estado desconectado.
 4. Preservar `escapeHtml()` o una sanitizacion equivalente al renderizar datos recibidos.
 5. Validar sintaxis antes de entregar:
 

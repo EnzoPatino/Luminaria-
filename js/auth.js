@@ -7,9 +7,6 @@
     if (configured) return `${configured.replace(/\/$/, '')}/api`;
     return window.location.protocol === 'file:' ? 'http://localhost:3000/api' : '/api';
   };
-  const isLocalDevelopment = () => window.location.protocol === 'file:' ||
-    ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-  const devUser = { id: 'local-dev', nombre: 'Desarrollo local', rol: 'admin' };
 
   function getToken() { return localStorage.getItem(TOKEN_KEY); }
   function clearSession() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
@@ -32,28 +29,11 @@
     const name = document.getElementById('sessionUserName');
     const role = document.getElementById('sessionUserRole');
     if (name) name.textContent = user.nombre;
-    if (role) role.textContent = user.rol === 'admin' ? 'Administrador' : user.rol === 'supervisor' ? 'Supervisor (demo)' : 'Técnico';
-    const demoMode = user.demo === true;
-    document.body.classList.toggle('supervisor-demo-mode', demoMode);
-    document.querySelectorAll('[data-demo-note]').forEach((node) => { node.hidden = !demoMode; });
-    const terminalContent = document.getElementById('terminalDemoContent');
-    const userContent = document.getElementById('userAdminDemoContent');
-    const clearConsole = document.getElementById('btnClearConsole');
-    if (terminalContent) terminalContent.inert = false;
-    userContent?.querySelectorAll('input, button, select, textarea').forEach((control) => {
-      control.disabled = demoMode;
-    });
-    if (clearConsole) clearConsole.disabled = demoMode;
+    if (role) role.textContent = user.rol === 'admin' ? 'Administrador' : 'Técnico';
     window.dispatchEvent(new CustomEvent('luminaria:authenticated', { detail: user }));
   }
 
   async function verifySession() {
-    if (isLocalDevelopment()) {
-      if (new URLSearchParams(window.location.search).get('demo') === 'supervisor') {
-        return showApp({ id: 'guest-viewer', nombre: 'Visitante', rol: 'supervisor', demo: true });
-      }
-      return showApp(devUser);
-    }
     const token = getToken();
     if (!token) return showLogin();
     try {
@@ -72,10 +52,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('loginForm');
     const button = document.getElementById('loginSubmit');
-    document.getElementById('loginGuest')?.addEventListener('click', () => {
-      clearSession();
-      showApp({ id: 'guest-viewer', nombre: 'Visitante', rol: 'supervisor', demo: true });
-    });
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const identifier = document.getElementById('loginIdentifier').value.trim();
@@ -83,13 +59,6 @@
       button.disabled = true;
       button.textContent = 'Ingresando…';
       setMessage('');
-      if (isLocalDevelopment()) {
-        showApp(devUser);
-        form.reset();
-        button.disabled = false;
-        button.textContent = 'Ingresar';
-        return;
-      }
       try {
         const response = await fetch(`${apiBase()}/auth/login`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },

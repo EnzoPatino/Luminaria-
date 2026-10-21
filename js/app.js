@@ -15,82 +15,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // ESTADO DE LA APLICACIÓN
   // ==========================================
   const appState = {
-    selectedTableroId: "TABLERO_01",
+    selectedTableroId: null,
     userRole: "admin",
-    tableros: {
-      TABLERO_01: {
-        id: "TABLERO_01",
-        nombre: "Centro / Palacio Municipal",
-        ubicacion: "Centro / Palacio Municipal",
-        posX: 20,
-        posY: 45,
-        tension_v: 220.0,
-        tension_nominal_v: 220.0,
-        fase: "L1",
-        //focos borrados
-      },
-      TABLERO_02: {
-        id: "TABLERO_02",
-        nombre: "Parque Norte",
-        ubicacion: "Parque Norte - Sector Canchas",
-        posX: 45,
-        posY: 30,
-        tension_v: 218.5,
-        tension_nominal_v: 220.0,
-        fase: "L2",
-     // focos borrados
-      },
-      TABLERO_03: {
-        id: "TABLERO_03",
-        nombre: "Paseo de la Costa",
-        ubicacion: "Paseo de la Costa - Río Limay",
-        posX: 75,
-        posY: 75,
-        tension_v: 220.0,
-        tension_nominal_v: 220.0,
-        fase: "L3",
-      // focos borrados
-      },
-      TABLERO_04: {
-        id: "TABLERO_04",
-        nombre: "Avenida Argentina",
-        ubicacion: "Av. Argentina y Monolito",
-        posX: 55,
-        posY: 50,
-        tension_v: 221.0,
-        tension_nominal_v: 220.0,
-        fase: "L1",
-       // focos borrados
-      },
-    },
+    tableros: {},
     alerts: [],
     activeFilter: "ALL",
     soundEnabled: true,
     expandedTableroId: null,
-    apiAvailable: false,
-    sensor: {
-      apiKey: "ClaveUnicaParaSensoresToken123",
-      temperatura: 23.0,
-      humedad: 40.0,
-      corriente_a: 3.6,
-      lastUpdate: "22:35:00",
-      history: [
-        { time: "22:30:00", temp: 22.4, hum: 42.0, amp: 3.5 },
-        { time: "22:31:00", temp: 22.6, hum: 41.5, amp: 3.5 },
-        { time: "22:32:00", temp: 22.8, hum: 41.0, amp: 3.6 },
-        { time: "22:33:00", temp: 23.0, hum: 40.5, amp: 3.6 },
-        { time: "22:34:00", temp: 23.1, hum: 40.2, amp: 3.7 },
-        { time: "22:35:00", temp: 23.0, hum: 40.0, amp: 3.6 },
-      ],
-      maxHistoryPoints: 15,
-      ranges: {
-        temp: { min: 18.0, max: 35.0, unit: "°C" },
-        hum: { min: 30.0, max: 70.0, unit: "%" },
-        amp: { min: 1.0, max: 10.0, unit: "A" },
-      },
-    },
     telemetry: {
-      selectedTableroId: "TABLERO_01",
+      selectedTableroId: null,
       range: "1h",
       readings: {},
       maxHistoryPoints: 720,
@@ -110,11 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
     kpiTotalTableros: document.getElementById("kpiTotalTableros"),
 
     leafletMapContainer: document.getElementById("leafletMapContainer"),
-    selectTablero: document.getElementById("selectTablero"),
-    tableroUbicacion: document.getElementById("tableroUbicacion"),
-    voltageGaugeNum: document.getElementById("voltageGaugeNum"),
-    voltageGaugeFill: document.getElementById("voltageGaugeFill"),
-    voltageStatusTag: document.getElementById("voltageStatusTag"),
 
     alertsContainer: document.getElementById("alertsContainer"),
     alertsCountBadge: document.getElementById("alertsCountBadge"),
@@ -124,7 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
     btnClearConsole: document.getElementById("btnClearConsole"),
 
     btnOpenMqttModal: document.getElementById("btnOpenMqttModal"),
-    btnOpenSimModal: document.getElementById("btnOpenSimModal"),
     roleSelector: document.getElementById("roleSelector"),
     roleIcon: document.getElementById("roleIcon"),
     btnToggleSound: document.getElementById("btnToggleSound"),
@@ -134,37 +61,13 @@ document.addEventListener("DOMContentLoaded", () => {
     soundLabelMobile: document.getElementById("soundLabelMobile"),
     themeLabelMobile: document.getElementById("themeLabelMobile"),
     mqttModal: document.getElementById("mqttModal"),
-    simModal: document.getElementById("simModal"),
     closeMqttModal: document.getElementById("closeMqttModal"),
-    closeSimModal: document.getElementById("closeSimModal"),
 
     formMqttConfig: document.getElementById("formMqttConfig"),
     btnConnectMosquitto: document.getElementById("btnConnectMosquitto"),
-    btnUseSimMode: document.getElementById("btnUseSimMode"),
 
-    simBajaTension: document.getElementById("simBajaTension"),
-    simDesconexionAbrupta: document.getElementById("simDesconexionAbrupta"),
-    simFocoQuemado: document.getElementById("simFocoQuemado"),
-    simTelemetriaNormal: document.getElementById("simTelemetriaNormal"),
 
     // Elementos de la sección Sensores
-    btnSimulateSensorMsg: document.getElementById("btnSimulateSensorMsg"),
-    btnSimAmpNormal: document.getElementById("btnSimAmpNormal"),
-    btnSimAmpAlto: document.getElementById("btnSimAmpAlto"),
-    btnSimAmpCero: document.getElementById("btnSimAmpCero"),
-    sensorCurrentTemp: document.getElementById("sensorCurrentTemp"),
-    sensorCurrentHum: document.getElementById("sensorCurrentHum"),
-    sensorCurrentAmp: document.getElementById("sensorCurrentAmp"),
-    sensorApiKey: document.getElementById("sensorApiKey"),
-    sensorLastUpdate: document.getElementById("sensorLastUpdate"),
-    sensorTempBadge: document.getElementById("sensorTempBadge"),
-    sensorHumBadge: document.getElementById("sensorHumBadge"),
-    sensorAmpBadge: document.getElementById("sensorAmpBadge"),
-    sensorTempCard: document.getElementById("sensorTempCard"),
-    sensorHumCard: document.getElementById("sensorHumCard"),
-    sensorAmpCard: document.getElementById("sensorAmpCard"),
-    simSensorNormal: document.getElementById("simSensorNormal"),
-    simSensorAlerta: document.getElementById("simSensorAlerta"),
   };
 
   // ==========================================
@@ -174,7 +77,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTabNavigation();
     setupEventListeners();
     setupMqttCallbacks();
-    setupSupabaseIntegration();
     applyStoredTheme();
     applyAuthenticatedRole();
     updateTableroUI();
@@ -184,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initTelemetryCharts();
     updateTelemetryUI();
 
-    // Conectar a MQTT o Modo Simulación
+    // Cargar datos persistidos antes de conectar el canal MQTT.
     await loadInitialData();
     await loadTelemetryHistory();
     if (window.luminariaMQTT) window.luminariaMQTT.connect();
@@ -209,8 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 5000);
   }
 
-  // REST remains optional: this timeout-bound helper makes local simulation a
-  // fail-safe fallback when the server or network is unavailable.
+  // La API es la fuente obligatoria para todo estado persistente.
   async function requestAPI(path, options = {}) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -264,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!id) return;
         focos[id] = {
           id,
-          corriente_ma: toFiniteNumber(foco.corriente_medida_ma, 0),
+          corriente_ma: toFiniteNumber(foco.corriente_medida_ma, null),
           estado: ["ok", "robado", "quemado"].includes(foco.estado) ? foco.estado : "ok",
         };
       });
@@ -272,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
       Object.entries(tablero.focos).forEach(([id, foco]) => {
         focos[id] = {
           id,
-          corriente_ma: toFiniteNumber(foco.corriente_ma || foco.corriente_medida_ma, 0),
+          corriente_ma: toFiniteNumber(foco.corriente_ma ?? foco.corriente_medida_ma, null),
           estado: ["ok", "robado", "quemado"].includes(foco.estado) ? foco.estado : "ok",
         };
       });
@@ -297,9 +198,9 @@ document.addEventListener("DOMContentLoaded", () => {
       ubicacion: tablero.ubicacion || "Ubicacion no informada",
       posX: Math.min(Math.max(toFiniteNumber(tablero.pos_x, 50), 0), 100),
       posY: Math.min(Math.max(toFiniteNumber(tablero.pos_y, 50), 0), 100),
-      tension_v: toFiniteNumber(tablero.tension_medida_v, toFiniteNumber(tablero.tension_nominal, 220)),
+      tension_v: toFiniteNumber(tablero.tension_medida_v, null),
       tension_nominal_v: toFiniteNumber(tablero.tension_nominal, 220),
-      corriente_ma: toFiniteNumber(tablero.corriente_medida_ma ?? tablero.corriente_ma, 0),
+      corriente_ma: toFiniteNumber(tablero.corriente_medida_ma ?? tablero.corriente_ma, null),
       fase: tablero.fase || "L1",
       estado: tablero.estado || "ok",
       ultimaLectura: tablero.ultima_lectura || tablero.ultimaLectura || null,
@@ -368,41 +269,30 @@ document.addEventListener("DOMContentLoaded", () => {
       if (Object.keys(tableros).length === 0) throw new Error("No persisted boards.");
       appState.tableros = tableros;
       appState.alerts = alertasAPI.map(normalizarAlertaAPI);
-      appState.apiAvailable = true;
       if (!appState.tableros[appState.selectedTableroId]) {
         appState.selectedTableroId = Object.keys(appState.tableros)[0];
       }
+      appState.telemetry.selectedTableroId = appState.selectedTableroId;
+      populateTelemetryBoardSelect();
       refreshAllViews();
     } catch (error) {
-      appState.apiAvailable = false;
-      console.warn("[Luminaria] API REST local no disponible. Intentando Supabase Cloud...", error);
-
-      if (window.luminariaSupabase) {
-        try {
-          const [sbTableros, sbAlertas] = await Promise.all([
-            window.luminariaSupabase.fetchTableros(),
-            window.luminariaSupabase.fetchAlertas(),
-          ]);
-          if (sbTableros && sbTableros.length > 0) {
-            const tableros = Object.fromEntries(
-              sbTableros.map((t) => {
-                const norm = normalizarTableroAPI(t);
-                return [norm.id, norm];
-              }),
-            );
-            appState.tableros = tableros;
-          }
-          if (Array.isArray(sbAlertas) && sbAlertas.length > 0) {
-            appState.alerts = sbAlertas.map(normalizarAlertaAPI);
-          }
-          if (sbTableros || sbAlertas) {
-            refreshAllViews();
-          }
-        } catch (sbErr) {
-          console.warn("[Luminaria] Error conectando con Supabase Cloud:", sbErr);
-        }
-      }
+      console.error("[Luminaria] No se pudieron cargar datos desde la API local.", error);
+      const container = document.getElementById("tablerosGridContainer");
+      if (container) container.innerHTML = '<p class="empty-state">No se pudo conectar con el servidor de datos. Reintentando…</p>';
     }
+  }
+
+  function populateTelemetryBoardSelect() {
+    const select = document.getElementById("telemetryBoardSelect");
+    if (!select) return;
+    select.replaceChildren();
+    Object.values(appState.tableros).forEach((tablero) => {
+      const option = document.createElement("option");
+      option.value = tablero.id;
+      option.textContent = tablero.nombre || tablero.id;
+      select.appendChild(option);
+    });
+    select.value = appState.telemetry.selectedTableroId || "";
   }
 
   // ==========================================
@@ -429,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch (e) {}
     updateThemeIcon(theme);
-    updateSensorChartsTheme();
+    updateTelemetryChartsTheme();
   }
 
   function applyStoredTheme() {
@@ -479,12 +369,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (elements.roleSelector && elements.roleSelector.value !== role) {
       elements.roleSelector.value = role;
     }
-    
+
     const roleToggleText = document.getElementById("roleToggleText");
     if (roleToggleText) {
-      roleToggleText.textContent = role === "admin" ? "Vista Administrador" : role === "supervisor" ? "Vista Supervisor (demo)" : "Vista Técnico";
+      roleToggleText.textContent = role === "admin" ? "Vista Administrador" : "Vista Técnico";
     }
-    
+
     updateRoleIcon(role);
 
     // Si la pestaña activa actual está restringida al cambiar a Técnico, cambiar automáticamente a Tableros
@@ -508,9 +398,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (role === "tecnico") {
       elements.roleIcon.className = "fas fa-user-gear role-icon";
       elements.roleIcon.title = "Vista Técnico activa (monitoreo operativo)";
-    } else if (role === "supervisor") {
-      elements.roleIcon.className = "fas fa-eye role-icon";
-      elements.roleIcon.title = "Vista Supervisor de demostración (solo visualización)";
     } else {
       elements.roleIcon.className = "fas fa-user-shield role-icon";
       elements.roleIcon.title = "Vista Administrador activa (control total)";
@@ -602,16 +489,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (message) { message.textContent = error.message || "No se pudo crear la cuenta."; message.className = "login-message error"; }
       } finally { submit.disabled = false; }
     });
-
-    // Cambio en selector hidden si existiera
-    if (elements.selectTablero) {
-      elements.selectTablero.addEventListener("change", (e) => {
-        appState.selectedTableroId = e.target.value;
-        appState.expandedTableroId = null;
-        updateTableroUI();
-        renderMapPins();
-      });
-    }
 
     // Filtros de Alertas
     elements.filterChips.forEach((chip) => {
@@ -738,27 +615,6 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.btnOpenMqttModal.addEventListener("click", () =>
         openModal(elements.mqttModal),
       );
-    if (elements.btnOpenSimModal)
-      elements.btnOpenSimModal.addEventListener("click", () =>
-        openModal(elements.simModal),
-      );
-    if (elements.closeMqttModal)
-      elements.closeMqttModal.addEventListener("click", () =>
-        closeModal(elements.mqttModal),
-      );
-    if (elements.closeSimModal)
-      elements.closeSimModal.addEventListener("click", () =>
-        closeModal(elements.simModal),
-      );
-
-    [elements.mqttModal, elements.simModal].forEach((modal) => {
-      if (modal) {
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) closeModal(modal);
-        });
-      }
-    });
-
     // Form MQTT Config
     if (elements.formMqttConfig) {
       const cfg = window.luminariaMQTT.config;
@@ -790,182 +646,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    if (elements.btnUseSimMode) {
-      elements.btnUseSimMode.addEventListener("click", () => {
-        window.luminariaMQTT.disconnect();
-        closeModal(elements.mqttModal);
-      });
-    }
-
-    // Botón de lectura demo en la pestaña de sensores
-    if (elements.btnSimulateSensorMsg) {
-      elements.btnSimulateSensorMsg.addEventListener("click", () => {
-        const randTemp = (22.0 + (Math.random() * 3 - 1.5)).toFixed(1);
-        const randHum = (40.0 + (Math.random() * 6 - 3)).toFixed(1);
-        const randAmp = (3.5 + (Math.random() * 0.8 - 0.4)).toFixed(1);
-        const payload = {
-          ApiKey: appState.sensor.apiKey,
-          Tem: randTemp,
-          Hum: randHum,
-          Amp: randAmp,
-        };
-        window.luminariaMQTT.publish("sensores/ambiente", payload);
-      });
-    }
-
-    if (elements.btnSimAmpNormal) {
-      elements.btnSimAmpNormal.addEventListener("click", () => {
-        const payload = {
-          ApiKey: appState.sensor.apiKey,
-          Tem: "23.0",
-          Hum: "40.0",
-          Amp: "3.5",
-        };
-        window.luminariaMQTT.publish("sensores/ambiente", payload);
-      });
-    }
-
-    if (elements.btnSimAmpAlto) {
-      elements.btnSimAmpAlto.addEventListener("click", () => {
-        const payload = {
-          ApiKey: appState.sensor.apiKey,
-          Tem: "26.5",
-          Hum: "40.0",
-          Amp: "12.5",
-        };
-        window.luminariaMQTT.publish("sensores/ambiente", payload);
-      });
-    }
-
-    if (elements.btnSimAmpCero) {
-      elements.btnSimAmpCero.addEventListener("click", () => {
-        const payload = {
-          ApiKey: appState.sensor.apiKey,
-          Tem: "23.0",
-          Hum: "40.0",
-          Amp: "0.0",
-        };
-        window.luminariaMQTT.publish("sensores/ambiente", payload);
-      });
-    }
-
-    setupSimulationPresets();
-  }
-
-  function setupSimulationPresets() {
-    if (elements.simBajaTension) {
-      elements.simBajaTension.addEventListener("click", () => {
-        const payload = {
-          tipo_evento: "BAJA_TENSION",
-          id_tablero: appState.selectedTableroId,
-          timestamp: new Date().toISOString(),
-          datos: {
-            tension_medida_v: 185.3,
-            tension_nominal_v: 220.0,
-            umbral_minimo_v: 190.0,
-            fase: "L1",
-          },
-          severidad: "CRITICA",
-          ubicacion:
-            appState.tableros[appState.selectedTableroId]?.ubicacion ||
-            "Centro / Palacio Municipal",
-        };
-        window.luminariaMQTT.publish("api/evento", payload);
-        closeModal(elements.simModal);
-      });
-    }
-
-    if (elements.simDesconexionAbrupta) {
-      elements.simDesconexionAbrupta.addEventListener("click", () => {
-        const payload = {
-          tipo_evento: "DESCONEXION_ABRUPTA_FOCO",
-          id_tablero: appState.selectedTableroId,
-          timestamp: new Date().toISOString(),
-          datos: {
-            id_foco: "FOCO_A3",
-            corriente_previa_ma: 450.0,
-            corriente_actual_ma: 0.0,
-            tiempo_caida_ms: 85,
-            estado_circuito: "ACTIVO",
-          },
-          severidad: "CRITICA",
-          ubicacion:
-            appState.tableros[appState.selectedTableroId]?.ubicacion ||
-            "Pasillo Principal",
-        };
-        window.luminariaMQTT.publish("api/evento", payload);
-        closeModal(elements.simModal);
-      });
-    }
-
-    if (elements.simFocoQuemado) {
-      elements.simFocoQuemado.addEventListener("click", () => {
-        const payload = {
-          tipo_evento: "FOCO_QUEMADO",
-          id_tablero: appState.selectedTableroId,
-          timestamp: new Date().toISOString(),
-          datos: {
-            id_foco: "FOCO_B1",
-            corriente_esperada_ma: 450.0,
-            corriente_medida_ma: 12.5,
-            duracion_anomalia_s: 30,
-            estado_circuito: "ACTIVO",
-          },
-          severidad: "ADVERTENCIA",
-          ubicacion:
-            appState.tableros[appState.selectedTableroId]?.ubicacion ||
-            "Sector Canchas",
-        };
-        window.luminariaMQTT.publish("api/evento", payload);
-        closeModal(elements.simModal);
-      });
-    }
-
-    if (elements.simTelemetriaNormal) {
-      elements.simTelemetriaNormal.addEventListener("click", () => {
-        const payload = {
-          tipo_evento: "TELEMETRIA_NORMAL",
-          id_tablero: appState.selectedTableroId,
-          timestamp: new Date().toISOString(),
-          datos: {
-            tension_medida_v: 220.0,
-            tension_nominal_v: 220.0,
-            fase: "L1",
-            focos_restaurados: ["FOCO_A3", "FOCO_B1"],
-          },
-          severidad: "INFO",
-          ubicacion:
-            appState.tableros[appState.selectedTableroId]?.ubicacion ||
-            "Centro / Palacio Municipal",
-        };
-        window.luminariaMQTT.publish("api/evento", payload);
-        closeModal(elements.simModal);
-      });
-    }
-
-    if (elements.simSensorNormal) {
-      elements.simSensorNormal.addEventListener("click", () => {
-        const payload = {
-          ApiKey: "ClaveUnicaParaSensoresToken123",
-          Tem: "23.0",
-          Hum: "40.0",
-        };
-        window.luminariaMQTT.publish("sensores/ambiente", payload);
-        closeModal(elements.simModal);
-      });
-    }
-
-    if (elements.simSensorAlerta) {
-      elements.simSensorAlerta.addEventListener("click", () => {
-        const payload = {
-          ApiKey: "ClaveUnicaParaSensoresToken123",
-          Tem: "39.5",
-          Hum: "82.0",
-        };
-        window.luminariaMQTT.publish("sensores/ambiente", payload);
-        closeModal(elements.simModal);
-      });
-    }
   }
 
   // ==========================================
@@ -1001,82 +681,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function setupSupabaseIntegration() {
-    if (!window.luminariaSupabase) return;
-
-    window.luminariaSupabase.onStatusChange((status) => {
-      if (!elements.mqttConsoleLog) return;
-      const timestamp = new Date().toLocaleTimeString();
-      const logRow = document.createElement("div");
-      const type = status === "connected" ? "info" : status === "error" ? "warn" : "info";
-      logRow.className = `log-row log-type-${type}`;
-
-      const message =
-        status === "connected"
-          ? `Supabase en línea (${window.luminariaSupabase.config.url})`
-          : `Supabase estado: ${status}`;
-
-      logRow.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-topic">[supabase]</span> <span class="log-text">${escapeHtml(message)}</span>`;
-
-      elements.mqttConsoleLog.prepend(logRow);
-      if (elements.mqttConsoleLog.children.length > 60) {
-        elements.mqttConsoleLog.removeChild(elements.mqttConsoleLog.lastChild);
-      }
-
-      // Si Supabase se conecta, sincronizar alertas de la nube y activar Realtime
-      if (status === "connected") {
-        window.luminariaSupabase.fetchAlertas().then((alerts) => {
-          if (Array.isArray(alerts) && alerts.length > 0) {
-            appState.alerts = alerts.map(normalizarAlertaAPI);
-            renderAlerts();
-            updateKPIs();
-            renderMapPins();
-          }
-        }).catch(() => {});
-
-        window.luminariaSupabase.subscribeToRealtime(
-          (payload) => {
-            if (payload.eventType === "INSERT" && payload.new) {
-              const incomingAlert = normalizarAlertaAPI(payload.new);
-              if (
-                !appState.alerts.some((a) =>
-                  String(a.id) === String(incomingAlert.id) ||
-                  esMismaAlertaActiva(a, incomingAlert)
-                )
-              ) {
-                appState.alerts.unshift(incomingAlert);
-                renderAlerts();
-                updateKPIs();
-                renderMapPins();
-              }
-            } else if (payload.eventType === "UPDATE" && payload.new) {
-              const updated = normalizarAlertaAPI(payload.new);
-              const idx = appState.alerts.findIndex((a) => String(a.id) === String(updated.id));
-              if (idx !== -1) {
-                appState.alerts[idx] = updated;
-                renderAlerts();
-                updateKPIs();
-                renderMapPins();
-              }
-            }
-          },
-          (payload) => {
-            if (payload.eventType === "UPDATE" && payload.new) {
-              const updatedTablero = normalizarTableroAPI(payload.new);
-              if (appState.tableros[updatedTablero.id]) {
-                appState.tableros[updatedTablero.id] = {
-                  ...appState.tableros[updatedTablero.id],
-                  ...updatedTablero,
-                };
-                refreshAllViews();
-              }
-            }
-          }
-        );
-      }
-    });
-  }
-
   function esMismaAlertaActiva(a, b) {
     if (!a || !b || a.resuelta || b.resuelta) return false;
     if (a.id_tablero !== b.id_tablero || a.tipo_evento !== b.tipo_evento) return false;
@@ -1094,30 +698,16 @@ document.addEventListener("DOMContentLoaded", () => {
       processElectricalTelemetry(event);
     }
 
-    // 1. Detectar si es un mensaje de telemetría de sensor ambiental
-    // Formato broker: {"ApiKey":"ClaveUnicaParaSensoresToken123","Tem":"23.0","Hum":"40.0"}
-    if (isSensorTelemetryEvent(event)) {
-      processSensorTelemetry(event);
-      return;
-    }
+    // Eventos eléctricos reales publicados por el backend tras su persistencia.
 
-    // 2. Eventos estándar de tableros eléctricos
     if (!event.tipo_evento) return;
 
     const tableroId = event.id_tablero || appState.selectedTableroId;
-    if (!appState.tableros[tableroId]) {
-      appState.tableros[tableroId] = {
-        id: tableroId,
-        nombre: tableroId,
-        ubicacion: event.ubicacion || "Ubicación Desconocida",
-        posX: 50,
-        posY: 50,
-        tension_v: 220.0,
-        focos: {},
-      };
-    }
-
     const tablero = appState.tableros[tableroId];
+    if (!tablero) {
+      console.warn(`[Luminaria] Evento recibido para tablero inexistente: ${tableroId}`);
+      return;
+    }
     if (event.ubicacion) tablero.ubicacion = event.ubicacion;
     tablero.ultimaLectura = event.timestamp || new Date().toISOString();
 
@@ -1125,7 +715,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let soundType = "info";
 
     if (event.tipo_evento === "BAJA_TENSION") {
-      const tension = toFiniteNumber(event.datos?.tension_medida_v, 185.0);
+      const tension = toFiniteNumber(event.datos?.tension_medida_v, NaN);
+      if (!Number.isFinite(tension)) return;
       tablero.tension_v = tension;
       tablero.fase = event.datos?.fase || "L1";
       tablero.fallaActiva = `Baja tensión: ${tension.toFixed(1)} V`;
@@ -1133,61 +724,57 @@ document.addEventListener("DOMContentLoaded", () => {
       alertTitle = `Baja Tensión Detectada: ${tension}V (Umbral: ${event.datos?.umbral_minimo_v || 190}V)`;
       soundType = "critical";
     } else if (event.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") {
-      const focoId = event.datos?.id_foco || "FOCO_DESCONOCIDO";
+      const focoId = event.datos?.id_foco;
+      if (!focoId) return;
       if (!tablero.focos[focoId]) {
         tablero.focos[focoId] = {
           id: focoId,
-          corriente_ma: 0,
+          corriente_ma: null,
           estado: "robado",
         };
       }
-      tablero.focos[focoId].corriente_ma =
-        event.datos?.corriente_actual_ma || 0.0;
+      const corrienteActual = toFiniteNumber(event.datos?.corriente_actual_ma, NaN);
+      if (Number.isFinite(corrienteActual)) tablero.focos[focoId].corriente_ma = corrienteActual;
       tablero.focos[focoId].estado = "robado";
       tablero.fallaActiva = "Desconexión detectada en el tablero";
       tablero.estado = "critico";
       alertTitle = `Desconexión Abrupta / Posible Robo en ${tablero.nombre || tableroId}`;
       soundType = "critical";
     } else if (event.tipo_evento === "FOCO_QUEMADO") {
-      const focoId = event.datos?.id_foco || "FOCO_DESCONOCIDO";
+      const focoId = event.datos?.id_foco;
+      if (!focoId) return;
       if (!tablero.focos[focoId]) {
         tablero.focos[focoId] = {
           id: focoId,
-          corriente_ma: 12.5,
+          corriente_ma: null,
           estado: "quemado",
         };
       }
-      tablero.focos[focoId].corriente_ma = toFiniteNumber(event.datos?.corriente_medida_ma, 12.5);
+      const corrienteMedida = toFiniteNumber(event.datos?.corriente_medida_ma, NaN);
+      if (Number.isFinite(corrienteMedida)) tablero.focos[focoId].corriente_ma = corrienteMedida;
       tablero.focos[focoId].estado = "quemado";
       tablero.fallaActiva = `Foco quemado detectado: ${focoId}`;
       tablero.estado = "advertencia";
       alertTitle = `Anomalía de Consumo / Foco Quemado en ${tablero.nombre || tableroId}`;
       soundType = "warning";
     } else if (event.tipo_evento === "TELEMETRIA_NORMAL") {
-      tablero.tension_v = toFiniteNumber(event.datos?.tension_medida_v, 220.0);
-      tablero.corriente_ma = toFiniteNumber(
+      const tensionMedida = toFiniteNumber(event.datos?.tension_medida_v, NaN);
+      if (!Number.isFinite(tensionMedida)) return;
+      tablero.tension_v = tensionMedida;
+      const corrienteMedida = toFiniteNumber(
         event.datos?.corriente_actual_ma ?? event.datos?.corriente_medida_ma,
-        tablero.corriente_ma,
+        NaN,
       );
-      if (event.datos?.focos_restaurados) {
-        event.datos.focos_restaurados.forEach((fId) => {
-          if (tablero.focos[fId]) {
-            tablero.focos[fId].estado = "ok";
-            tablero.focos[fId].corriente_ma = 450.0;
-          }
-        });
-      } else {
-        Object.keys(tablero.focos).forEach((fId) => {
-          tablero.focos[fId].estado = "ok";
-          tablero.focos[fId].corriente_ma = 450.0;
-        });
-      }
-      tablero.fallaActiva = "";
-      tablero.estado = "ok";
-      // Auto-resolver alertas activas previas de este tablero al restablecerse la telemetría normal
+      if (Number.isFinite(corrienteMedida)) tablero.corriente_ma = corrienteMedida;
       const focosRestaurados = Array.isArray(event.datos?.focos_restaurados)
         ? event.datos.focos_restaurados.map(String)
         : [];
+      focosRestaurados.forEach((fId) => {
+        if (tablero.focos[fId]) tablero.focos[fId].estado = "ok";
+      });
+      tablero.fallaActiva = "";
+      tablero.estado = "ok";
+      // Auto-resolver alertas activas previas de este tablero al restablecerse la telemetría normal
       appState.alerts.forEach((a) => {
         if (
           !a.resuelta &&
@@ -1195,17 +782,9 @@ document.addEventListener("DOMContentLoaded", () => {
           (a.tipo_evento === "BAJA_TENSION" ||
             ((a.tipo_evento === "FOCO_QUEMADO" ||
               a.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") &&
-             (focosRestaurados.length === 0 ||
-              focosRestaurados.includes(String(a.datos?.id_foco ?? a.id_foco_afectado ?? "")))))
+             focosRestaurados.includes(String(a.datos?.id_foco ?? a.id_foco_afectado ?? ""))))
         ) {
           a.resuelta = true;
-          if (
-            !appState.apiAvailable &&
-            window.luminariaSupabase?.status === "connected" &&
-            /^\d+$/.test(String(a.id))
-          ) {
-            window.luminariaSupabase.resolveAlerta(a.id, "AUTO_RESTABLECIDO");
-          }
         }
       });
       alertTitle = `Telemetría Normal Restablecida en ${tablero.nombre || tableroId}`;
@@ -1230,25 +809,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!yaActiva) {
         appState.alerts.unshift(alertRecord);
 
-        if (appState.apiAvailable) {
-          // El backend persistió el evento antes de publicarlo por MQTT.
-          fetchAlertasFromAPI().then((alertas) => {
-            appState.alerts = alertas.map(normalizarAlertaAPI);
-            refreshAllViews();
-          }).catch(() => {});
-        } else if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
-          window.luminariaSupabase.insertAlerta(alertRecord).then((persisted) => {
-            if (persisted && persisted.id_alerta) {
-              alertRecord.id = String(persisted.id_alerta);
-            }
-          }).catch((err) => console.warn("[Supabase] No se pudo persistir alerta:", err));
-
-          window.luminariaSupabase.updateTablero(tableroId, {
-            tension_medida_v: tablero.tension_v,
-            estado: tablero.estado,
-            focos: tablero.focos,
-          }).catch(() => {});
-        }
+        // El backend persistió el evento antes de publicarlo por MQTT.
+        fetchAlertasFromAPI().then((alertas) => {
+          appState.alerts = alertas.map(normalizarAlertaAPI);
+          refreshAllViews();
+        }).catch(() => {});
       }
 
       if (!yaActiva && appState.soundEnabled) {
@@ -1304,8 +869,9 @@ document.addEventListener("DOMContentLoaded", () => {
       let statusBadgeClass = isStale ? "badge-neutral" : "badge-ok";
       let statusIcon = isStale ? "fa-satellite-dish" : "fa-check-circle";
 
-      const voltageCritical = tablero.tension_v < 190.0;
-      const voltageWarning = tablero.tension_v >= 190.0 && tablero.tension_v < 210.0;
+      const hasVoltageReading = Number.isFinite(tablero.tension_v);
+      const voltageCritical = hasVoltageReading && tablero.tension_v < 190.0;
+      const voltageWarning = hasVoltageReading && tablero.tension_v >= 190.0 && tablero.tension_v < 210.0;
       const focos = Object.values(tablero.focos || {});
       const hayDesconexion = focos.some((foco) => foco.estado === "robado");
       const hayFallaLuminaria = focos.some((foco) => foco.estado === "quemado");
@@ -1336,7 +902,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const fallasActivas = [];
-      if (tablero.tension_v < 210) {
+      if (hasVoltageReading && tablero.tension_v < 210) {
         fallasActivas.push(`${tablero.tension_v < 190 ? "Baja tensión" : "Tensión fuera de rango"}: ${fmtVoltage(tablero.tension_v)} V`);
       }
       if (hayDesconexion) fallasActivas.push("Desconexión detectada en el tablero");
@@ -1355,7 +921,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const isSelected = tablero.id === appState.selectedTableroId;
       const isExpanded = tablero.id === appState.expandedTableroId;
       const pctVoltage = Math.min(
-        Math.max((tablero.tension_v / 250.0) * 100, 0),
+        Math.max(((tablero.tension_v || 0) / 250.0) * 100, 0),
         100,
       );
 
@@ -1425,7 +991,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Corriente Reportada</span>
-                <span class="expand-stat-val">${(toFiniteNumber(tablero.corriente_ma, 0) / 1000).toFixed(2)} A</span>
+                <span class="expand-stat-val">${Number.isFinite(tablero.corriente_ma) ? `${(tablero.corriente_ma / 1000).toFixed(2)} A` : "--"}</span>
               </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Último Reporte</span>
@@ -1453,9 +1019,6 @@ document.addEventListener("DOMContentLoaded", () => {
           appState.selectedTableroId = tablero.id;
           appState.expandedTableroId = shouldClose ? null : tablero.id;
 
-          if (elements.selectTablero) {
-            elements.selectTablero.value = tablero.id;
-          }
           updateTableroUI();
           renderMapPins();
         });
@@ -1530,66 +1093,30 @@ document.addEventListener("DOMContentLoaded", () => {
         const tecnicoResponsable =
           appState.userRole === "tecnico" ? "Técnico de Guardia" : "Administrador Municipal";
 
-        if (appState.apiAvailable) {
-          if (alert.resuelta) return;
-          btnResolve.disabled = true;
-          try {
-            await resolveAlertaAPI(alert.id);
-            alert.resuelta = true;
-            if (alert.id_tablero && appState.tableros[alert.id_tablero]) {
-              const tab = appState.tableros[alert.id_tablero];
-              const remainingActive = appState.alerts.filter(
-                (a) => a.id_tablero === alert.id_tablero && !a.resuelta && a.id !== alert.id
-              );
-              if (remainingActive.length === 0 && tab.tension_v >= 210.0) {
-                tab.estado = "ok";
-                tab.fallaActiva = "";
-                Object.values(tab.focos || {}).forEach((f) => { f.estado = "ok"; });
-              }
-            }
-            refreshAllViews();
-          } catch (error) {
-            console.warn("[Luminaria] No se pudo resolver la alerta en la API.", error);
-            btnResolve.disabled = false;
-          }
-          return;
+        if (alert.resuelta) return;
+        btnResolve.disabled = true;
+        try {
+          await resolveAlertaAPI(alert.id);
+          alert.resuelta = true;
+          refreshAllViews();
+        } catch (error) {
+          console.warn("[Luminaria] No se pudo resolver la alerta en la API.", error);
+          btnResolve.disabled = false;
         }
-
-        // Si Supabase está conectado, persistir la resolución en la nube con el técnico
-        if (window.luminariaSupabase && window.luminariaSupabase.status === "connected") {
-          btnResolve.disabled = true;
-          try {
-            await window.luminariaSupabase.resolveAlerta(alert.id, tecnicoResponsable);
-            alert.resuelta = true;
-            renderAlerts();
-            updateKPIs();
-            renderMapPins();
-            return;
-          } catch (e) {
-            console.warn("[Supabase] Error resolviendo alerta en nube:", e);
-            btnResolve.disabled = false;
-          }
-        }
-
-        // En simulación local pura, alternar estado
-        alert.resuelta = !alert.resuelta;
-        renderAlerts();
-        updateKPIs();
-        renderMapPins();
       });
 
       elements.alertsContainer.appendChild(card);
     });
   }
 
-  
-  
+
+
   let leafletMap = null;
   let leafletMarkers = {};
 
   function initLeafletMap() {
     const neuquenCoords = [-38.9516, -68.0591];
-    
+
     if (!elements.leafletMapContainer || typeof L === 'undefined') return;
 
     // Inicializar el mapa sin la marca de agua (attributionControl: false)
@@ -1607,7 +1134,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 100);
 
   function renderMapPins() {
-    if (!leafletMap) return; 
+    if (!leafletMap) return;
 
     const baseLat = -38.98;
     const baseLng = -68.08;
@@ -1670,7 +1197,7 @@ document.addEventListener("DOMContentLoaded", () => {
           opacity: 1,
           fillOpacity: 1
         }).addTo(leafletMap);
-        
+
         marker.bindTooltip(tablero.nombre || tablero.id, {
           direction: 'top',
           offset: [0, -10]
@@ -1679,7 +1206,6 @@ document.addEventListener("DOMContentLoaded", () => {
         marker.on("click", () => {
           appState.selectedTableroId = tablero.id;
           appState.expandedTableroId = tablero.id;
-          if (elements.selectTablero) elements.selectTablero.value = tablero.id;
           updateTableroUI();
           renderMapPins();
 
@@ -1809,6 +1335,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function fmtVoltage(v, decimals = 1) {
+    if (v === null || v === undefined || v === "") return "--";
     const n = Number(v);
     if (!isFinite(n)) return "--";
     return n.toFixed(decimals);
@@ -1824,96 +1351,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
   // TELEMETRÍA DE SENSORES Y GESTIÓN DE GRÁFICOS
   // ==========================================
-  function isSensorTelemetryEvent(event) {
-    if (!event || typeof event !== "object") return false;
-    return (
-      event.Tem !== undefined ||
-      event.Hum !== undefined ||
-      event.Amp !== undefined ||
-      event.amp !== undefined ||
-      event.corriente !== undefined ||
-      (event.ApiKey !== undefined &&
-        (event.Tem !== undefined || event.Hum !== undefined || event.Amp !== undefined)) ||
-      event.tipo_evento === "TELEMETRIA_SENSOR"
-    );
-  }
-
-  function processSensorTelemetry(event) {
-    const rawTem =
-      event.Tem !== undefined
-        ? event.Tem
-        : event.tem !== undefined
-          ? event.tem
-          : event.temperatura || event.temp;
-    const rawHum =
-      event.Hum !== undefined
-        ? event.Hum
-        : event.hum !== undefined
-          ? event.hum
-          : event.humedad || event.hum;
-    const rawAmp =
-      event.Amp !== undefined
-        ? event.Amp
-        : event.amp !== undefined
-          ? event.amp
-          : event.corriente_a !== undefined
-            ? event.corriente_a
-            : event.corriente;
-    const apiKey = event.ApiKey || event.apiKey || appState.sensor.apiKey;
-
-    const tempVal = parseFloat(rawTem);
-    const humVal = parseFloat(rawHum);
-    const ampVal = parseFloat(rawAmp);
-
-    if (!isNaN(tempVal)) {
-      appState.sensor.temperatura = Number(tempVal.toFixed(1));
-    }
-    if (!isNaN(humVal)) {
-      appState.sensor.humedad = Number(humVal.toFixed(1));
-    }
-    if (!isNaN(ampVal)) {
-      appState.sensor.corriente_a = Number(ampVal.toFixed(1));
-    }
-    if (apiKey) {
-      appState.sensor.apiKey = String(apiKey);
-    }
-
-    const nowTime = new Date().toLocaleTimeString("es-AR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    appState.sensor.lastUpdate = nowTime;
-
-    // Añadir al historial para los gráficos
-    appState.sensor.history.push({
-      time: nowTime,
-      temp: appState.sensor.temperatura,
-      hum: appState.sensor.humedad,
-      amp: appState.sensor.corriente_a,
-    });
-
-    if (appState.sensor.history.length > appState.sensor.maxHistoryPoints) {
-      appState.sensor.history.shift();
-    }
-
-    // Verificar si está dentro de los rangos aceptables
-    const tempInRange =
-      appState.sensor.temperatura >= appState.sensor.ranges.temp.min &&
-      appState.sensor.temperatura <= appState.sensor.ranges.temp.max;
-    const ampInRange =
-      appState.sensor.corriente_a >= appState.sensor.ranges.amp.min &&
-      appState.sensor.corriente_a <= appState.sensor.ranges.amp.max;
-
-    // Sonido sutil de advertencia si hay anomalía
-    if ((!tempInRange || !ampInRange) && appState.soundEnabled) {
-      playAlertAudioSound("warning");
-    }
-
-    // Los paquetes ambientales heredados se conservan para compatibilidad del
-    // broker, pero no reemplazan la vista de diagnóstico eléctrico.
-  }
-
   function getChartThemeColors() {
     const isLight =
       document.documentElement.getAttribute("data-theme") === "light" ||
@@ -1930,346 +1367,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function initSensorCharts() {
-    if (typeof Chart === "undefined") {
-      console.warn(
-        "Chart.js no disponible para renderizar gráficos de sensores.",
-      );
-      return;
-    }
-
-    const theme = getChartThemeColors();
-    const ctxLine = document.getElementById("sensorLineChart");
-    const ctxBar = document.getElementById("sensorBarChart");
-
-    // 1. Gráfico de Líneas (Historial de Temperatura y Consumo)
-    if (ctxLine) {
-      sensorLineChartInstance = new Chart(ctxLine, {
-        type: "line",
-        data: {
-          labels: appState.sensor.history.map((h) => h.time),
-          datasets: [
-            {
-              label: "Temperatura (°C)",
-              data: appState.sensor.history.map((h) => h.temp),
-              borderColor: "#f59e0b",
-              backgroundColor: "rgba(245, 158, 11, 0.12)",
-              borderWidth: 2.5,
-              tension: 0.35,
-              fill: true,
-              pointBackgroundColor: "#f59e0b",
-              pointBorderColor: "#ffffff",
-              pointBorderWidth: 1.5,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              yAxisID: "yTemp",
-            },
-            {
-              label: "Consumo (A)",
-              data: appState.sensor.history.map((h) => h.amp !== undefined ? h.amp : 3.6),
-              borderColor: "#3b82f6",
-              backgroundColor: "rgba(59, 130, 246, 0.12)",
-              borderWidth: 2.5,
-              tension: 0.35,
-              fill: true,
-              pointBackgroundColor: "#3b82f6",
-              pointBorderColor: "#ffffff",
-              pointBorderWidth: 1.5,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              yAxisID: "yAmp",
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {
-            mode: "index",
-            intersect: false,
-          },
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              backgroundColor: theme.tooltipBg,
-              titleColor: theme.tooltipText,
-              bodyColor: theme.tooltipText,
-              borderColor: theme.tooltipBorder,
-              borderWidth: 1,
-              padding: 10,
-              callbacks: {
-                label: function (context) {
-                  const unit = context.dataset.label.includes("Temp") ? "°C" : " A";
-                  return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}${unit}`;
-                },
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: { color: theme.gridColor },
-              ticks: {
-                color: theme.textDim,
-                font: { family: "JetBrains Mono", size: 11 },
-              },
-            },
-            yTemp: {
-              type: "linear",
-              display: true,
-              position: "left",
-              min: 0,
-              max: 50,
-              title: {
-                display: true,
-                text: "Temperatura (°C)",
-                color: "#f59e0b",
-                font: { weight: "bold", size: 11 },
-              },
-              grid: { color: theme.gridColor },
-              ticks: {
-                color: theme.textDim,
-                font: { family: "JetBrains Mono", size: 11 },
-              },
-            },
-            yAmp: {
-              type: "linear",
-              display: true,
-              position: "right",
-              min: 0,
-              max: 20,
-              title: {
-                display: true,
-                text: "Consumo (A)",
-                color: "#3b82f6",
-                font: { weight: "bold", size: 11 },
-              },
-              grid: { drawOnChartArea: false },
-              ticks: {
-                color: theme.textDim,
-                font: { family: "JetBrains Mono", size: 11 },
-              },
-            },
-          },
-        },
-      });
-    }
-
-    // 2. Gráfico de Barras (Consumo y Temperatura vs Rangos Aceptables)
-    if (ctxBar) {
-      const temp = appState.sensor.temperatura;
-      const amp = appState.sensor.corriente_a;
-      const tempInRange =
-        temp >= appState.sensor.ranges.temp.min &&
-        temp <= appState.sensor.ranges.temp.max;
-      const ampInRange =
-        amp >= appState.sensor.ranges.amp.min &&
-        amp <= appState.sensor.ranges.amp.max;
-
-      sensorBarChartInstance = new Chart(ctxBar, {
-        type: "bar",
-        data: {
-          labels: ["Consumo (A)", "Temperatura (°C)"],
-          datasets: [
-            {
-              label: "Valor Actual Medido",
-              data: [amp, temp],
-              backgroundColor: [
-                ampInRange ? "#3b82f6" : amp > 10 ? "#ef4444" : "#f59e0b",
-                tempInRange ? "#10b981" : temp > 35 ? "#ef4444" : "#f59e0b",
-              ],
-              borderColor: [
-                ampInRange ? "#1d4ed8" : "#dc2626",
-                tempInRange ? "#059669" : "#dc2626",
-              ],
-              borderWidth: 1.5,
-              borderRadius: 8,
-              barPercentage: 0.5,
-              categoryPercentage: 0.5,
-            },
-            {
-              label: "Mínimo Aceptable",
-              data: [appState.sensor.ranges.amp.min, appState.sensor.ranges.temp.min],
-              backgroundColor: "rgba(79, 179, 224, 0.25)",
-              borderColor: "rgba(79, 179, 224, 0.8)",
-              borderWidth: 1.5,
-              borderRadius: 6,
-              barPercentage: 0.5,
-              categoryPercentage: 0.5,
-            },
-            {
-              label: "Máximo Aceptable",
-              data: [appState.sensor.ranges.amp.max, appState.sensor.ranges.temp.max],
-              backgroundColor: "rgba(216, 180, 92, 0.25)",
-              borderColor: "rgba(216, 180, 92, 0.8)",
-              borderWidth: 1.5,
-              borderRadius: 6,
-              barPercentage: 0.5,
-              categoryPercentage: 0.5,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: true,
-              position: "top",
-              labels: {
-                color: theme.textColor,
-                font: { family: "Outfit", size: 12, weight: "bold" },
-                boxWidth: 14,
-                padding: 12,
-              },
-            },
-            tooltip: {
-              backgroundColor: theme.tooltipBg,
-              titleColor: theme.tooltipText,
-              bodyColor: theme.tooltipText,
-              borderColor: theme.tooltipBorder,
-              borderWidth: 1,
-              padding: 10,
-              callbacks: {
-                afterBody: function (items) {
-                  const ampVal = appState.sensor.corriente_a;
-                  const tempVal = appState.sensor.temperatura;
-                  const ampOk = ampVal >= 1.0 && ampVal <= 10.0;
-                  const tempOk = tempVal >= 18 && tempVal <= 35;
-                  return `\nConsumo (1.0A - 10.0A): ${ampOk ? "✅ Normal" : "⚠️ Fuera de Rango"}\nTemp (18°C - 35°C): ${tempOk ? "✅ Normal" : "⚠️ Fuera de Rango"}`;
-                },
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: { color: theme.gridColor },
-              ticks: {
-                color: theme.textColor,
-                font: { family: "Outfit", size: 13, weight: "bold" },
-              },
-            },
-            y: {
-              min: 0,
-              max: 50,
-              grid: { color: theme.gridColor },
-              ticks: {
-                color: theme.textDim,
-                font: { family: "JetBrains Mono", size: 11 },
-              },
-              title: {
-                display: true,
-                text: "Valor Medido",
-                color: theme.textColor,
-                font: { weight: "bold", size: 11 },
-              },
-            },
-          },
-        },
-      });
-    }
-  }
-
-  function updateSensorUI() {
-    const temp = appState.sensor.temperatura;
-    const hum = appState.sensor.humedad;
-    const amp = appState.sensor.corriente_a;
-
-    if (elements.sensorCurrentTemp) {
-      elements.sensorCurrentTemp.textContent = temp.toFixed(1);
-    }
-    if (elements.sensorCurrentHum) {
-      elements.sensorCurrentHum.textContent = hum.toFixed(1);
-    }
-    if (elements.sensorCurrentAmp) {
-      elements.sensorCurrentAmp.textContent = amp.toFixed(1);
-    }
-    if (elements.sensorApiKey) {
-      elements.sensorApiKey.textContent = appState.sensor.apiKey;
-    }
-    if (elements.sensorLastUpdate) {
-      elements.sensorLastUpdate.textContent = appState.sensor.lastUpdate;
-    }
-
-    // Badges de rango aceptable
-    const ampMin = appState.sensor.ranges.amp.min;
-    const ampMax = appState.sensor.ranges.amp.max;
-    if (elements.sensorAmpBadge) {
-      if (amp < ampMin) {
-        elements.sensorAmpBadge.className = "sensor-range-badge badge-warning";
-        elements.sensorAmpBadge.textContent = `Sin Consumo (<${ampMin}A)`;
-      } else if (amp > ampMax) {
-        elements.sensorAmpBadge.className = "sensor-range-badge badge-critical";
-        elements.sensorAmpBadge.textContent = `Sobrecorriente (>${ampMax}A)`;
-      } else {
-        elements.sensorAmpBadge.className = "sensor-range-badge badge-ok";
-        elements.sensorAmpBadge.textContent = "Consumo Normal";
-      }
-    }
-
-    const tempMin = appState.sensor.ranges.temp.min;
-    const tempMax = appState.sensor.ranges.temp.max;
-    if (elements.sensorTempBadge) {
-      if (temp < tempMin) {
-        elements.sensorTempBadge.className = "sensor-range-badge badge-warning";
-        elements.sensorTempBadge.textContent = `Baja Temp (<${tempMin}°C)`;
-      } else if (temp > tempMax) {
-        elements.sensorTempBadge.className =
-          "sensor-range-badge badge-critical";
-        elements.sensorTempBadge.textContent = `Alta Temp (>${tempMax}°C)`;
-      } else {
-        elements.sensorTempBadge.className = "sensor-range-badge badge-ok";
-        elements.sensorTempBadge.textContent = "Rango Aceptable";
-      }
-    }
-
-    const humMin = appState.sensor.ranges.hum.min;
-    const humMax = appState.sensor.ranges.hum.max;
-    if (elements.sensorHumBadge) {
-      if (hum < humMin) {
-        elements.sensorHumBadge.className = "sensor-range-badge badge-warning";
-        elements.sensorHumBadge.textContent = `Baja Humedad (<${humMin}%)`;
-      } else if (hum > humMax) {
-        elements.sensorHumBadge.className = "sensor-range-badge badge-critical";
-        elements.sensorHumBadge.textContent = `Alta Humedad (>${humMax}%)`;
-      } else {
-        elements.sensorHumBadge.className = "sensor-range-badge badge-ok";
-        elements.sensorHumBadge.textContent = "Rango Aceptable";
-      }
-    }
-
-    // Actualizar Gráfico de Líneas
-    if (sensorLineChartInstance) {
-      sensorLineChartInstance.data.labels = appState.sensor.history.map(
-        (h) => h.time,
-      );
-      sensorLineChartInstance.data.datasets[0].data =
-        appState.sensor.history.map((h) => h.temp);
-      sensorLineChartInstance.data.datasets[1].data =
-        appState.sensor.history.map((h) => h.amp !== undefined ? h.amp : 3.6);
-      sensorLineChartInstance.update();
-    }
-
-    // Actualizar Gráfico de Barras
-    if (sensorBarChartInstance) {
-      const tempInRange = temp >= tempMin && temp <= tempMax;
-      const ampInRange = amp >= ampMin && amp <= ampMax;
-
-      sensorBarChartInstance.data.datasets[0].data = [amp, temp];
-      sensorBarChartInstance.data.datasets[0].backgroundColor = [
-        ampInRange ? "#3b82f6" : amp > ampMax ? "#ef4444" : "#f59e0b",
-        tempInRange ? "#10b981" : temp > tempMax ? "#ef4444" : "#f59e0b",
-      ];
-      sensorBarChartInstance.data.datasets[0].borderColor = [
-        ampInRange ? "#1d4ed8" : "#dc2626",
-        tempInRange ? "#059669" : "#dc2626",
-      ];
-      sensorBarChartInstance.update();
-    }
-  }
-
-  function updateSensorChartsTheme() {
+  function updateTelemetryChartsTheme() {
     const theme = getChartThemeColors();
 
     if (sensorLineChartInstance) {
@@ -2388,6 +1486,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadTelemetryHistory() {
     const tableroId = appState.telemetry.selectedTableroId;
+    if (!tableroId) {
+      updateTelemetryUI();
+      return;
+    }
     try {
       const params = new URLSearchParams({ id_tablero: tableroId, inicio: telemetryStartDate(), limit: "720" });
       const data = await requestAPI(`/telemetria/historico?${params.toString()}`);

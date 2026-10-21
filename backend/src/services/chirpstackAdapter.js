@@ -227,35 +227,14 @@ function extractMeasurements(body) {
   // Extracción de lectura de tensión directa o potenciometro
   const rawTension = merged.tension_medida_v
     ?? merged.tension
-    ?? merged.voltaje
     ?? merged.voltage
-    ?? merged.volts
-    ?? merged.v;
+    ?? merged.volts;
 
   const rawPotenciometro = merged.potenciometro ?? merged.adc ?? merged.adc_val;
 
-  let tension;
-  const scalePot = process.env.CHIRPSTACK_SCALE_POTENTIOMETER !== 'false';
-  const potMaxV = parseFloat(process.env.CHIRPSTACK_POTENTIOMETER_MAX_V || '250.0');
-
-  if (rawTension !== undefined && typeof rawTension === 'number' && !isNaN(rawTension)) {
-    // Si viene tensión en rango de Arduino (0-5V) y la escala de simulación está activa:
-    // Se escala 0-5V -> 0-250V para que al girar el potenciómetro se puedan simular
-    // estados normales (~220V) y disparar BAJA_TENSION (< 190V) tal como fue diseñado en el laboratorio.
-    if (scalePot && rawTension <= 5.0) {
-      tension = Number(((rawTension / 5.0) * potMaxV).toFixed(2));
-    } else {
-      tension = Number(rawTension.toFixed(2));
-    }
-  } else if (rawPotenciometro !== undefined && typeof rawPotenciometro === 'number' && !isNaN(rawPotenciometro)) {
-    if (scalePot) {
-      tension = Number(((rawPotenciometro / 1023.0) * potMaxV).toFixed(2));
-    } else {
-      tension = Number(((rawPotenciometro * 5.0) / 1023.0).toFixed(2));
-    }
-  } else {
-    // Valor nominal seguro si no se recibió dato de tensión
-    tension = 220.0;
+  let tension = null;
+  if (typeof rawTension === 'number' && Number.isFinite(rawTension)) {
+    tension = Number(rawTension.toFixed(2));
   }
 
   // Extracción de corriente
@@ -278,12 +257,17 @@ function extractMeasurements(body) {
     fase = 'L1';
   }
 
+  const corrientePrevia = merged.corriente_previa_ma ?? merged.corriente_anterior_ma;
+  const tiempoCaidaMs = merged.tiempo_caida_ms;
+
   return {
-    tension: typeof tension === 'number' && !isNaN(tension) ? tension : 220.0,
-    corriente: typeof corriente === 'number' && !isNaN(corriente) ? Number(corriente.toFixed(2)) : 450.0,
+    tension,
+    corriente: typeof corriente === 'number' && Number.isFinite(corriente) ? Number(corriente.toFixed(2)) : null,
+    corrientePrevia: typeof corrientePrevia === 'number' && Number.isFinite(corrientePrevia) ? corrientePrevia : null,
+    tiempoCaidaMs: typeof tiempoCaidaMs === 'number' && Number.isFinite(tiempoCaidaMs) ? tiempoCaidaMs : null,
     fase,
     focoAfectado: merged.id_foco || merged.foco || null,
-    estadoCircuito: merged.estado_circuito || 'ACTIVO',
+    estadoCircuito: merged.estado_circuito || null,
     rawObject: merged,
     rawPotenciometro,
     sensorVoltaje: merged.voltaje,
@@ -304,12 +288,18 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
   const {
     tension,
     corriente,
+    corrientePrevia,
+    tiempoCaidaMs,
+    estadoCircuito,
     fase,
     focoAfectado,
     rawObject,
     rawPotenciometro,
     sensorVoltaje,
   } = extractMeasurements(body);
+  if (!Number.isFinite(tension)) {
+    throw new Error('El uplink no contiene una medición válida de tension_medida_v.');
+  }
 
   // Timestamp ISO
   let timestamp = body.time || body.publishedAt;
@@ -332,24 +322,29 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
       tension_nominal_v: 220.0,
       umbral_minimo_v: 190.0,
       fase,
-      corriente_medida_ma: corriente,
-      corriente_actual_ma: corriente,
-      rssi_lora: rssi !== null ? rssi : -90,
+      ...(Number.isFinite(corriente) ? { corriente_medida_ma: corriente, corriente_actual_ma: corriente } : {}),
+      ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',
     };
-  } else if (focoAfectado && corriente < 50) {
+  } else if (
+    focoAfectado &&
+    Number.isFinite(corriente) && corriente < 50 &&
+    Number.isFinite(corrientePrevia) && corrientePrevia >= 50 &&
+    Number.isFinite(tiempoCaidaMs) && tiempoCaidaMs <= 200 &&
+    estadoCircuito === 'ACTIVO'
+  ) {
     tipoEvento = 'DESCONEXION_ABRUPTA_FOCO';
     severidad = 'CRITICA';
     datos = {
       id_foco: String(focoAfectado),
-      corriente_previa_ma: 450.0,
+      corriente_previa_ma: corrientePrevia,
       corriente_actual_ma: corriente,
-      tiempo_caida_ms: 120,
+      tiempo_caida_ms: tiempoCaidaMs,
       estado_circuito: 'ACTIVO',
       tension_medida_v: tension,
       tension_nominal_v: 220.0,
       fase,
-      rssi_lora: rssi !== null ? rssi : -90,
+      ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',
     };
   } else {
@@ -358,9 +353,8 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
       tension_medida_v: tension,
       tension_nominal_v: 220.0,
       fase,
-      corriente_medida_ma: corriente,
-      corriente_actual_ma: corriente,
-      rssi_lora: rssi !== null ? rssi : -90,
+      ...(Number.isFinite(corriente) ? { corriente_medida_ma: corriente, corriente_actual_ma: corriente } : {}),
+      ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',
     };
   }

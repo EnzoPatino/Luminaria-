@@ -292,51 +292,6 @@ html, body {
   align-items: center;
   gap: 0.65rem;
 }
-
-/* Selector de Vista por Rol (Supervisor / Técnico) */
-.role-selector-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.38rem 0.75rem;
-  background: var(--bg-dark);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  transition: var(--transition);
-}
-
-.role-selector-wrap:hover,
-.role-selector-wrap:focus-within {
-  border-color: var(--border-focus);
-}
-
-.role-selector-wrap .role-icon {
-  font-size: 0.9rem;
-  color: var(--color-accent-text);
-  transition: var(--transition);
-}
-
-.role-select {
-  background: transparent;
-  border: none;
-  color: var(--text-main);
-  font-family: var(--font-sans);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-}
-
-.role-select option {
-  background: var(--bg-card);
-  color: var(--text-main);
-}
-
-/* Ocultar elementos exclusivos de Supervisor en Vista Técnico */
-[data-role="tecnico"] [data-role-restricted="supervisor"] {
-  display: none !important;
-}
-
 .btn-text-mobile {
   display: none;
 }
@@ -357,11 +312,6 @@ html, body {
 .status-dot.disconnected {
   background-color: var(--color-critical);
   box-shadow: 0 0 10px var(--color-critical);
-}
-
-.status-dot.simulating {
-  background-color: var(--color-warning);
-  box-shadow: 0 0 10px var(--color-warning);
 }
 
 /* Botones Accesibles */
@@ -399,16 +349,6 @@ html, body {
 .btn-secondary:hover {
   background: var(--border-color);
   color: var(--text-main);
-}
-
-.btn-sim {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.25);
-}
-.btn-sim:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
 }
 
 .btn-icon {
@@ -1367,7 +1307,6 @@ html, body {
   color: var(--text-main);
 }
 
-.log-type-sim, .log-type-simulated { color: var(--color-warning); }
 .log-type-err, .log-type-error { color: var(--color-critical); }
 .log-type-incoming { color: var(--color-accent-text); }
 .log-type-outgoing { color: #a78bfa; }
@@ -1480,46 +1419,6 @@ html, body {
   gap: 0.65rem;
   justify-content: flex-end;
   margin-top: 0.5rem;
-}
-
-.sim-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.65rem;
-}
-
-.sim-option {
-  background: var(--bg-dark);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: 0.8rem 0.95rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  transition: var(--transition);
-  text-align: left;
-  color: var(--text-main);
-}
-
-.sim-option:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--text-dim);
-  transform: translateX(2px);
-}
-
-.sim-option-content h4 {
-  font-size: 0.88rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.sim-option-content p {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 0.15rem;
 }
 
 /* ==========================================================================
@@ -1916,36 +1815,6 @@ html, body {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-muted);
-}
-
-.sensor-demo-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 0.85rem 1.15rem;
-  background: var(--color-accent-bg);
-  border: 1px solid var(--color-accent-soft);
-  border-radius: var(--radius-md);
-  color: var(--text-main);
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-
-.sensor-demo-note i {
-  font-size: 1.15rem;
-  color: var(--color-accent-text);
-  margin-top: 0.15rem;
-  flex-shrink: 0;
-}
-
-.sensor-demo-note code {
-  background: var(--bg-dark);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  color: var(--color-accent-text);
-  border: 1px solid var(--border-color);
 }
 
 /* Grilla de Tarjetas KPI de Sensor */

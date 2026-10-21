@@ -10,11 +10,9 @@
 
 Project Luminaria es una plataforma integral de monitoreo inteligente de tableros electricos de alumbrado publico. La arquitectura del sistema esta compuesta por:
 
-1. **Frontend Web (Vanilla JS + Supabase Client):** Panel de control institucional en tiempo real, consumo de telemetría por WebSockets/MQTT, mapas interactivos SVG, gráficos analíticos y persistencia en la nube mediante Supabase. Incluye modo de simulación offline como fallback de tolerancia a fallos.
+1. **Frontend Web (Vanilla JS):** Panel de control institucional en tiempo real, consumo de telemetría por WebSockets/MQTT, mapas interactivos SVG, gráficos analíticos y consulta persistente a través de la API local. Requiere la API local y el broker para reflejar datos reales.
 2. **Backend REST & Worker MQTT (Node.js + Express):** Servicio API para gestión de tableros, alertas y health check, junto a un microservicio worker que ingesta eventos por TCP (puerto 1883) directamente a PostgreSQL.
-3. **Persistencia Híbrida de Base de Datos:**
-   * **Supabase Cloud (PostgreSQL 15+):** Almacenamiento administrado en la nube con Row Level Security (RLS), tiempo real y sincronización persistente de tableros y alertas (`supabase_schema.sql`).
-   * **PostgreSQL Local:** Motor relacional con migraciones (`001_init_schema.sql`), ingestión de series temporales masivas de sensores y mantenimiento automático con agregaciones diarias.
+3. **Persistencia PostgreSQL Local:** Motor relacional con migraciones (`backend/src/db/migrations/`), ingestión de series temporales de sensores y mantenimiento automático.
 4. **Infraestructura Contenerizada:** Broker Eclipse Mosquitto con perfiles de acceso (TCP 1883 + WebSockets 9001), PostgreSQL y proxy inverso Nginx.
 
 > La documentación detallada para el equipo de base de datos se encuentra en [`Documentacion/MANUAL_BASE_DE_DATOS.md`](MANUAL_BASE_DE_DATOS.md).
@@ -35,8 +33,7 @@ Project_Luminaria/
 |-- js/
 |   |-- app.js
 |   |-- mqtt-client.js
-|   `-- supabase-client.js
-|-- backend/
+||-- backend/
 |   |-- server.js
 |   |-- package.json
 |   `-- src/
@@ -70,8 +67,7 @@ Project_Luminaria/
 |       |-- routes/
 |       |   |-- alertaRoutes.js (Protegido con requireRole)
 |       |   |-- authRoutes.js (/api/auth/login, /register, /me)
-|       |   |-- configRoutes.js
-|       |   |-- eventRoutes.js
+|    |       |   |-- eventRoutes.js
 |       |   |-- healthRoutes.js (Circuit Breaker y estado MQTT)
 |       |   |-- index.js
 |       |   |-- tableroRoutes.js
@@ -99,7 +95,6 @@ Project_Luminaria/
 |   |-- CONTEXTO_TECNICO.md
 |   |-- MATRIZ_DE_TAREAS_POR_NIVEL.md
 |   `-- PLAN_DE_TRABAJO_SCRUM.md
-|-- supabase_schema.sql
 |-- docker-compose.yml
 |-- docker-compose.db.yml
 |-- MANUAL_DESARROLLADOR.md
@@ -125,13 +120,13 @@ Project_Luminaria/
          ┌─────────────────────────┐     ┌────────────────────────────┐
          │ NAVEGADOR (FRONTEND)    │     │ BACKEND WORKER INGESTOR    │
          │ • index.html + Paho     │     │ • Node.js subscriber       │
-         │ • supabase-client.js    │     │ • Validación Zod           │
+         │ • API REST local       │     │ • Validación Zod           │
          │ • app.js (UI en vivo)   │     │ • REST API (/api/)         │
          └────────────┬────────────┘     └─────────────┬──────────────┘
                       │                                │
                       ▼ HTTPS / Realtime               ▼ Pool pg
          ┌─────────────────────────┐     ┌────────────────────────────┐
-         │ SUPABASE CLOUD (PG)     │     │ POSTGRESQL LOCAL           │
+         │                         │     │ POSTGRESQL LOCAL           │
          │ • Tableros & Alertas    │     │ • Lecturas telemétricas    │
          │ • Row Level Security    │     │ • Mantenimiento & Purga    │
          └─────────────────────────┘     └────────────────────────────┘
@@ -146,12 +141,11 @@ La UI se organiza en cuatro pestañas principales:
 - **Tableros Electricos:** grilla de tarjetas por tablero con tension, fase, luminarias operativas y estado semaforo.
 - **Mapa de Zonas:** mapa SVG representativo con pines interactivos por tablero.
 - **Alertas:** historial filtrable por `ALL`, `CRITICA`, `ADVERTENCIA` e `INFO`; cada alerta puede marcarse como resuelta.
-- **Consola MQTT:** registro de mensajes entrantes, salientes, simulados y errores de conexion.
+- **Consola MQTT:** registro de mensajes entrantes, salientes y errores de conexión.
 
 La cabecera incluye:
 
 - estado de conexion MQTT;
-- acceso al simulador;
 - configuracion del servidor MQTT;
 - activacion o silenciamiento del sonido de alarma;
 - **interruptor de tema claro/oscuro** (boton con icono `fa-moon` / `fa-sun`).
@@ -378,8 +372,7 @@ El backend opera como un servicio autónomo y resiliente, diseñado para alta co
 
 | Método | Ruta | Acceso / Rol | Descripción |
 |---|---|---|---|
-| `GET` | `/api/health` | Público | Health check integral con **Circuit Breaker** (BD, worker MQTT, Supabase Cloud y uptime). |
-| `GET` | `/api/config` | Público | Configuración pública de red y tópicos MQTT permitidos. |
+| `GET` | `/api/health` | Público | Health check integral con **Circuit Breaker** (PostgreSQL, worker MQTT y uptime). |
 | `POST` | `/api/auth/login` | Público | Autenticación con email/password. Retorna JWT con claims de usuario y rol. Registra auditoría. |
 | `POST` | `/api/auth/register` | `admin` | Alta de nuevo operador (`admin`, `tecnico`) con hashing seguro `scrypt`. |
 | `GET` | `/api/auth/me` | Autenticado | Retorna los datos y rol del token JWT activo. |
@@ -475,7 +468,7 @@ El backend opera como un servicio autónomo y resiliente, diseñado para alta co
 - **Autenticación JWT y RBAC (BE-04 / BB-10):** Migración `002_usuarios_y_audit.sql`, modelo `usuariosModel`, servicio `authService` con hashing `scrypt` y middleware `authMiddleware`.
 - **Auditoría de Operaciones (SEC-03):** Tabla `audit_log`, middleware `auditMiddleware` para trazabilidad de logins y resoluciones técnicas (`resuelto_por`).
 - **Resiliencia de Base de Datos (BE-07):** Reintentos automáticos con backoff exponencial y jitter en `database.js` (`queryWithRetry`).
-- **Health Check y Circuit Breaker (BE-08):** Monitor inteligente de base de datos con estados `closed`/`open`/`half-open`, reporte en vivo de suscriptor MQTT y cliente Supabase.
+- **Health Check y Circuit Breaker (BE-08):** Monitor inteligente de base de datos con estados `closed`/`open`/`half-open`, reporte en vivo de suscriptor MQTT.
 - **Logging Estructurado y Correlación (BE-09):** Módulo `logger.js` y middleware `X-Correlation-Id` para rastreo unificado de eventos.
 - **Migraciones Secuenciales:** Runner `migrate.js` actualizado para ejecutar dinámicamente todos los archivos `.sql` en orden alfabético.
 - **Optimizaciones Frontend Previas:** Corrección del menú hamburguesa en móviles, sanitización XSS, singleton de AudioContext y soporte completo para modo oscuro anti-flash.

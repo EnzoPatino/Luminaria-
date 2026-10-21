@@ -1,14 +1,15 @@
 /**
  * Project Luminaria - Cliente MQTT para Mosquitto (WebSocket)
  * Municipalidad de Neuquén
- * Manejador de comunicación MQTT con fallback a modo simulación
+ * Cliente MQTT para conexión al broker Mosquitto por WebSocket
  */
 
 class LuminariaMQTTClient {
   constructor() {
     this.client = null;
     this.isConnected = false;
-    this.isSimulationMode = true; // Por defecto inicia en modo simulación
+    this.reconnectTimer = null;
+    this.reconnectDelayMs = 5000;
 
     const isBrowser = typeof window !== "undefined";
     const defaultHost = isBrowser && window.location.hostname ? window.location.hostname : "localhost";
@@ -84,11 +85,9 @@ class LuminariaMQTTClient {
     }
 
     if (typeof Paho === "undefined" || !Paho.MQTT) {
-      this.log(
-        "Librería Paho MQTT no detectada en el navegador. Activando modo simulación.",
-        "warning",
-      );
-      this.enableSimulationMode("Paho MQTT no disponible");
+      this.log("Librería Paho MQTT no disponible.", "error");
+      this.notifyStatusChange("disconnected", "Cliente MQTT no disponible");
+      this.scheduleReconnect();
       return;
     }
     try {
@@ -134,13 +133,16 @@ class LuminariaMQTTClient {
       this.client.connect(connectOptions);
     } catch (err) {
       this.log(`Error al inicializar cliente MQTT: ${err.message}`, "error");
-      this.enableSimulationMode(`Error de conexión: ${err.message}`);
+      this.isConnected = false;
+      this.notifyStatusChange("disconnected", "Error de conexión MQTT");
+      this.scheduleReconnect();
     }
   }
 
   handleConnectSuccess() {
     this.isConnected = true;
-    this.isSimulationMode = false;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this._triedPort9001 = false;
     this.log(
       `¡Conectado exitosamente a Mosquitto MQTT! ClientID: ${this.config.clientId}`,
@@ -174,22 +176,22 @@ class LuminariaMQTTClient {
       return;
     }
 
-    this.enableSimulationMode(
-      `Fallo de conexión (${errMsg}). Modo simulación activado.`,
-    );
+    this.client = null;
+    this.notifyStatusChange("disconnected", `Broker no disponible: ${errMsg}`);
+    this.scheduleReconnect();
   }
 
   handleConnectionLost(responseObject) {
     this.isConnected = false;
     if (responseObject.errorCode !== 0) {
+      this.client = null;
       this.log(
         `Conexión perdida con Mosquitto: ${responseObject.errorMessage}`,
         "error",
       );
-      this.enableSimulationMode(
-        "Conexión perdida con broker. Reintentando o usando simulación.",
-      );
     }
+    this.notifyStatusChange("disconnected", "Conexión perdida. Reintentando…");
+    this.scheduleReconnect();
   }
 
   handleMessageArrived(message) {
@@ -251,40 +253,16 @@ class LuminariaMQTTClient {
         this.log(`Error al publicar mensaje: ${e.message}`, "error", topic);
       }
     } else {
-      // Si está en simulación, procesar directo internamente
-      this.log(
-        `[SIMULACIÓN] Evento emitido localmente en [${topic}]: ${payloadString}`,
-        "simulated",
-        topic,
-      );
-      try {
-        const payloadJson = JSON.parse(payloadString);
-        if (this.onMessageCallback) {
-          this.onMessageCallback(topic, payloadJson, payloadString);
-        }
-      } catch (e) {
-        console.error("Error parseando JSON de simulación:", e);
-      }
+      this.log(`No se publicó en [${topic}]: broker desconectado.`, "error", topic);
     }
   }
 
-  disconnect() {
-    if (this.client && this.isConnected) {
-      try {
-        this.client.disconnect();
-      } catch (e) {
-        console.warn("Error durante desconexión:", e);
-      }
-    }
-    this.isConnected = false;
-    this.enableSimulationMode("Desconectado manualmente");
-  }
-
-  enableSimulationMode(reason = "Modo Simulación") {
-    this.isSimulationMode = true;
-    this.isConnected = false;
-    this.log(`Modo Simulación Activo (${reason})`, "simulated");
-    this.notifyStatusChange("simulating", "Modo Simulación Activo");
+  scheduleReconnect(delay = this.reconnectDelayMs) {
+    if (this.reconnectTimer) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, delay);
   }
 
   notifyStatusChange(status, label) {
@@ -293,7 +271,6 @@ class LuminariaMQTTClient {
         status,
         label,
         config: this.config,
-        isSim: this.isSimulationMode,
       });
     }
   }

@@ -16,9 +16,9 @@ El archivo `app.js` se encarga de traducir matemáticamente estos porcentajes a 
 
 ---
 
-## 💻 2. Cómo Editar de forma Local (Modo Demo / Sin conexión)
+## 2. Cómo Editar Tableros en PostgreSQL local
 
-Si la aplicación no está conectada a la base de datos o se está usando la data "mockeada", los tableros viven dentro de `js/app.js` en el objeto `appState.tableros`.
+Los tableros se administran desde PostgreSQL local y la API del backend. Si el servicio de datos no responde, la aplicación no inventa tableros ni habilita edición en memoria.
 
 ### 📌 Mover un tablero existente
 1. Abre el archivo `js/app.js`.
@@ -35,7 +35,7 @@ Si la aplicación no está conectada a la base de datos o se está usando la dat
    ```
 
 ### ➕ Agregar un tablero nuevo
-Para agregar un tablero nuevo, simplemente copia un bloque de tablero existente y pégalo justo debajo. Asegúrate de:
+Para agregar un tablero nuevo, crea el registro en PostgreSQL usando una migración SQL versionada. Asegúrate de:
 1. Cambiar la clave principal (ej. `TABLERO_05`).
 2. Cambiar el `id` para que coincida.
 3. Establecer sus posiciones `posX` y `posY` (de 0 a 100).
@@ -49,7 +49,7 @@ Para agregar un tablero nuevo, simplemente copia un bloque de tablero existente 
      tension_v: 220.0,
      tension_nominal_v: 220.0,
      fase: "L1",
-     focos: {} // Puedes dejar los focos vacíos o agregar mock data
+     focos: {} // Estructura de focos persistida en PostgreSQL
    },
    ```
 
@@ -58,41 +58,6 @@ Simplemente **elimina todo el bloque** de ese tablero dentro de `appState.tabler
 
 ---
 
-## ☁️ 3. Cómo Editar en Producción (Base de Datos Supabase)
+## 3. Editar en Producción
 
-Cuando la aplicación está conectada a **Supabase**, los datos precargados de `app.js` son ignorados y se renderiza lo que viene directamente de la nube. 
-
-Para modificar el mapa:
-1. Ingresa a tu panel de control de **Supabase**.
-2. Ve al **Table Editor** (Editor de tablas).
-3. Abre la tabla llamada `tableros`.
-
-### 📌 Mover un tablero
-- Ubica el tablero en la tabla.
-- Edita las columnas `pos_x` y `pos_y` ingresando números entre 0 y 100.
-
-### ➕ Agregar un tablero nuevo
-- Haz clic en **Insert Row** (Insertar fila).
-- Rellena obligatoriamente los campos principales, prestando especial atención a `pos_x` y `pos_y`.
-- Al guardar la fila, el mapa en la aplicación mostrará automáticamente el nuevo punto al recargar la página.
-
-### 🗑️ Borrar un tablero
-- Selecciona la fila del tablero que quieres eliminar y bórrala (Delete Row). Desaparecerá de inmediato del mapa.
-
----
-
-## ⚙️ Ajuste de Calibración del Mapa (Avanzado)
-Si notas que el rango de 0 a 100 se queda "corto" o se sale mucho de la ciudad de Neuquén, puedes ajustar la caja delimitadora (Bounding Box) directamente en `app.js`.
-
-Busca la función `renderMapPins()` en `app.js`:
-```javascript
-const baseLat = -38.98; // Límite inferior (Sur)
-const baseLng = -68.08; // Límite izquierdo (Oeste)
-
-// El 0.05 es cuánto crece hacia el Norte (hasta -38.93)
-const lat = baseLat + (tablero.posY / 100) * 0.05;
-
-// El 0.08 es cuánto crece hacia el Este (hasta -68.00)
-const lng = baseLng + (tablero.posX / 100) * 0.08;
-```
-Cambiando esos valores maestros, reescalarás la distribución de todos los pines instantáneamente para abarcar un área mayor o menor.
+Los datos de tableros se leen desde PostgreSQL local a través de la API del backend. Para modificar ubicaciones, actualizá los campos del tablero en la base local respetando el esquema de `backend/src/db/migrations/`, o agregá el cambio mediante una migración SQL versionada.

@@ -30,16 +30,16 @@
 | **SEC-01** | Backend / DevOps | Seguridad en Capa de Red: CORS, Rate Limiting, Headers | ✅ Implementado | 🔴 **CRÍTICO** | 5 SP | CORS, rate limiting y headers HTTP de seguridad (CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Permissions-Policy). ✔ |
 | **SEC-02** | Backend | Integridad de Datos en Ingestor MQTT (deduplicación, límites) | ✅ Implementado | 🔴 **CRÍTICO** | 3 SP | Implementado rate limiting y deduplicación en src/services/ingestaService.js. |
 | **BE-06** | Frontend | Error Boundary y Recuperación ante Fallos de MQTT/UI | 🟡 Parcial | 🔴 **CRÍTICO** | 3 SP | `processIncomingEvent()` tiene validación nula básica pero sin `try/catch` envolvente. Un payload inesperado puede silenciosamente corromper el estado de UI. |
-| **BE-03** | Backend | Endpoints REST (`GET /api/tableros`, `GET /api/alertas`, `PATCH /api/alertas/:id`, `GET /api/config`) | ✅ Implementado | 🟠 **ALTO** | 8 SP | Implementados endpoints REST completos con controladores, rutas y health check en src/routes/. ✔ |
-| **DB-01** | DBA | Diseño e Implementación de Esquema Relacional ER (Local + Supabase) | ✅ Implementado | 🟠 **ALTO** | 5 SP | Esquema relacional con 6 tablas locales y esquema Supabase Cloud con RLS y Realtime en supabase_schema.sql. ✔ |
+| **BE-03** | Backend | Endpoints REST (`GET /api/tableros`, `GET /api/alertas`, `PATCH /api/alertas/:id`) | ✅ Implementado | 🟠 **ALTO** | 8 SP | Endpoints REST respaldados por PostgreSQL local, con controladores, rutas y health check en src/routes/. ✔ |
+| **DB-01** | DBA | Diseño e Implementación de Esquema Relacional PostgreSQL local | ✅ Implementado | 🟠 **ALTO** | 5 SP | Esquema relacional implementado en PostgreSQL local mediante migraciones versionadas. ✔ |
 | **DB-02** | DBA | Series Temporales (TimescaleDB / Particionado) | ❌ Pendiente | 🟠 **ALTO** | 5 SP | La tabla `lecturas` existe pero sin particionado. Con ingesta masiva de sensores, la BD se degradará sin esta optimización. |
-| **FE-01** | Frontend | Integración con API REST y Supabase Cloud | ✅ Implementado | 🟠 **ALTO** | 5 SP | Carga de tableros y alertas desde backend REST o Supabase Cloud con fallback transparente a simulación. ✔ |
-| **FE-02** | Frontend | Resolución de Alertas vía API REST y Supabase | ✅ Implementado | 🟠 **ALTO** | 3 SP | Resolución persistida en backend local y Supabase con registro de técnico responsable y timestamp. ✔ |
+| **FE-01** | Frontend | Integración con API REST local | ✅ Implementado | 🟠 **ALTO** | 5 SP | Carga de tableros y alertas desde el backend local sin datos alternativos locales. ✔ |
+| **FE-02** | Frontend | Resolución de alertas vía API REST local | ✅ Implementado | 🟠 **ALTO** | 3 SP | Resolución persistida en PostgreSQL local con registro de técnico responsable y timestamp. ✔ |
 | **DO-02** | DevOps | Contenerización Completa `docker-compose.yml` | 🟡 Parcial | 🟠 **ALTO** | 5 SP | Solo PostgreSQL en Docker. Backend, Mosquitto y Nginx sin contenerizar. El despliegue en servidores de la Municipalidad es inviable sin esto. |
 | **DB-05** | DBA | Plan de Backup y Recuperación (`pg_dump` cron) | ❌ Pendiente | 🟠 **ALTO** | 3 SP | Sin backups, un fallo eléctrico o de hardware del servidor pierde todo el historial de eventos de la red municipal. |
 | **BE-07** | Backend / DBA | Connection Pooling y Retry Strategy para PostgreSQL | ✅ Implementado | 🟠 **ALTO** | 3 SP | Pool `pg` con retry automático (`queryWithRetry`) y backoff exponencial con jitter ante fallos transitorios de BD. ✔ |
 | **DO-06** | DevOps | Separación de Entornos Staging / Producción | 🟡 Parcial | 🟠 **ALTO** | 3 SP | `.env.example` versionado. Faltan archivos de entorno separados para staging y producción. |
-| **BE-08** | Backend | Health Check y Circuit Breaker | ✅ Implementado | 🟠 **ALTO** | 2 SP | `GET /api/health` con Circuit Breaker (estados closed, half-open, open), monitoreo de BD, estado MQTT en vivo y Supabase. ✔ |
+| **BE-08** | Backend | Health Check y Circuit Breaker | ✅ Implementado | 🟠 **ALTO** | 2 SP | `GET /api/health` con Circuit Breaker (estados closed, half-open, open), monitoreo de PostgreSQL y estado MQTT en vivo. ✔ |
 | **BE-04** | Backend | Autenticación JWT y Control de Acceso (RBAC) | ✅ Implementado | 🟡 **MODERADO** | 5 SP | Migración 002 `usuarios`, HMAC-SHA256 con scrypt, endpoints `/api/auth` (login/register/me) y middleware RBAC por rol. ✔ |
 | **FE-06** | Frontend | Modal de Autenticación (UI Login) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | Depende de BE-04. Sin login, el switch de roles (Administrador/Técnico) es solo decorativo. |
 | **FE-05** | Frontend | Notificaciones Push Web (`Notification API`) | ❌ Pendiente | 🟡 **MODERADO** | 3 SP | El técnico de guardia no recibe alertas si no tiene la pestaña activa. |
@@ -122,7 +122,6 @@
   - `GET /api/tableros` → listado y estado derivado de tableros.
   - `GET /api/alertas` → filtrado por severidad/estado con paginación (`limit`, `offset`, `total`).
   - `PATCH /api/alertas/:id/resolver` → resolución transaccional de alertas (asociada al usuario autenticado).
-  - `GET /api/config` → exposición segura de tópicos y brokers.
 
 #### `BE-07` — Connection Pooling y Retry Strategy ✅ DONE
 - **Estado:** ✅ Implementado
@@ -130,7 +129,7 @@
 
 #### `BE-08` — Health Check y Circuit Breaker ✅ DONE
 - **Estado:** ✅ Implementado
-- **Implementación:** En `src/routes/healthRoutes.js`: Circuit Breaker de 3 estados (`closed`, `half-open`, `open`) para no degradar el servidor si PostgreSQL cae, monitoreo del suscriptor TCP MQTT en vivo (`setMqttSubscriberRef`), estado del cliente Supabase Cloud y métrica de `uptime` del proceso.
+- **Implementación:** En `src/routes/healthRoutes.js`: Circuit Breaker de 3 estados (`closed`, `half-open`, `open`) para no degradar el servidor si PostgreSQL cae, monitoreo del suscriptor TCP MQTT en vivo (`setMqttSubscriberRef`), métrica de `uptime` del proceso.
 
 #### `DB-01` — Esquema ER ✅ DONE
 - 6 tablas creadas, 8 índices, constraints y checks robustos. Seed de datos iniciales disponible.
@@ -140,7 +139,7 @@
 - **Criterio:** Backup diferencial diario + completo semanal. Prueba de restauración documentada.
 
 #### `FE-01` — Integración API REST Frontend
-- **Acción en `js/app.js`:** Agregar función `loadInitialData()` que reemplace el `init()` con llamadas a `/api/tableros` y `/api/alertas`. Mantener mock data como fallback.
+- **Acción en `js/app.js`:** Agregar función `loadInitialData()` que reemplace el `init()` con llamadas a `/api/tableros` y `/api/alertas`. Mostrar estado sin datos cuando la API no responda.
 
 #### `FE-02` — Resolución de Alertas via API
 - **Acción:** En `renderAlerts()`, al hacer clic en "Marcar Resuelta", enviar `PATCH /api/alertas/{id}/resolver` y actualizar UI solo con respuesta `200`.
@@ -251,7 +250,7 @@ Sprint 5 (2 semanas) — REFINAMIENTO
 | `BF-07` | 🟡 ABIERTO | Lógica de severidad duplicada entre `renderTablerosGrid()` y `renderMapPins()` | `js/app.js` |
 | `BF-08` | 🟢 MENOR | `console.log` de cada mensaje MQTT sin flag `debug` (satura consola en producción) | `js/mqtt-client.js:58` |
 | `BF-09` | 🟢 MENOR | `updateKPIs()` busca elementos DOM por `getElementById` en cada evento (sin cachear) | `js/app.js:1251-1254` |
-| `BF-10` | 🟢 MENOR | `renderTablerosGrid()` re-renderiza toda la grilla por evento (OK a escala demo) | `js/app.js:878` |
+| `BF-10` | 🟢 MENOR | `renderTablerosGrid()` re-renderiza toda la grilla por evento (OK con el volumen actual) | `js/app.js:878` |
 
 ---
 

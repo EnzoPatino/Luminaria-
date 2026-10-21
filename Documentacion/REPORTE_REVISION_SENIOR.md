@@ -82,12 +82,12 @@ La bitácora oficial está en `Documentacion/MATRIZ_DE_TAREAS_POR_NIVEL.md` → 
 | # | Patrón / Oportunidad | Archivo | Recomendación | Nivel |
 |---|---|---|---|---|
 | 1 | Lógica de severidad duplicada entre `renderTablerosGrid()` y `renderMapPins()` | `js/app.js` | Unificar en `getTableroStatus(tablero)` — **ojo**: hoy difieren (el mapa suma alertas sin resolver). Refactor con cuidado para no cambiar comportamiento. | 🟡 |
-| 2 | `renderTablerosGrid()` re-renderiza toda la grilla por evento | `js/app.js` | OK a escala demo; si crece el nº de tableros, evaluar render por tarjeta o `DocumentFragment`. | 🟢 |
+| 2 | `renderTablerosGrid()` re-renderiza toda la grilla por evento | `js/app.js` | OK con el volumen actual; si crece el nº de tableros, evaluar render por tarjeta o `DocumentFragment`. | 🟢 |
 | 3 | `updateKPIs()` re-busca elementos del banner por `getElementById` en cada evento | `js/app.js` | Cachear refs DOM en objeto `elements` (ya existe) y agregar los del banner. | 🟢 |
 | 4 | `console.log` de cada mensaje MQTT en `log()` | `js/mqtt-client.js` | Guardar detrás de flag `debug` para no saturar consola en producción. | 🟢 |
 | 5 | CORS abierto + sin rate limiting | `backend/src/app.js` | Restringir CORS a dominios de la Municipalidad (`.env` + `cors({ origin })`). Rate limiting por IP (tarea `SEC-01`). | 🔴 |
 | 6 | Sin validación de schema en payloads MQTT entrantes | `js/app.js` `processIncomingEvent()` | Middleware/validador del contrato JSON (tarea `BE-02`) antes de tocar estado. | 🔴 |
-| 7 | Alertas con `id` por `Math.random()` | `js/app.js` | Suficiente para demo local; reemplazar por `crypto.randomUUID()` cuando exista persistencia. | 🟢 |
+| 7 | Alertas con `id` por `Math.random()` | `js/app.js` | Se reemplaza por el ID del backend tras persistir; no usar como identificador de seguridad. | 🟢 |
 
 ---
 

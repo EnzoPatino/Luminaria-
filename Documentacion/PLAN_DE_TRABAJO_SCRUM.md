@@ -26,7 +26,7 @@
 
 | Capa | Estado | Detalle |
 |---|---|---|
-| **Frontend** | ✅ MVP funcional | `index.html` + `js/app.js` (1851 líneas) + `js/mqtt-client.js` (225 líneas). Tema claro/oscuro, roles, gráficos Chart.js, mapa SVG, consola MQTT, simulación completa. |
+| **Frontend** | ✅ MVP funcional | `index.html` + `js/app.js` (1851 líneas) + `js/mqtt-client.js` (225 líneas). Tema claro/oscuro, roles, gráficos Chart.js, mapa SVG, consola MQTT y gestión de usuarios. |
 | **Backend REST** | 🟡 Parcial | Express.js con `/api/health` y `POST /api/eventos` implementados. Faltan `GET /api/tableros`, `GET /api/alertas`, `PATCH /api/alertas/:id/resolver`. |
 | **Ingestor MQTT** | ❌ Pendiente | **El Worker TCP subscriber (escucha en 1883) NO existe**. Solo hay `persistenciaService.js` que procesa eventos si llegan por HTTP. |
 | **Base de Datos** | ✅ Esquema listo | Migración SQL completa con tablas: `zonas`, `tableros`, `sensores`, `lecturas`, `alertas`, `estadisticas_zona`. Índices optimizados. Seed de datos iniciales. |
@@ -39,8 +39,8 @@
 
 | ID | Historia de Usuario / Tarea | Estado | Descripción y Criterios de Aceptación | Archivos | Prioridad |
 |---|---|---|---|---|---|
-| **FE-01** | **Integración con API REST y Supabase Cloud** | ✅ Implementado | Carga de tableros y alertas desde backend REST o Supabase Cloud con fallback a modo simulación. Sincronización transparente de datos persistentes. | [js/app.js](../js/app.js), [js/supabase-client.js](../js/supabase-client.js) | 🟠 **ALTA** |
-| **FE-02** | **Resolución de Alertas vía API y Supabase** | ✅ Implementado | Al hacer clic en "Marcar Resuelta", persiste en backend REST y en Supabase Cloud con fecha y rol del técnico responsable. | [js/app.js](../js/app.js), [js/supabase-client.js](../js/supabase-client.js) | 🟠 **ALTA** |
+| **FE-01** | **Integración con API REST local** | ✅ Implementado | Carga de tableros y alertas desde el backend local sin modo alternativo local. Sincronización transparente de datos persistentes. | [js/app.js](../js/app.js), [backend/src/routes/alertaRoutes.js](../backend/src/routes/alertaRoutes.js) | 🟠 **ALTA** |
+| **FE-02** | **Resolución de alertas vía API local** | ✅ Implementado | Al hacer clic en "Marcar Resuelta", persiste en backend REST y en PostgreSQL local con fecha y rol del técnico responsable. | [js/app.js](../js/app.js), [backend/src/routes/alertaRoutes.js](../backend/src/routes/alertaRoutes.js) | 🟠 **ALTA** |
 | **FE-03** | **Preservar Reglas Críticas de UI y Anti-Flash** | ✅ Implementado | Script anti-flash en `<head>` activo. `#mapPinsContainer` relativo a `.map-svg-wrapper` correcto. Variables CSS de tema funcionando. Bug de menú hamburguesa corregido. | [index.html](../index.html), [css/](../css/) | 🔴 **CRÍTICA** |
 | **FE-04** | **Exportación y Filtros en Consola MQTT** | ❌ Pendiente | Botones para pausar/reanudar auto-scroll, filtrar por topic (`neuquen/iluminacion/#` vs `api/evento`) y exportar logs a CSV/JSON. | [js/app.js](../js/app.js) | 🟡 **MEDIA** |
 | **FE-05** | **Notificaciones Push Web** | ❌ Pendiente | `Notification API` del navegador para alertas `CRITICA`. Solicitar permisos al usuario. Activar solo si el usuario concede permiso. | [js/app.js](../js/app.js) | 🟡 **MEDIA** |
@@ -67,9 +67,9 @@
 | **SEC-01** | **Seguridad en Capa de Red: CORS, Rate Limiting, Headers** | 🟡 Parcial | CORS con lista blanca ✅. Rate limiting 100 req/min ✅. **Faltan**: `Content-Security-Policy`, `X-Content-Type-Options`, `Strict-Transport-Security` en headers de respuesta. Configurar dominio real de la Municipalidad en `CORS_ORIGIN`. | [backend/src/app.js](../backend/src/app.js) | 🔴 **CRÍTICA** |
 | **SEC-02** | **Integridad de Datos en Ingestor MQTT** | ✅ Implementado | Deduplicación por `id_tablero + timestamp` (ventana 5s). Límite de payload 4KB. Rate limiting por tablero (máx 10 evt/s). Cola con backpressure. | — | 🔴 **CRÍTICA** |
 | **BE-07** | **Connection Pooling y Retry Strategy para PostgreSQL** | 🟡 Parcial | Pool `pg` configurado con `max: 10` en `database.js`. **Falta**: retry con backoff exponencial, health check en docker-compose para evitar conexiones prematuras. | [backend/src/config/database.js](../backend/src/config/database.js) | 🟠 **ALTA** |
-| **BE-08** | **Health Check y Circuit Breaker** | 🟡 Parcial | `GET /api/health` responde con estado de BD y Supabase ✅. **Falta**: circuit breaker (5 fallos → `503 Retry-After 30s`) y estado de MQTT en el health check. | [backend/src/routes/healthRoutes.js](../backend/src/routes/healthRoutes.js) | 🟠 **ALTA** |
+| **BE-08** | **Health Check y Circuit Breaker** | 🟡 Parcial | `GET /api/health` responde con estado de PostgreSQL ✅. **Falta**: circuit breaker (5 fallos → `503 Retry-After 30s`) y estado de MQTT en el health check. | [backend/src/routes/healthRoutes.js](../backend/src/routes/healthRoutes.js) | 🟠 **ALTA** |
 | **BE-09** | **Logging Estructurado y Correlación de Eventos** | 🟡 Parcial | Request logger inline activo ✅. **Falta**: logging JSON estructurado con `correlation_id`, `service`, `event_type`. Rotación de logs. Propagación de `correlation_id` desde MQTT hasta BD. | [backend/src/app.js](../backend/src/app.js) | 🟡 **MODERADO** |
-| **SEC-03** | **Audit Logging y Registro de Seguridad** | 🟡 Parcial | Registro de técnico resolutor y fecha/hora en la tabla `alertas` en base de datos ✅. Falta tabla general `audit_log` para registrar inicios de sesión y accesos. | [supabase_schema.sql](../supabase_schema.sql) | 🟡 **MODERADO** |
+| **SEC-03** | **Audit Logging y Registro de Seguridad** | 🟡 Parcial | Registro de técnico resolutor y fecha/hora en la tabla `alertas` en base de datos ✅. Falta tabla general `audit_log` para registrar inicios de sesión y accesos. | [backend/src/db/migrations/](../backend/src/db/migrations/) | 🟡 **MODERADO** |
 
 ---
 

@@ -86,19 +86,13 @@ async function handleChirpstackUplink(req, res, next) {
     console.log(`                    -> Tensión: ${normalizedEvent.datos.tension_medida_v}V${potInfo} | Corriente: ${normalizedEvent.datos.corriente_medida_ma}mA | RSSI: ${normalizedEvent.datos.rssi_lora}dBm`);
 
     // Ingestar en la base de datos PostgreSQL mediante el servicio transaccional existente
-    let ingestionResult = null;
-    let dbStatus = 'skipped';
-    try {
-      ingestionResult = await ingestEvent(normalizedEvent, {
-        source: 'chirpstack_http',
-        ip: req.ip,
-        devEui: meta.devEui,
-        deviceName: meta.deviceName,
-      });
-      dbStatus = ingestionResult.duplicate ? 'duplicate' : 'persisted';
-    } catch (dbErr) {
-      console.warn(`\x1b[33m[ChirpStack Ingesta]\x1b[0m BD no disponible (${dbErr.message}). El paquete se procesó en memoria correctamente.`);
-    }
+    const ingestionResult = await ingestEvent(normalizedEvent, {
+      source: 'chirpstack_http',
+      ip: req.ip,
+      devEui: meta.devEui,
+      deviceName: meta.deviceName,
+    });
+    const dbStatus = ingestionResult.duplicate ? 'duplicate' : 'persisted';
 
     lastReceivedPayload = {
       receivedAt: new Date().toISOString(),

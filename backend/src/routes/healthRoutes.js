@@ -1,6 +1,5 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { checkSupabaseHealth } = require('../services/supabaseService');
 
 const router = express.Router();
 
@@ -80,17 +79,13 @@ router.get('/', async (req, res) => {
     }
   }
 
-  // ── Supabase health ────────────────────────────────────────────────────
-  const supabaseHealth = await checkSupabaseHealth();
-
   // ── Resultado global ──────────────────────────────────────────────────
-  const isOk = dbStatus === 'connected' || supabaseHealth.status === 'connected';
+  const isOk = dbStatus === 'connected';
 
   res.status(isOk ? 200 : 503).json({
     status: isOk ? 'ok' : 'degraded',
     database: dbStatus,
     mqtt: mqttStatus,
-    supabase: supabaseHealth.status,
     circuitBreaker: cbState,
     uptime: Math.floor(process.uptime()),
   });

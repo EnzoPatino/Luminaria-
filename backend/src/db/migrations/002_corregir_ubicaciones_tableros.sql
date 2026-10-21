@@ -1,7 +1,7 @@
 BEGIN;
 
 -- pos_x/pos_y son porcentajes del área geográfica que convierte el mapa.
--- Cada tablero de demostración queda anclado a un espacio verde de Neuquén.
+-- Cada tablero inicial queda anclado a un espacio verde de Neuquén.
 INSERT INTO zonas (nombre_zona, tipo_espacio, descripcion)
 VALUES
   ('Parque Central', 'parque', 'Parque Central de Neuquén, sobre Avenida Olascoaga'),

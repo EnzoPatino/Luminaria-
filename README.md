@@ -17,7 +17,6 @@ La interfaz web es una aplicación liviana desarrollada con **HTML5, CSS3 vanill
 - **Mapa de Zonas**: Mapa SVG representativo con pines interactivos por tablero; al hacer clic selecciona el tablero y muestra su telemetría.
 - **Alertas**: Historial de eventos filtrable por severidad (`CRITICA`, `ADVERTENCIA`, `INFO`) con posibilidad de marcar alertas como resueltas.
 - **Consola de Telemetría MQTT**: Inspector de mensajes JSON recibidos y transmitidos por el broker.
-- **Simulador de Eventos Hardware**: Herramienta integrada para simular eventos directamente desde la UI sin requerir hardware físico ni broker activo.
 - **Banner y KPIs**: Estado general del sistema con alertas, advertencias y cantidad de tableros monitoreados.
 - **Tema claro/oscuro**: Botón en la cabecera para alternar entre los dos temas visuales. La preferencia se persiste en `localStorage`. El modo oscuro es el predeterminado.
 
@@ -38,18 +37,15 @@ El panel web estará disponible inmediatamente en `http://<IP_O_DOMINIO>/` (puer
 Antes del primer despliegue, configurá los secretos requeridos y el administrador inicial siguiendo [DEPLOY_PRODUCCION.md](DEPLOY_PRODUCCION.md). Para producción, el panel debe publicarse detrás de HTTPS.
 
 ### Ejecución de Desarrollo Local
-Para desarrollo y pruebas rápidas en máquina local:
+La interfaz requiere el backend y la base local para iniciar sesión y mostrar datos. En `js/config.js`, configurá temporalmente `apiBaseUrl: "http://localhost:3000"` para servir el frontend en otro puerto. Luego:
 ```bash
-# Frontend
-python3 -m http.server 8080
-
-# Backend
+# Terminal 1: backend y PostgreSQL disponibles
 cd backend && npm install && npm run dev
+
+# Terminal 2: frontend (origen permitido por CORS)
+python3 -m http.server 5500
 ```
-
-### Frontend estático y desarrollo local
-
-El login se omite automáticamente solo al abrir el frontend en `localhost`, `127.0.0.1` o `file://`; usa el rol administrador local para probar la interfaz. Ese modo no crea una sesión válida en el backend.
+Abrí `http://localhost:5500`. El inicio de sesión siempre se valida contra el backend. Para producción, dejá `apiBaseUrl` vacío cuando frontend y API compartan origen.
 
 Si GitHub Pages y el backend están en dominios distintos, configurar `apiBaseUrl` en `js/config.js` con el origen público del backend (sin `/api` al final). El backend también debe permitir el origen `https://<usuario>.github.io` en `CORS_ORIGIN`. En producción el login sigue validándose contra el backend.
 
@@ -67,7 +63,7 @@ El backend recibe la telemetría enviada por los sensores y gateways a través d
 2. **Endpoint de verificación:** `GET /api/uplink` (informa si el receptor está listo).
 3. **Inspección de diagnóstico:** `GET /api/uplink/last` (requiere token JWT de operador autorizado).
 
-El adaptador (`chirpstackAdapter.js`) mapea el identificador del dispositivo (DevEUI) con el tablero asignado, clasifica los voltajes y persiste los registros tanto en PostgreSQL como en Supabase.
+El adaptador (`chirpstackAdapter.js`) mapea el identificador del dispositivo (DevEUI) con el tablero asignado, clasifica los voltajes y persiste los registros en PostgreSQL local.
 
 ### Configuración de Mosquitto MQTT (opcional)
 

@@ -1,78 +1,13 @@
-# Implementación de base de datos — Project Luminaria
+# Base de datos — Project Luminaria
 
-Esta carpeta contiene los cambios de persistencia preparados para copiar sobre el repositorio `Luminaria-`.
+La aplicación usa PostgreSQL local como única base persistente. Docker Compose administra el servicio `postgres`; el backend se conecta mediante `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` y `PGPASSWORD`.
 
-## Arquitectura de Persistencia Híbrida
+## Esquema y despliegue
 
-Project Luminaria utiliza dos niveles de persistencia:
+- Migraciones: `backend/src/db/migrations/`.
+- Seeds iniciales: `backend/src/db/seeds/`.
+- Mantenimiento manual: `cd backend && npm run db:maintenance`.
+- Ingesta de telemetría: `POST /api/uplink` (ChirpStack) y `POST /api/eventos`.
+- El dashboard consulta los tableros y alertas a través de la API del backend; los cambios se guardan en PostgreSQL.
 
-1. **Supabase Cloud (PostgreSQL Administrado):**
-   * Tablas `tableros` y `alertas` en la nube con soporte **Row Level Security (RLS)** y **Realtime**.
-   * Persistencia inmediata desde el frontend (`js/supabase-client.js`) para que las alertas y resoluciones técnicas queden registradas permanentemente tras recargas (`F5`).
-   * Script DDL y semillas: [`supabase_schema.sql`](supabase_schema.sql).
-   * Manual técnico completo para DBAs: [`Documentacion/MANUAL_BASE_DE_DATOS.md`](Documentacion/MANUAL_BASE_DE_DATOS.md).
-
-2. **PostgreSQL Local (Motor de Ingesta y Series Temporales):**
-   * 6 tablas: `zonas`, `tableros`, `sensores`, `lecturas`, `alertas`, `estadisticas_zona`.
-   * Ingestión de telemetría por HTTP desde ChirpStack (`POST /api/uplink`) y REST genérico (`POST /api/eventos`). MQTT disponible opcionalmente.
-   * Migración: `backend/src/db/migrations/001_init_schema.sql`.
-   * Scheduler de agregaciones diarias y purga periódica segura.
-
-## Aplicación y Despliegue
-
-### A. Supabase Cloud (Producción / Frontend)
-1. Abrir **Supabase Dashboard** > **SQL Editor**.
-2. Pegar el contenido de [`supabase_schema.sql`](supabase_schema.sql) y presionar **Run**.
-3. Las variables de entorno se configuran en `.env` y `backend/.env`.
-
-### B. PostgreSQL Local (Backend / Ingestor)
-1. En `backend/`, ejecutá `npm install`.
-2. Asegurar que las variables de conexión estén en `backend/.env`.
-3. Ejecutá las migraciones y seeds:
-   ```bash
-   npm run db:migrate
-   npm run db:seed
-   ```
-4. Para ejecutar mantenimiento manual: `npm run db:maintenance`.
-
-## Prueba de ingestión
-
-### Vía ChirpStack HTTP (producción)
-
-POST `http://localhost:3000/api/uplink?event=up`
-
-ChirpStack envía el webhook automáticamente. Para simular manualmente:
-
-```bash
-curl -X POST http://localhost:3000/api/uplink?event=up \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "deviceInfo": { "devEui": "24e124746e392242", "deviceName": "ArduinoRFM95_v2" },
-    "object": { "tension": 218.4, "corriente": 425, "fase": "L1" },
-    "rxInfo": [{ "rssi": -112 }]
-  }'
-```
-
-Para inspeccionar el último dato recibido: `GET http://localhost:3000/api/uplink/last`
-
-### Vía REST genérico
-
-POST `http://localhost:3000/api/eventos`
-
-Ejemplo:
-
-```json
-{
-  "tipo_evento": "BAJA_TENSION",
-  "id_tablero": "TABLERO_01",
-  "timestamp": "2026-08-31T04:00:00.000Z",
-  "datos": {
-    "tension_medida_v": 185.3,
-    "tension_nominal_v": 220.0,
-    "umbral_minimo_v": 190.0,
-    "fase": "L1"
-  },
-  "severidad": "CRITICA",
-  "ubicacion": "Centro / Palacio Municipal"
-}
-```
+Para producción, seguí los pasos de [DEPLOY_PRODUCCION.md](DEPLOY_PRODUCCION.md). No se requieren cuentas, claves ni servicios de base de datos externos.

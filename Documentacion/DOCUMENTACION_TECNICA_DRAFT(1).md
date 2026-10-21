@@ -8,7 +8,7 @@
 
 ## 1. Proposito del Draft
 
-Este documento conserva la idea inicial del sistema completo y la alinea con el estado actual del repositorio. La implementacion disponible hoy es el panel web estatico con MQTT por WebSockets y simulacion local.
+Este documento conserva la idea inicial del sistema completo y la alinea con el estado actual del repositorio. La implementacion disponible hoy es el panel web estatico con MQTT por WebSockets y consulta de datos persistidos en PostgreSQL local.
 
 La API REST, PostgreSQL y Docker siguen siendo una arquitectura posible para una etapa posterior, pero no forman parte de la version implementada en este arbol.
 
@@ -97,7 +97,6 @@ El panel actual incluye:
 - KPIs;
 - tabs de Tableros, Mapa, Alertas y Consola;
 - modal de configuracion MQTT;
-- modal de simulacion;
 - filtro de alertas por severidad;
 - accion para marcar alertas como resueltas;
 - mapa de zonas responsive con pines anclados al contenedor del SVG y etiquetas que no se recortan en movil.
@@ -151,6 +150,6 @@ node -c js/mqtt-client.js
 Prueba manual:
 
 1. Abrir `index.html`.
-2. Esperar conexion MQTT o modo simulacion.
-3. Ejecutar cada preset del simulador.
+2. Esperar la conexión con el broker MQTT.
+
 4. Revisar tarjetas, mapa, historial, consola, banner y KPIs.
