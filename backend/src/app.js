@@ -56,7 +56,12 @@ app.use((req, res, next) => {
 });
 
 // BB-06: CORS restringido con lista blanca configurable
-const defaultOrigins = ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'];
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'https://luminarias.neuquencapital.gob.ar',
+];
 const configuredOrigins = config.corsOrigin
   ? config.corsOrigin.split(',').map(o => o.trim()).filter(Boolean)
   : [];

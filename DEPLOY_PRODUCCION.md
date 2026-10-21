@@ -18,7 +18,9 @@ Si `cp` responde que no encuentra `.env.production.example`, ejecutá `git pull 
 openssl rand -hex 48
 ```
 
-`CORS_ORIGIN` debe ser la URL HTTPS final, por ejemplo `https://panel.midominio.gob.ar`.
+`CORS_ORIGIN` debe ser la URL HTTPS final del frontend. Para Luminaria en Neuquén:
+`https://luminarias.neuquencapital.gob.ar`. Si se sirven desde más de un origen,
+separalos con comas, sin espacios adicionales.
 
 ## Primer despliegue
 
