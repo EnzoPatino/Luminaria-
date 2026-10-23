@@ -15,7 +15,11 @@ async function upsertFromEvent(client, event) {
        nombre_tablero = COALESCE(tableros.nombre_tablero, EXCLUDED.nombre_tablero),
        ubicacion = COALESCE(EXCLUDED.ubicacion, tableros.ubicacion),
        fase = COALESCE(EXCLUDED.fase, tableros.fase),
-       tension_nominal = COALESCE(EXCLUDED.tension_nominal, tableros.tension_nominal)
+       tension_nominal = COALESCE(EXCLUDED.tension_nominal, tableros.tension_nominal),
+       ultima_modificacion = CASE
+         WHEN left(tableros.id_tablero, 5) = 'DEMO_' THEN now()
+         ELSE tableros.ultima_modificacion
+       END
      RETURNING *`,
     [idTablero, ubicacion, fase, tensionNominal]
   );

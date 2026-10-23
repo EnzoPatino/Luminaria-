@@ -9,6 +9,10 @@ const {
 const { closePool } = require("./src/config/database");
 const { createMqttSubscriber } = require("./src/workers/mqttSubscriber");
 const { getMqttPublisher } = require("./src/services/mqttPublisher");
+const {
+  startDemoDataCleanupScheduler,
+  stopDemoDataCleanupScheduler,
+} = require("./src/services/demoDataCleanupScheduler");
 
 const PORT = config.port || 3000;
 const mqttSubscriber = createMqttSubscriber();
@@ -26,6 +30,7 @@ const server = app.listen(PORT, () => {
 
   // Seccion: procesos autonomos que deben correr aunque no haya navegador abierto.
   startMaintenanceScheduler();
+  startDemoDataCleanupScheduler();
   getMqttPublisher(); // Inicia conexion al broker Mosquitto para difusion en tiempo real
   if (config.mqtt && config.mqtt.enabled) {
     mqttSubscriber.start();
@@ -54,6 +59,7 @@ async function shutdown(signal) {
 
   try {
     stopMaintenanceScheduler();
+    await stopDemoDataCleanupScheduler();
     if (config.mqtt && config.mqtt.enabled) {
       await mqttSubscriber.stop();
     }

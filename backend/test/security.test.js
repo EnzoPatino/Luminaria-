@@ -140,6 +140,60 @@ test('MQTT credential generation safely replaces an existing password file', () 
   assert.match(compose, /mv -f "\$\$temporary_file" "\$\$password_file"/);
 });
 
+test('demo data cleanup targets only inactive DEMO boards and removes dependent rows transactionally', async () => {
+  const { cleanupStaleDemoData, SELECT_STALE_DEMO_BOARDS } = require('../src/services/demoDataCleanupService');
+  const calls = [];
+  const client = {
+    query: async (sql, params) => {
+      calls.push({ sql, params });
+      if (sql === SELECT_STALE_DEMO_BOARDS) {
+        return { rows: [{ id_tablero: 'DEMO_CHIRPSTACK_01' }] };
+      }
+      return { rows: [], rowCount: 1 };
+    },
+    release: () => calls.push({ sql: 'RELEASE', params: [] }),
+  };
+  const db = { connect: async () => client };
+
+  const deleted = await cleanupStaleDemoData(db, 300000);
+  assert.equal(deleted, 1);
+  assert.deepEqual(calls.map((call) => call.sql.trim().split(/\s+/).slice(0, 2).join(' ')), [
+    'BEGIN',
+    'SELECT t.id_tablero',
+    'DELETE FROM',
+    'DELETE FROM',
+    'DELETE FROM',
+    'DELETE FROM',
+    'COMMIT',
+    'RELEASE',
+  ]);
+  for (const call of calls.filter((item) => item.sql.startsWith('DELETE'))) {
+    assert.deepEqual(call.params, [['DEMO_CHIRPSTACK_01']]);
+  }
+  assert.match(SELECT_STALE_DEMO_BOARDS, /left\(t\.id_tablero, 5\) = 'DEMO_'/);
+  assert.match(SELECT_STALE_DEMO_BOARDS, /NOT EXISTS/);
+});
+
+test('telemetry refreshes inactivity only for DEMO boards', async () => {
+  const { upsertFromEvent } = require('../src/models/tablerosModel');
+  let statement = '';
+  const client = {
+    query: async (sql) => {
+      statement = sql;
+      return { rows: [{ id_tablero: 'DEMO_TABLERO_01' }] };
+    },
+  };
+
+  await upsertFromEvent(client, {
+    id_tablero: 'DEMO_TABLERO_01',
+    ubicacion: 'DEMO / Prueba',
+    datos: { fase: 'L1', tension_nominal_v: 220 },
+  });
+
+  assert.match(statement, /WHEN left\(tableros\.id_tablero, 5\) = 'DEMO_' THEN now\(\)/);
+  assert.match(statement, /ELSE tableros\.ultima_modificacion/);
+});
+
 test('MQTT browser credentials are removed from persistent storage', () => {
   const root = path.resolve(__dirname, '../..');
   const source = fs.readFileSync(path.join(root, 'js/mqtt-client.js'), 'utf8');

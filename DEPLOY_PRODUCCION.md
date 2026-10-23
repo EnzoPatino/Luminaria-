@@ -33,6 +33,11 @@ se conserva solo en memoria del navegador, no en `localStorage`. Actualizá las
 credenciales de cada dispositivo con `MQTT_DEVICE_PASSWORD` si se usa MQTT directo.
 Compose no publica los listeners MQTT fuera de la red Docker.
 
+Los tableros cuyos IDs empiezan con `DEMO_` y sus lecturas, sensores y alertas se
+eliminan automáticamente tras cinco minutos sin lecturas. El proceso revisa
+cada minuto; estos intervalos se pueden ajustar con `DEMO_DATA_TTL_MS` y
+`DEMO_DATA_CLEANUP_INTERVAL_MS`.
+
 ## Primer despliegue
 
 ```bash

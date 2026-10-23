@@ -18,6 +18,8 @@ const rateLimitWindowMs = toPositiveNumber(process.env.RATE_LIMIT_WINDOW_MS, 600
 const rateLimitMax = toPositiveNumber(process.env.RATE_LIMIT_MAX, 100);
 const mqttPort = toPositiveNumber(process.env.MQTT_PORT, 1883);
 const mqttQos = Number(process.env.MQTT_QOS || 0);
+const demoDataTtlMs = toPositiveNumber(process.env.DEMO_DATA_TTL_MS, 5 * 60 * 1000);
+const demoDataCleanupIntervalMs = toPositiveNumber(process.env.DEMO_DATA_CLEANUP_INTERVAL_MS, 60 * 1000);
 const chirpstackWebhookToken = process.env.CHIRPSTACK_WEBHOOK_TOKEN || '';
 const trustProxyValue = process.env.TRUST_PROXY || 'loopback';
 const trustProxy = /^\d+$/.test(trustProxyValue) ? Number(trustProxyValue) : trustProxyValue;
@@ -41,6 +43,12 @@ module.exports = {
     deduplicationWindowMs: toPositiveNumber(process.env.INGESTION_DEDUP_WINDOW_MS, 5000),
     rateLimitWindowMs: toPositiveNumber(process.env.INGESTION_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMaxPerTablero: toPositiveNumber(process.env.INGESTION_RATE_LIMIT_MAX_PER_TABLERO, 120),
+  },
+
+  // Los tableros DEMO_* se eliminan tras cinco minutos sin telemetría.
+  demoData: {
+    inactivityTtlMs: demoDataTtlMs,
+    cleanupIntervalMs: demoDataCleanupIntervalMs,
   },
 
   // Seccion: conexion MQTT TCP para recibir eventos aunque la web este cerrada.
