@@ -4,12 +4,15 @@ topic write neuquen/iluminacion/#
 
 # Seccion: permisos para el worker de backend.
 user backend_worker
-topic read neuquen/iluminacion/#
+topic readwrite neuquen/iluminacion/#
+topic readwrite api/evento
+topic readwrite sensores/#
 
-# Seccion: permisos para la UI web por WebSockets.
+# Seccion: permisos de solo lectura para la UI web por WebSockets.
 user web_dashboard
 topic read neuquen/iluminacion/#
-topic write api/evento
+topic read api/evento
+topic read sensores/#
 
 # Seccion: regla por defecto restrictiva.
 pattern read $SYS/broker/connection/%c/state

@@ -8,10 +8,11 @@ topic readwrite neuquen/iluminacion/#
 topic readwrite api/evento
 topic readwrite sensores/#
 
-# Seccion: permisos para clientes anonimos (UI web por WebSockets y backend local)
-topic readwrite neuquen/iluminacion/#
-topic readwrite api/evento
-topic readwrite sensores/#
+# El panel solo necesita leer eventos; no debe publicar telemetria.
+user web_dashboard
+topic read neuquen/iluminacion/#
+topic read api/evento
+topic read sensores/#
 
 # Seccion: regla por defecto restrictiva.
 pattern read $SYS/broker/connection/%c/state

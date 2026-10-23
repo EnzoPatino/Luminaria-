@@ -16,6 +16,7 @@ scratch/
 .DS_Store
 .vercel
 .env*
+deploy/mosquitto/passwords
 .gemini/
 .claude/
 .agents/

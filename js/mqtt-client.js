@@ -8,6 +8,7 @@ class LuminariaMQTTClient {
   constructor() {
     this.client = null;
     this.isConnected = false;
+    this.manuallyDisconnected = false;
     this.reconnectTimer = null;
     this.reconnectDelayMs = 5000;
 
@@ -44,6 +45,9 @@ class LuminariaMQTTClient {
       const saved = localStorage.getItem("luminaria_mqtt_config");
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Migra contraseñas MQTT antiguas fuera de localStorage.
+        delete parsed.password;
+        localStorage.setItem("luminaria_mqtt_config", JSON.stringify(parsed));
         // Si antes se guardó 'localhost' pero ahora estamos navegando desde una IP o dominio real, descartar el localhost obsoleto
         if (parsed.host === "localhost" && typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost") {
           delete parsed.host;
@@ -59,9 +63,10 @@ class LuminariaMQTTClient {
   saveConfig(newConfig) {
     this.config = { ...this.config, ...newConfig };
     try {
+      const { password: _password, ...persistedConfig } = this.config;
       localStorage.setItem(
         "luminaria_mqtt_config",
-        JSON.stringify(this.config),
+        JSON.stringify(persistedConfig),
       );
     } catch (e) {
       console.warn("No se pudo guardar la configuración MQTT:", e);
@@ -83,6 +88,12 @@ class LuminariaMQTTClient {
     if (configOverride) {
       this.saveConfig(configOverride);
     }
+
+    if (!this.config.username || !this.config.password) {
+      this.notifyStatusChange("disconnected", "Ingresá las credenciales MQTT");
+      return;
+    }
+    this.manuallyDisconnected = false;
 
     if (typeof Paho === "undefined" || !Paho.MQTT) {
       this.log("Librería Paho MQTT no disponible.", "error");
@@ -166,16 +177,6 @@ class LuminariaMQTTClient {
     const errMsg = error.errorMessage || error.message || "Broker no accesible";
     this.log(`Fallo al conectar con Mosquitto (${this.config.host}:${this.config.port}${this.config.path}): ${errMsg}`, "error");
 
-    // Intento de fallback directo a puerto 9001 si el reverse proxy /mqtt en puerto 80 falló
-    if (Number(this.config.port) !== 9001 && !this._triedPort9001) {
-      this._triedPort9001 = true;
-      this.log("Intentando fallback directo al puerto 9001 (WebSockets de Mosquitto)...", "info");
-      this.config.port = 9001;
-      this.config.path = "";
-      setTimeout(() => this.connect(), 800);
-      return;
-    }
-
     this.client = null;
     this.notifyStatusChange("disconnected", `Broker no disponible: ${errMsg}`);
     this.scheduleReconnect();
@@ -183,6 +184,11 @@ class LuminariaMQTTClient {
 
   handleConnectionLost(responseObject) {
     this.isConnected = false;
+    if (this.manuallyDisconnected) {
+      this.client = null;
+      this.notifyStatusChange("disconnected", "Desconectado");
+      return;
+    }
     if (responseObject.errorCode !== 0) {
       this.client = null;
       this.log(
@@ -192,6 +198,19 @@ class LuminariaMQTTClient {
     }
     this.notifyStatusChange("disconnected", "Conexión perdida. Reintentando…");
     this.scheduleReconnect();
+  }
+
+  disconnect() {
+    this.manuallyDisconnected = true;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    const client = this.client;
+    const wasConnected = this.isConnected;
+    this.client = null;
+    this.isConnected = false;
+    this.config.password = "";
+    if (client && wasConnected && client.isConnected()) client.disconnect();
+    this.notifyStatusChange("disconnected", "Desconectado");
   }
 
   handleMessageArrived(message) {

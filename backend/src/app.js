@@ -43,10 +43,10 @@ app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`, {
+    logger.info(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`, {
       correlation_id: req.correlationId,
       method: req.method,
-      path: req.originalUrl,
+      path: req.path,
       status: res.statusCode,
       duration_ms: duration,
       ip: req.ip,
@@ -56,7 +56,7 @@ app.use((req, res, next) => {
 });
 
 // BB-06: CORS restringido con lista blanca configurable
-const defaultOrigins = [
+const defaultOrigins = config.env === 'production' ? [] : [
   'http://localhost:3000',
   'http://localhost:5500',
   'http://127.0.0.1:5500',
@@ -70,7 +70,7 @@ const allowedOrigins = [...new Set([...defaultOrigins, ...configuredOrigins])];
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     return callback(new Error(`CORS policy: El origen '${origin}' no está autorizado.`));
@@ -112,7 +112,7 @@ app.use((req, res) => {
   res.status(404).json({
     status: 'error',
     statusCode: 404,
-    message: `Ruta no encontrada: ${req.method} ${req.originalUrl}`,
+    message: `Ruta no encontrada: ${req.method} ${req.path}`,
   });
 });
 
@@ -132,8 +132,10 @@ app.use((err, req, res, next) => {
     status: 'error',
     statusCode,
     ...(err.code && { code: err.code }),
-    message: err.message || 'Error interno del servidor.',
-    ...(err.details && { details: err.details }),
+    message: statusCode < 500 || config.env === 'development'
+      ? (err.message || 'Error interno del servidor.')
+      : 'Error interno del servidor.',
+    ...(err.details && statusCode < 500 && { details: err.details }),
     ...(config.env === 'development' && { stack: err.stack }),
   });
 });

@@ -24,18 +24,44 @@ services:
   # 2. Broker MQTT (Eclipse Mosquitto)
   # ─────────────────────────────────────────────────────────
   mosquitto:
-    image: eclipse-mosquitto:latest
+    image: eclipse-mosquitto:2
     container_name: luminaria_mqtt
     restart: unless-stopped
-    ports:
-      - "1883:1883" # MQTT TCP para gateways / microcontroladores en red local
-      - "9001:9001" # WebSockets directo para navegadores web
+    depends_on:
+      mqtt-credentials:
+        condition: service_completed_successfully
     volumes:
       - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./deploy/mosquitto/passwords:/mosquitto/config/passwords:ro
       - ./deploy/mosquitto/aclfile:/mosquitto/config/aclfile:ro
+      - luminaria_mqttpasswords:/mosquitto/passwords:ro
       - luminaria_mqttdata:/mosquitto/data
       - luminaria_mqttlog:/mosquitto/log
+
+  mqtt-credentials:
+    image: eclipse-mosquitto:2
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        case "$$MQTT_BACKEND_PASSWORD$$MQTT_DASHBOARD_PASSWORD$$MQTT_DEVICE_PASSWORD" in *REEMPLAZAR*|'') echo 'Defina contraseñas MQTT reales en .env.' >&2; exit 1;; esac
+        test "$${#MQTT_BACKEND_PASSWORD}" -ge 32
+        test "$${#MQTT_DASHBOARD_PASSWORD}" -ge 32
+        test "$${#MQTT_DEVICE_PASSWORD}" -ge 32
+        test "$$MQTT_BACKEND_PASSWORD" != "$$MQTT_DASHBOARD_PASSWORD"
+        test "$$MQTT_BACKEND_PASSWORD" != "$$MQTT_DEVICE_PASSWORD"
+        test "$$MQTT_DASHBOARD_PASSWORD" != "$$MQTT_DEVICE_PASSWORD"
+        umask 077
+        mosquitto_passwd -b -c /mosquitto/passwords/passwords backend_worker "$$MQTT_BACKEND_PASSWORD"
+        mosquitto_passwd -b /mosquitto/passwords/passwords web_dashboard "$$MQTT_DASHBOARD_PASSWORD"
+        mosquitto_passwd -b /mosquitto/passwords/passwords esp32_writer "$$MQTT_DEVICE_PASSWORD"
+        chown 1883:1883 /mosquitto/passwords/passwords
+    environment:
+      MQTT_BACKEND_PASSWORD: ${MQTT_BACKEND_PASSWORD:?Definir MQTT_BACKEND_PASSWORD en .env}
+      MQTT_DASHBOARD_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:?Definir MQTT_DASHBOARD_PASSWORD en .env}
+      MQTT_DEVICE_PASSWORD: ${MQTT_DEVICE_PASSWORD:?Definir MQTT_DEVICE_PASSWORD en .env}
+    volumes:
+      - luminaria_mqttpasswords:/mosquitto/passwords
 
   # ─────────────────────────────────────────────────────────
   # 3. Backend API (Node.js + Express)
@@ -51,9 +77,6 @@ services:
         condition: service_healthy
       mosquitto:
         condition: service_started
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
     environment:
       PORT: 3000
       NODE_ENV: production
@@ -63,7 +86,7 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Definir BOOTSTRAP_ADMIN_PASSWORD en .env}
       BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:?Definir BOOTSTRAP_ADMIN_NAME en .env}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?Definir BOOTSTRAP_ADMIN_EMAIL en .env}
-      TRUST_PROXY: "loopback"
+      TRUST_PROXY: "1"
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: ${POSTGRES_DB:-luminaria}
@@ -72,29 +95,44 @@ services:
       MQTT_SUBSCRIBER_ENABLED: "false"
       MQTT_HOST: mosquitto
       MQTT_PORT: 1883
+      MQTT_USERNAME: backend_worker
+      MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:?Definir MQTT_BACKEND_PASSWORD en .env}
+      CHIRPSTACK_WEBHOOK_TOKEN: ${CHIRPSTACK_WEBHOOK_TOKEN:?Definir CHIRPSTACK_WEBHOOK_TOKEN en .env}
       RATE_LIMIT_WINDOW_MS: 60000
       RATE_LIMIT_MAX: 300
     expose:
       - "3000"
 
   # ─────────────────────────────────────────────────────────
-  # 4. Servidor Web & Reverse Proxy (Nginx)
+  # 4. Servidor Web & Reverse Proxy (Caddy con HTTPS automático)
   # ─────────────────────────────────────────────────────────
-  nginx:
-    image: nginx:alpine
+  caddy:
+    image: caddy:2-alpine
     container_name: luminaria_web
     restart: unless-stopped
     depends_on:
       - backend
       - mosquitto
+    environment:
+      DOMAIN: ${DOMAIN:-luminarias.neuquencapital.gob.ar}
     ports:
       - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
-      # Monta la raiz del frontend directamente en Nginx
-      - .:/usr/share/nginx/html:ro
-      - ./deploy/nginx/nginx.docker.conf:/etc/nginx/nginx.conf:ro
+      # Solo se montan archivos públicos del frontend, nunca el repositorio.
+      - ./index.html:/srv/index.html:ro
+      - ./css:/srv/css:ro
+      - ./js:/srv/js:ro
+      - ./Img:/srv/Img:ro
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   luminaria_pgdata:
   luminaria_mqttdata:
   luminaria_mqttlog:
+  luminaria_mqttpasswords:
+  caddy_data:
+  caddy_config:

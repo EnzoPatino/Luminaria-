@@ -7,7 +7,10 @@ const logger = require('../services/logger');
 // ─────────────────────────────────────────────────────────────────────────────
 
 function correlationMiddleware(req, res, next) {
-  req.correlationId = req.headers['x-correlation-id'] || logger.generateCorrelationId();
+  const suppliedId = req.headers['x-correlation-id'];
+  req.correlationId = typeof suppliedId === 'string' && /^[a-zA-Z0-9._-]{1,80}$/.test(suppliedId)
+    ? suppliedId
+    : logger.generateCorrelationId();
   res.setHeader('X-Correlation-Id', req.correlationId);
   next();
 }

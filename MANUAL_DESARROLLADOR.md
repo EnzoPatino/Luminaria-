@@ -13,15 +13,14 @@ Aplicación web para monitoreo en tiempo real de tableros de iluminación públi
 ## 1. Comandos Comunes
 
 ### Despliegue Completo en Producción (Docker Compose)
-Levanta los 4 servicios integrados (PostgreSQL 16, Mosquitto MQTT, Backend Node.js y Nginx Reverse Proxy):
+Levanta PostgreSQL 16, Mosquitto MQTT, el backend Node.js y Caddy como proxy HTTPS:
 
 ```bash
 docker compose up -d --build
 ```
-- **Frontend web**: puerto `80` (o `443` con TLS).
-- **API REST**: `http://<host>/api/` (proxied a Node.js en contenedor).
-- **WebSockets MQTT**: `ws://<host>/mqtt` (proxied a Mosquitto).
-- **MQTT TCP (Gateways LoRa/ESP32)**: puerto `1883`.
+- **Frontend y API REST**: HTTPS en el dominio configurado; HTTP redirige a HTTPS.
+- **WebSockets MQTT**: WSS en `https://<host>/mqtt`, con usuario y contraseña.
+- **MQTT TCP**: interno a Docker; no se publica directamente en el host.
 - **PostgreSQL**: accesible únicamente en `127.0.0.1:5432` del host (sellado contra accesos externos).
 
 Verificar estado y logs:
@@ -179,16 +178,16 @@ Default (en `mqtt-client.js`):
 }
 ```
 
-El cliente MQTT autodetecta el host y puerto web actual para conectarse a Mosquitto mediante el reverse proxy de Nginx (`/mqtt`). La configuración manual se persiste en `localStorage['luminaria_mqtt_config']`. Si falla o no hay conexión, mantiene el estado desconectado y reintenta.
+El cliente MQTT autodetecta el host y puerto web actual para conectarse a Mosquitto mediante Caddy (`/mqtt`). La configuración persiste el usuario y los topics en `localStorage['luminaria_mqtt_config']`; la contraseña se pide al conectar y solo permanece en memoria. Si falta una credencial, el cliente no intenta conectarse.
 
 ---
 
 ## 7. Directrices de Seguridad y Despliegue Perimetral
 
 1. **Aislamiento de Puertos:** PostgreSQL nunca debe exponerse en `0.0.0.0`. En `docker-compose.yml`, vincular exclusivamente a `127.0.0.1:5432:5432`.
-2. **Filtrado de Archivos Sensibles en Nginx:** El reverse proxy debe bloquear expresamente solicitudes a archivos ocultos (`/\.`), fuentes internas, schemas (`.sql`), configs (`.yml`, `.json`, `.env`) y documentación (`.md`).
+2. **Archivos públicos:** Caddy monta únicamente `index.html`, `css/`, `js/` e `Img/`; no montes la raíz del repositorio en el servidor web.
 3. **Endpoints de Depuración:** Rutas como `/api/uplink/last` deben requerir autenticación JWT (`requireAuth`) para no fugar payloads en claro.
-4. **Rate Limiting:** El perimetro de Nginx y Express implementa limitación de tasa por IP y por tablero para mitigar ataques de denegación de servicio.
+4. **Rate Limiting:** Express limita solicitudes y refuerza el endpoint de login por IP.
 5. **No introducir frameworks pesados en el frontend:** Mantener la ligereza con Vanilla JS y Paho MQTT.
 6. **Preservar el contrato JSON del hardware:** No renombrar claves de eventos coordinadas con los microcontroladores y ChirpStack.
-7. **Validar sintaxis antes de commit:** `node -c js/app.js && node -c js/mqtt-client.js`.
+7. **Validación:** `npm test` en `backend/` y `python3 check_syntax.py` desde la raíz.

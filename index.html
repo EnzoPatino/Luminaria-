@@ -26,26 +26,13 @@
   <link rel="stylesheet" href="css/auth.css">
 
   <!-- Librería MQTT Paho para WebSockets -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" integrity="sha384-FtgI6XBQHroa6RTQqVE29PsMgDmibchdhIXlikZhRqly3P0ZGnfxior+GiKyxF7/" crossorigin="anonymous"></script>
 
   <!-- Librería Chart.js para Gráficos Ligeros y Accesibles -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
 
-  <!-- Anti-flash: aplica el tema y rol guardado antes de que renderice la página -->
-  <script>
-    (function() {
-      try {
-        var t = localStorage.getItem('luminaria_theme');
-        if (t === 'light' || t === 'dark') {
-          document.documentElement.setAttribute('data-theme', t);
-          if (t === 'light') {
-            document.documentElement.classList.add('light-mode');
-          }
-        }
-        document.documentElement.setAttribute('data-role', 'tecnico');
-      } catch (e) {}
-    })();
-  </script>
+  <!-- Anti-flash compatible con Content-Security-Policy sin scripts inline. -->
+  <script src="js/theme-bootstrap.js"></script>
 </head>
 <body class="session-required">
 
@@ -453,6 +440,17 @@
           <div class="form-field">
             <label for="mqttPort">Puerto WebSocket</label>
             <input type="number" id="mqttPort" class="form-input" value="9001">
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="mqttUsername">Usuario MQTT</label>
+            <input type="text" id="mqttUsername" class="form-input" autocomplete="username">
+          </div>
+          <div class="form-field">
+            <label for="mqttPassword">Contraseña MQTT</label>
+            <input type="password" id="mqttPassword" class="form-input" autocomplete="new-password">
           </div>
         </div>
 

@@ -9,7 +9,11 @@
   };
 
   function getToken() { return localStorage.getItem(TOKEN_KEY); }
-  function clearSession() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
+  function clearSession() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    window.luminariaMQTT?.disconnect();
+  }
   function setMessage(message, kind = 'error') {
     const node = document.getElementById('loginMessage');
     if (!node) return;
@@ -83,6 +87,11 @@
       window.location.reload();
     });
     verifySession();
+  });
+
+  window.addEventListener('luminaria:session-expired', () => {
+    clearSession();
+    showLogin('Tu sesión venció. Ingresá nuevamente para continuar.');
   });
 
   window.luminariaRequest = async function (path, options = {}) {

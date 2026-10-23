@@ -12,6 +12,9 @@ function required(name) {
 }
 
 function validatePassword(password) {
+  if (/REEMPLAZAR/i.test(password)) {
+    throw new Error('BOOTSTRAP_ADMIN_PASSWORD debe reemplazarse por un secreto aleatorio antes de iniciar.');
+  }
   if (password.length < 14 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
     throw new Error('BOOTSTRAP_ADMIN_PASSWORD debe tener al menos 14 caracteres e incluir mayúscula, minúscula y número.');
   }

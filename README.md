@@ -27,12 +27,12 @@ La interfaz es **100% responsive**: en pantallas móviles la navegación se agru
 ## 3. Guía de Ejecución
 
 ### Despliegue en Producción (Docker Compose)
-Levanta todos los servicios unificados (PostgreSQL 16, Mosquitto MQTT, Backend Node.js y Nginx):
+Levanta los servicios (PostgreSQL 16, Mosquitto MQTT, Backend Node.js y Caddy):
 
 ```bash
 docker compose up -d --build
 ```
-El panel web estará disponible inmediatamente en `http://<IP_O_DOMINIO>/` (puerto 80/443).
+El panel requiere DNS apuntando al servidor y los puertos 80 y 443 accesibles para que Caddy emita el certificado TLS. Abrilo en `https://<DOMINIO>/`.
 
 Antes del primer despliegue, configurá los secretos requeridos y el administrador inicial siguiendo [DEPLOY_PRODUCCION.md](DEPLOY_PRODUCCION.md). Para producción, el panel debe publicarse detrás de HTTPS.
 
@@ -57,17 +57,20 @@ El backend recibe la telemetría enviada por los sensores y gateways a través d
 
 1. **Configuración del Webhook en ChirpStack:**
    - Tipo de integración: **HTTP**
-   - URL del Endpoint: `http://<IP_O_DOMINIO_DEL_SERVIDOR>/api/uplink`
+   - URL del Endpoint: `https://<DOMINIO>/api/uplink`
    - Formato de payload: **JSON**
    - Evento suscrito: **Uplink**
+   - Header `X-ChirpStack-Token`: el valor de `CHIRPSTACK_WEBHOOK_TOKEN` del `.env` del servidor.
 2. **Endpoint de verificación:** `GET /api/uplink` (informa si el receptor está listo).
 3. **Inspección de diagnóstico:** `GET /api/uplink/last` (requiere token JWT de operador autorizado).
 
 El adaptador (`chirpstackAdapter.js`) mapea el identificador del dispositivo (DevEUI) con el tablero asignado, clasifica los voltajes y persiste los registros en PostgreSQL local.
 
-### Configuración de Mosquitto MQTT (opcional)
+### Configuración autenticada de Mosquitto MQTT (opcional)
 
-Si se desea usar MQTT en paralelo, configurar `MQTT_SUBSCRIBER_ENABLED=true` en `backend/.env` y asegurar que Mosquitto esté corriendo:
+Compose mantiene los listeners MQTT dentro de la red Docker y no publica los puertos 1883 ni 9001 al host. El panel se conecta por WebSocket seguro a través de Caddy y requiere el usuario `web_dashboard`. El broker no admite clientes anónimos. Para configurar una instalación nueva, seguí [DEPLOY_PRODUCCION.md](DEPLOY_PRODUCCION.md). Los dispositivos que necesiten MQTT directo requieren exposición de red y TLS configurados específicamente; no publiques el puerto 1883 sin cifrado.
+
+Si se desea usar MQTT como fuente de ingesta, configurar `MQTT_SUBSCRIBER_ENABLED=true` en `.env` y mantener la autenticación del `backend_worker`:
 ```bash
 docker compose up -d mosquitto
 ```

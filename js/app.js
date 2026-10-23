@@ -125,6 +125,9 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         signal: controller.signal,
       });
+      if (response.status === 401) {
+        window.dispatchEvent(new Event("luminaria:session-expired"));
+      }
       if (!response.ok) throw new Error(`API ${response.status}: ${path}`);
       const body = await response.json();
       if (!body || body.status !== "ok") throw new Error(`Invalid API response: ${path}`);
@@ -622,6 +625,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("mqttPort").value = cfg.port;
       document.getElementById("mqttPath").value = cfg.path;
       document.getElementById("mqttClientId").value = cfg.clientId;
+      document.getElementById("mqttUsername").value = cfg.username || "";
+      document.getElementById("mqttPassword").value = "";
       document.getElementById("mqttTopic").value = cfg.topics.join(", ");
 
       elements.formMqttConfig.addEventListener("submit", (e) => {
@@ -635,6 +640,8 @@ document.addEventListener("DOMContentLoaded", () => {
           clientId:
             document.getElementById("mqttClientId").value.trim() ||
             "luminaria_web",
+          username: document.getElementById("mqttUsername").value.trim(),
+          password: document.getElementById("mqttPassword").value,
           topics: document
             .getElementById("mqttTopic")
             .value.split(",")
@@ -642,6 +649,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(Boolean),
         };
         window.luminariaMQTT.connect(newCfg);
+        document.getElementById("mqttPassword").value = "";
         closeModal(elements.mqttModal);
       });
     }
@@ -665,10 +673,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }) => {
       if (!elements.mqttConsoleLog) return;
       const logRow = document.createElement("div");
-      logRow.className = `log-row log-type-${type}`;
+      const safeType = ["info", "success", "warning", "error", "incoming", "outgoing"].includes(type) ? type : "info";
+      logRow.className = `log-row log-type-${safeType}`;
 
-      let topicTag = topic ? `<span class="log-topic">[${topic}]</span>` : "";
-      logRow.innerHTML = `<span class="log-time">[${timestamp}]</span> ${topicTag} <span class="log-text">${escapeHtml(message)}</span>`;
+      const topicTag = topic ? `<span class="log-topic">[${escapeHtml(topic)}]</span>` : "";
+      logRow.innerHTML = `<span class="log-time">[${escapeHtml(timestamp)}]</span> ${topicTag} <span class="log-text">${escapeHtml(message)}</span>`;
 
       elements.mqttConsoleLog.prepend(logRow);
       if (elements.mqttConsoleLog.children.length > 60) {

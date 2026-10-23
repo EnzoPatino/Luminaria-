@@ -10,7 +10,7 @@ const auditLogModel = require('../models/auditLogModel');
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'luminaria-local-development-only');
 const JWT_EXPIRES_IN_SECONDS = Number(process.env.JWT_EXPIRES_IN_SECONDS) || 28800; // 8 horas
 
-if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) {
+if (process.env.NODE_ENV === 'production' && (JWT_SECRET.length < 32 || /REEMPLAZAR/i.test(JWT_SECRET))) {
   throw new Error('JWT_SECRET debe estar definido y tener al menos 32 caracteres en producción.');
 }
 
@@ -74,6 +74,9 @@ function verifyJwt(token) {
 
     const [headerB64, payloadB64, signature] = parts;
 
+    const header = JSON.parse(base64UrlDecode(headerB64));
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') return null;
+
     // Verificar firma
     const expectedSignature = crypto
       .createHmac('sha256', JWT_SECRET)
@@ -88,9 +91,12 @@ function verifyJwt(token) {
 
     // Verificar expiración
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
+    if (!Number.isFinite(payload.exp) || payload.exp <= now) {
       return null;
     }
+
+    if (typeof payload.sub !== 'number' && typeof payload.sub !== 'string') return null;
+    if (!['admin', 'tecnico'].includes(payload.rol)) return null;
 
     return payload;
   } catch {

@@ -7,8 +7,8 @@ const { IngestionError } = require('../errors/ingestionError');
 // ─────────────────────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email o nombre de usuario requerido.'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
+  email: z.string().trim().min(1, 'Email o nombre de usuario requerido.').max(254),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.').max(128),
 });
 
 const registerSchema = z.object({

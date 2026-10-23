@@ -31,6 +31,14 @@ function requireAuth(req, res, next) {
     });
   }
 
+  if (!payload.sub || !['admin', 'tecnico'].includes(payload.rol)) {
+    return res.status(401).json({
+      status: 'error',
+      statusCode: 401,
+      message: 'Token inválido o expirado.',
+    });
+  }
+
   req.user = {
     id_usuario: payload.sub,
     email: payload.email,

@@ -12,54 +12,21 @@ La interfaz permite visualizar la telemetria enviada por los microcontroladores 
 
 ---
 
-## 2. Requisitos de Red y Protocolo
+## 2. Red, autenticación y permisos
 
-MQTT utiliza TCP/IP como transporte base. Dado que los navegadores web no pueden abrir sockets TCP nativos directos a puertos como el 1883, la comunicacion entre la UI y Mosquitto se realiza mediante **WebSockets**.
+Compose mantiene los puertos 1883 (MQTT TCP) y 9001 (WebSockets) en la red
+privada de Docker. El panel se conecta a `/mqtt` por WSS a través de Caddy; no
+expongas esos puertos directamente a Internet. Mosquitto rechaza conexiones
+anónimas y aplica los permisos declarados en `deploy/mosquitto/aclfile`.
 
-### Puertos Estandar
-- **1883**: Puerto TCP sin cifrar para dispositivos de campo (ESP32, gateways LoRa).
-- **9001**: Puerto WebSocket sin cifrar para clientes web (UI en navegador).
-- **8883**: Puerto TCP cifrado con TLS.
-- **8083**: Puerto WebSocket cifrado o alternativo.
-
----
-
-## 3. Configuracion de Mosquitto (`mosquitto.conf`)
-
-Para permitir que la interfaz web se conecte al servidor Mosquitto, el archivo de configuracion del broker debe incluir la siguiente definicion de listeners:
-
-```ini
-# Configuración global
-persistence true
-persistence_location /mosquitto/data/
-log_dest file /mosquitto/log/mosquitto.log
-
-# Listener 1: Puerto nativo MQTT para hardware y gateways
-listener 1883
-protocol mqtt
-allow_anonymous true
-
-# Listener 2: Puerto WebSockets para la interfaz Web UI
-listener 9001
-protocol websockets
-allow_anonymous true
-```
-
-### Ejecucion con Docker Compose
-```yaml
-version: '3.8'
-
-services:
-  mosquitto:
-    image: eclipse-mosquitto:latest
-    container_name: luminaria_broker
-    restart: always
-    ports:
-      - "1883:1883"
-      - "9001:9001"
-    volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
-```
+Compose genera los hashes bcrypt para `backend_worker`, `web_dashboard` y
+`esp32_writer` desde secretos únicos del `.env`. El backend puede publicar y
+leer; el panel solo puede leer; los dispositivos pueden publicar telemetría.
+El panel pide su usuario y contraseña desde **Servidor** y conserva la clave
+solo en memoria. Si se conecta hardware directamente por MQTT, configurá un
+listener cifrado con TLS y una regla de firewall antes de publicar un puerto.
+La opción recomendada en esta instalación es enviar telemetría por el webhook
+HTTPS autenticado de ChirpStack.
 
 ---
 

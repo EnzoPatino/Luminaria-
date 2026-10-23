@@ -18,12 +18,21 @@ const rateLimitWindowMs = toPositiveNumber(process.env.RATE_LIMIT_WINDOW_MS, 600
 const rateLimitMax = toPositiveNumber(process.env.RATE_LIMIT_MAX, 100);
 const mqttPort = toPositiveNumber(process.env.MQTT_PORT, 1883);
 const mqttQos = Number(process.env.MQTT_QOS || 0);
+const chirpstackWebhookToken = process.env.CHIRPSTACK_WEBHOOK_TOKEN || '';
+const trustProxyValue = process.env.TRUST_PROXY || 'loopback';
+const trustProxy = /^\d+$/.test(trustProxyValue) ? Number(trustProxyValue) : trustProxyValue;
+
+if (process.env.NODE_ENV === 'production' &&
+    (chirpstackWebhookToken.length < 32 || /REEMPLAZAR/i.test(chirpstackWebhookToken))) {
+  throw new Error('CHIRPSTACK_WEBHOOK_TOKEN debe estar definido y tener al menos 32 caracteres en producción.');
+}
 
 module.exports = {
   env: process.env.NODE_ENV || 'development',
   port,
   corsOrigin: process.env.CORS_ORIGIN || '',
-  trustProxy: process.env.TRUST_PROXY || 'loopback',
+  chirpstackWebhookToken,
+  trustProxy,
   rateLimitWindowMs,
   rateLimitMax,
 
