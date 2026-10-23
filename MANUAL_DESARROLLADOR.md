@@ -13,12 +13,12 @@ Aplicación web para monitoreo en tiempo real de tableros de iluminación públi
 ## 1. Comandos Comunes
 
 ### Despliegue Completo en Producción (Docker Compose)
-Levanta PostgreSQL 16, Mosquitto MQTT, el backend Node.js y Caddy como proxy HTTPS:
+Levanta PostgreSQL 16, Mosquitto MQTT, el backend Node.js y Caddy como proxy HTTP interno. En producción, el ReverseProxy institucional termina TLS:
 
 ```bash
 docker compose up -d --build
 ```
-- **Frontend y API REST**: HTTPS en el dominio configurado; HTTP redirige a HTTPS.
+- **Frontend y API REST**: HTTPS público en el ReverseProxy; Caddy recibe HTTP desde ese proxy en el puerto 80.
 - **WebSockets MQTT**: WSS en `https://<host>/mqtt`, con usuario y contraseña.
 - **MQTT TCP**: interno a Docker; no se publica directamente en el host.
 - **PostgreSQL**: accesible únicamente en `127.0.0.1:5432` del host (sellado contra accesos externos).

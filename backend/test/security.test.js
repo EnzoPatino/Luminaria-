@@ -118,17 +118,26 @@ test('broker configuration denies anonymous clients and gives the dashboard read
   assert.equal(config.trustProxy, 1);
 });
 
-test('production frontend policy uses HTTPS, integrity-checked scripts, and no inline scripts', () => {
+test('production frontend uses the institutional HTTPS proxy and integrity-checked scripts', () => {
   const root = path.resolve(__dirname, '../..');
   const caddy = fs.readFileSync(path.join(root, 'deploy/Caddyfile'), 'utf8');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.match(caddy, /\{\$DOMAIN\}/);
+  assert.match(caddy, /http:\/\/\{\$DOMAIN\}/);
   assert.match(caddy, /frame-ancestors 'none'/);
   assert.match(caddy, /Strict-Transport-Security/);
   assert.match(html, /paho-mqtt\/1\.0\.1\/mqttws31\.min\.js" integrity="sha384-/);
   assert.match(html, /chart\.js@4\.5\.1\/dist\/chart\.umd\.min\.js" integrity="sha384-/);
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i);
+  const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8');
+  assert.doesNotMatch(compose, /"443:443(?:\/udp)?"/);
   assert.equal(fs.existsSync(path.join(root, 'deploy/mosquitto/passwords')), false);
+});
+
+test('MQTT credential generation safely replaces an existing password file', () => {
+  const root = path.resolve(__dirname, '../..');
+  const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8');
+  assert.match(compose, /passwords\.tmp/);
+  assert.match(compose, /mv -f "\$\$temporary_file" "\$\$password_file"/);
 });
 
 test('MQTT browser credentials are removed from persistent storage', () => {

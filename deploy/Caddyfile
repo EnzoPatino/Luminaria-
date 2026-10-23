@@ -1,4 +1,6 @@
-{$DOMAIN} {
+# Public HTTPS and certificates are terminated by the institutional reverse proxy.
+# Caddy serves the private HTTP origin only; do not enable automatic HTTPS here.
+http://{$DOMAIN} {
 	encode zstd gzip
 
 	header {

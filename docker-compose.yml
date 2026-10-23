@@ -52,10 +52,14 @@ services:
         test "$$MQTT_BACKEND_PASSWORD" != "$$MQTT_DEVICE_PASSWORD"
         test "$$MQTT_DASHBOARD_PASSWORD" != "$$MQTT_DEVICE_PASSWORD"
         umask 077
-        mosquitto_passwd -b -c /mosquitto/passwords/passwords backend_worker "$$MQTT_BACKEND_PASSWORD"
-        mosquitto_passwd -b /mosquitto/passwords/passwords web_dashboard "$$MQTT_DASHBOARD_PASSWORD"
-        mosquitto_passwd -b /mosquitto/passwords/passwords esp32_writer "$$MQTT_DEVICE_PASSWORD"
-        chown 1883:1883 /mosquitto/passwords/passwords
+        password_file=/mosquitto/passwords/passwords
+        temporary_file=/mosquitto/passwords/passwords.tmp
+        rm -f "$$temporary_file"
+        mosquitto_passwd -b -c "$$temporary_file" backend_worker "$$MQTT_BACKEND_PASSWORD"
+        mosquitto_passwd -b "$$temporary_file" web_dashboard "$$MQTT_DASHBOARD_PASSWORD"
+        mosquitto_passwd -b "$$temporary_file" esp32_writer "$$MQTT_DEVICE_PASSWORD"
+        chown 1883:1883 "$$temporary_file"
+        mv -f "$$temporary_file" "$$password_file"
     environment:
       MQTT_BACKEND_PASSWORD: ${MQTT_BACKEND_PASSWORD:?Definir MQTT_BACKEND_PASSWORD en .env}
       MQTT_DASHBOARD_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:?Definir MQTT_DASHBOARD_PASSWORD en .env}
@@ -104,7 +108,7 @@ services:
       - "3000"
 
   # ─────────────────────────────────────────────────────────
-  # 4. Servidor Web & Reverse Proxy (Caddy con HTTPS automático)
+  # 4. Proxy HTTP de origen (el reverse proxy institucional termina HTTPS)
   # ─────────────────────────────────────────────────────────
   caddy:
     image: caddy:2-alpine
@@ -117,8 +121,6 @@ services:
       DOMAIN: ${DOMAIN:-luminarias.neuquencapital.gob.ar}
     ports:
       - "80:80"
-      - "443:443"
-      - "443:443/udp"
     volumes:
       # Solo se montan archivos públicos del frontend, nunca el repositorio.
       - ./index.html:/srv/index.html:ro

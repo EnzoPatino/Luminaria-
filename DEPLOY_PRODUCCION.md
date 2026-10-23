@@ -2,7 +2,7 @@
 
 ## Antes de iniciar
 
-1. Configurá el registro DNS indicado por `DOMAIN` para que apunte al servidor. Abrí los puertos 80 y 443 para que Caddy emita y renueve automáticamente el certificado TLS. No expongas el inicio de sesión únicamente por HTTP.
+1. El ReverseProxy institucional termina TLS y administra el certificado público. Configuralo para redirigir HTTP público a HTTPS y reenviar el tráfico HTTPS por HTTP al servidor Luminaria en el puerto 80. Caddy sirve solo el origen HTTP y no obtiene certificados. No publiques el puerto 443 de este servidor; limitá el acceso al puerto 80 a la red del ReverseProxy siempre que sea posible.
 2. En el servidor, dentro del directorio del proyecto, creá el archivo de secretos a partir del ejemplo:
 
 ```bash
@@ -59,17 +59,16 @@ Conservá el mismo `.env`: el administrador inicial no se modifica si ya existe.
 
 ## Despliegue manual de `main`
 
-El workflow `.github/workflows/deploy-main.yml` se ejecuta desde **Actions → Deploy main to production → Run workflow**, seleccionando `main`. El push no despliega automáticamente: primero se deben agregar los secretos nuevos al `.env` del servidor y configurar el header de ChirpStack. El workflow hace `git pull --ff-only origin main` en `~/luminaria` y actualiza todos los servicios.
+El servidor de producción se administra por VPN. El runner hospedado por GitHub no puede alcanzar su IP privada, y no se debe exponer SSH a Internet para habilitar despliegues directos. La automatización queda pendiente de aprobación de infraestructura; se puede evaluar un job en Jenkins con un agente dentro de la red. Mientras tanto, actualizá `main` manualmente desde una sesión VPN:
 
-En **GitHub → Settings → Secrets and variables → Actions**, agregá estos repository secrets:
+```bash
+cd ~/luminaria
+git pull --ff-only origin main
+docker compose config --quiet
+docker compose up -d --build
+```
 
-- `DEPLOY_HOST`: IP o nombre DNS del servidor accesible por SSH.
-- `DEPLOY_USER`: usuario del servidor que puede leer el repositorio y ejecutar Docker; por ejemplo `epet20`.
-- `DEPLOY_PORT`: puerto SSH, normalmente `22`.
-- `DEPLOY_SSH_KEY`: clave privada de una clave dedicada. Instalá la clave pública correspondiente en `~/.ssh/authorized_keys` de ese usuario.
-- `DEPLOY_KNOWN_HOSTS`: línea de `known_hosts` para el servidor. Obtenela con `ssh-keyscan -H -p <puerto> <host>` y verificá su huella con quien administra el servidor antes de guardarla.
-
-El workflow solo despliega si la referencia es `main`. Protegé esa rama para que solo cambios revisados puedan disparar un despliegue. El workflow conserva el volumen de PostgreSQL; no ejecuta `docker compose down -v`.
+No agregues secretos de despliegue ni habilites un workflow de GitHub Actions mientras no exista una ruta de red aprobada hacia el servidor.
 
 ## Verificación
 
@@ -77,6 +76,6 @@ El workflow solo despliega si la referencia es `main`. Protegé esa rama para qu
 2. Confirmá que el acceso exige credenciales.
 3. Ingresá con el administrador configurado en `.env`.
 4. Creá una cuenta de prueba y verificá que puede iniciar sesión.
-5. Verificá que `http://tu-dominio/` redirige a HTTPS y que MQTT solo conecta por WSS con credenciales.
+5. Verificá que el ReverseProxy redirige el tráfico público HTTP a HTTPS, que el dominio presenta el certificado administrado allí y que MQTT solo conecta por WSS con credenciales.
 
 No subas el archivo `.env` ni compartas las claves por canales no seguros.

@@ -32,7 +32,7 @@ Levanta los servicios (PostgreSQL 16, Mosquitto MQTT, Backend Node.js y Caddy):
 ```bash
 docker compose up -d --build
 ```
-El panel requiere DNS apuntando al servidor y los puertos 80 y 443 accesibles para que Caddy emita el certificado TLS. Abrilo en `https://<DOMINIO>/`.
+En producción, el ReverseProxy institucional administra TLS y reenvía tráfico HTTP al puerto 80 de Caddy en la red interna. No publiques el puerto 443 de este servidor. Abrilo en `https://<DOMINIO>/`.
 
 Antes del primer despliegue, configurá los secretos requeridos y el administrador inicial siguiendo [DEPLOY_PRODUCCION.md](DEPLOY_PRODUCCION.md). Para producción, el panel debe publicarse detrás de HTTPS.
 
