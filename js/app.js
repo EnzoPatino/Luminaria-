@@ -1000,7 +1000,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Corriente Reportada</span>
-                <span class="expand-stat-val">${Number.isFinite(tablero.corriente_ma) ? `${(tablero.corriente_ma / 1000).toFixed(2)} A` : "--"}</span>
+                <span class="expand-stat-val">${Number.isFinite(tablero.corriente_ma) ? `${(tablero.corriente_ma / 1000).toFixed(3)} A` : "--"}</span>
               </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Último Reporte</span>
@@ -1535,7 +1535,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const voltage = latest?.tension;
     const status = voltageStatus(voltage);
     setTelemetryText("telemetryVoltageValue", Number.isFinite(voltage) ? voltage.toFixed(1) : "--");
-    setTelemetryText("telemetryCurrentValue", Number.isFinite(latest?.corriente) ? latest.corriente.toFixed(2) : "--");
+    setTelemetryText("telemetryCurrentValue", Number.isFinite(latest?.corriente) ? latest.corriente.toFixed(3) : "--");
     setTelemetryText("telemetryLastUpdate", latest ? formatTelemetryTime(latest.timestamp) : "--:--");
     setTelemetryText("telemetryAverageValue", voltages.length ? `${(voltages.reduce((sum, value) => sum + value, 0) / voltages.length).toFixed(1)} V` : "--");
     setTelemetryText("telemetryMinimumValue", voltages.length ? `${Math.min(...voltages).toFixed(1)} V` : "--");

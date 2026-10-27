@@ -10,6 +10,10 @@ Este documento describe la integracion entre la interfaz de usuario (UI) desarro
 
 La interfaz permite visualizar la telemetria enviada por los microcontroladores (ESP32) instalados en los tableros electricos y mostrar alertas inmediatas cuando se detectan anomalias de tension o fallas en las luminarias.
 
+La corriente se intercambia y persiste en miliamperios (mA), dentro del rango
+operativo de 0 a 50 mA. El panel convierte esas lecturas a amperios (A) para
+mostrarlas en los tableros.
+
 ---
 
 ## 2. Red, autenticación y permisos
@@ -63,7 +67,7 @@ Se emite cuando la corriente cae a 0 mA en menos de 200 ms mientras el circuito 
   "timestamp": "2025-06-10T15:10:22Z",
   "datos": {
     "id_foco": "FOCO_A3",
-    "corriente_previa_ma": 450.0,
+    "corriente_previa_ma": 50.0,
     "corriente_actual_ma": 0.0,
     "tiempo_caida_ms": 85,
     "estado_circuito": "ACTIVO"
@@ -83,7 +87,7 @@ Se emite cuando la corriente medida se mantiene significativamente baja (por deb
   "timestamp": "2025-06-10T16:45:00Z",
   "datos": {
     "id_foco": "FOCO_B1",
-    "corriente_esperada_ma": 450.0,
+    "corriente_esperada_ma": 50.0,
     "corriente_medida_ma": 12.5,
     "duracion_anomalia_s": 30,
     "estado_circuito": "ACTIVO"

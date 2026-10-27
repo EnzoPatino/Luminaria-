@@ -238,16 +238,17 @@ function extractMeasurements(body) {
   }
 
   // Extracción de corriente
-  let corriente = merged.corriente_medida_ma
+  const corrienteEnMa = merged.corriente_medida_ma
     ?? merged.corriente_actual_ma
+    ?? merged.ma;
+  let corriente = corrienteEnMa
     ?? merged.corriente
     ?? merged.current
     ?? merged.amperaje
-    ?? merged.i
-    ?? merged.ma;
+    ?? merged.i;
 
   // Si la corriente viene en Amperes decimales (ej: 0.45A), convertir a mA
-  if (typeof corriente === 'number' && corriente > 0 && corriente < 20) {
+  if (corrienteEnMa === undefined && typeof corriente === 'number' && corriente > 0 && corriente < 20) {
     corriente = Math.round(corriente * 1000);
   }
 

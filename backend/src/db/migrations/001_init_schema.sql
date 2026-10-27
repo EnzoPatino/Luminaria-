@@ -49,17 +49,17 @@ CREATE TABLE IF NOT EXISTS lecturas (
   id_lectura BIGSERIAL PRIMARY KEY,
   id_sensor INTEGER NOT NULL REFERENCES sensores(id_sensor) ON DELETE RESTRICT,
   id_tablero TEXT REFERENCES tableros(id_tablero) ON DELETE SET NULL,
-  amperaje NUMERIC(8,2),
+  amperaje NUMERIC(8,3),
   fecha_hora TIMESTAMPTZ NOT NULL DEFAULT now(),
   timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
   valor_tension NUMERIC(6,2),
-  valor_corriente NUMERIC(8,2),
+  valor_corriente NUMERIC(8,3),
   fase TEXT,
   rssi_lora NUMERIC(5,1),
   estado_conexion TEXT,
   CONSTRAINT lecturas_tension_chk CHECK (valor_tension IS NULL OR valor_tension >= 0),
-  CONSTRAINT lecturas_corriente_chk CHECK (valor_corriente IS NULL OR valor_corriente >= 0),
-  CONSTRAINT lecturas_amperaje_chk CHECK (amperaje IS NULL OR amperaje >= 0),
+  CONSTRAINT lecturas_corriente_chk CHECK (valor_corriente IS NULL OR valor_corriente BETWEEN 0 AND 50),
+  CONSTRAINT lecturas_amperaje_chk CHECK (amperaje IS NULL OR amperaje BETWEEN 0 AND 50),
   CONSTRAINT lecturas_fase_chk CHECK (fase IS NULL OR fase IN ('L1', 'L2', 'L3'))
 );
 
