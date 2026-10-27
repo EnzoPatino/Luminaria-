@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="css/consola.css">
   <link rel="stylesheet" href="css/modales.css">
   <link rel="stylesheet" href="css/telemetria.css">
-  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/auth.css?v=password-toggle-1">
 
   <!-- Librería MQTT Paho para WebSockets -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" integrity="sha384-FtgI6XBQHroa6RTQqVE29PsMgDmibchdhIXlikZhRqly3P0ZGnfxior+GiKyxF7/" crossorigin="anonymous"></script>
@@ -53,9 +53,13 @@
           <label class="login-field" for="loginIdentifier">Usuario
             <input id="loginIdentifier" name="identifier" autocomplete="username" required autofocus>
           </label>
-          <label class="login-field" for="loginPassword">Contraseña
-            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
-          </label>
+          <div class="login-field">
+            <label for="loginPassword">Contraseña</label>
+            <div class="login-password-wrap">
+              <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+              <button class="login-password-toggle" id="toggleLoginPassword" type="button" aria-label="Mostrar contraseña" aria-controls="loginPassword" aria-pressed="false">Mostrar</button>
+            </div>
+          </div>
           <button class="login-submit" id="loginSubmit" type="submit">Ingresar</button>
           <p class="login-message" id="loginMessage" aria-live="polite"></p>
         </form>
@@ -484,6 +488,7 @@
   <script src="js/mqtt-client.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/password-toggle.js?v=password-toggle-1"></script>
   <script src="js/app.js?v=visible-current-50ma"></script>
 </body>
 </html>

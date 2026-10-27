@@ -13,6 +13,10 @@ body.session-required .login-screen { display: grid; place-items: center; }
 .login-field { display: grid; gap: 8px; margin-bottom: 20px; font-weight: 600; font-size: .9rem; }
 .login-field input { height: 48px; border: 1px solid #aeb8c4; padding: 0 13px; font: inherit; color: #182230; background: #fff; border-radius: 0; }
 .login-field input:focus { outline: 3px solid rgba(0,47,167,.18); border-color: #002fa7; }
+.login-password-wrap { position: relative; display: flex; }
+.login-password-wrap input { width: 100%; padding-right: 82px; }
+.login-password-toggle { position: absolute; top: 1px; right: 1px; height: 46px; padding: 0 12px; border: 0; background: #fff; color: #002fa7; font: 600 .85rem var(--font-sans); cursor: pointer; }
+.login-password-toggle:focus-visible { outline: 3px solid rgba(0,47,167,.3); outline-offset: -3px; }
 .login-submit { width: 100%; min-height: 48px; border: 0; border-radius: 0; background: #002fa7; color: #fff; font: 600 1rem var(--font-sans); cursor: pointer; }
 .login-submit:hover { background: #001f73; }
 .login-submit:disabled { opacity: .65; cursor: wait; }
