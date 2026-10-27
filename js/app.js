@@ -979,6 +979,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="info-cell-lbl">Telemetría / Enlace</span>
             <span class="info-cell-val">${isStale ? `<i class="fas fa-clock"></i> ${timeAgoText} (Inactivo)` : `<i class="fas fa-circle text-success pulse"></i> ${timeAgoText} (En vivo)`}</span>
           </div>
+          <div class="info-cell">
+            <span class="info-cell-lbl">Corriente</span>
+            <span class="info-cell-val">${Number.isFinite(tablero.corriente_ma) ? `${(tablero.corriente_ma / 1000).toFixed(3)} A` : "--"}</span>
+          </div>
         </div>
 
         <div class="tablero-card-actions">
