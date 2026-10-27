@@ -135,25 +135,21 @@
          RESUMEN DE MÉTRICAS KPI
          ========================================== -->
     <section class="kpi-bar">
-      <div class="kpi-box">
-        <button class="kpi-icon-wrap red kpi-alert-trigger" id="openCriticalAlertBoard" type="button" aria-label="Abrir tablero de la alerta crítica más reciente" title="Abrir tablero de la alerta crítica más reciente">
-          <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-        </button>
+      <button class="kpi-box kpi-alert-box" id="openCriticalAlertBoard" type="button" aria-label="Abrir el tablero de la alerta crítica más reciente" title="Abrir el tablero de la alerta crítica más reciente">
+        <span class="kpi-icon-wrap red"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></span>
         <div class="kpi-data">
           <span class="kpi-name">Alertas</span>
           <span class="kpi-num" id="kpiAlertasCriticas">0</span>
         </div>
-      </div>
+      </button>
 
-      <div class="kpi-box">
-        <button class="kpi-icon-wrap yellow kpi-alert-trigger" id="openWarningAlertBoard" type="button" aria-label="Abrir tablero de la advertencia más reciente" title="Abrir tablero de la advertencia más reciente">
-          <i class="fas fa-lightbulb" aria-hidden="true"></i>
-        </button>
+      <button class="kpi-box kpi-alert-box" id="openWarningAlertBoard" type="button" aria-label="Abrir el tablero de la advertencia más reciente" title="Abrir el tablero de la advertencia más reciente">
+        <span class="kpi-icon-wrap yellow"><i class="fas fa-lightbulb" aria-hidden="true"></i></span>
         <div class="kpi-data">
           <span class="kpi-name">Advertencias</span>
           <span class="kpi-num" id="kpiAdvertencias">0</span>
         </div>
-      </div>
+      </button>
 
       <div class="kpi-box">
         <div class="kpi-icon-wrap green"><i class="fas fa-cubes"></i></div>
@@ -493,6 +489,6 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/password-toggle.js?v=password-toggle-1"></script>
-  <script src="js/app.js?v=alert-board-1"></script>
+  <script src="js/app.js?v=alert-board-2"></script>
 </body>
 </html>

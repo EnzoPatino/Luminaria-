@@ -852,11 +852,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function openLatestAlertBoard(severity) {
     const latestAlert = appState.alerts
       .filter((alert) => alert.severidad === severity && !alert.resuelta)
-      .sort((a, b) => Date.parse(b.timestamp || "") - Date.parse(a.timestamp || ""))
-      .find((alert) => appState.tableros[alert.id_tablero]);
+      .sort((a, b) => (Date.parse(b.timestamp || "") || 0) - (Date.parse(a.timestamp || "") || 0))
+      .find((alert) => resolveAlertBoardId(alert));
     if (!latestAlert) return;
 
-    const tableroId = latestAlert.id_tablero;
+    const tableroId = resolveAlertBoardId(latestAlert);
     appState.selectedTableroId = tableroId;
     appState.expandedTableroId = tableroId;
 
@@ -871,6 +871,24 @@ document.addEventListener("DOMContentLoaded", () => {
         .find((item) => item.dataset.tableroId === tableroId);
       card?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
+  }
+
+  function resolveAlertBoardId(alert) {
+    const rawId = String(alert.id_tablero || "").trim();
+    const boardIds = Object.keys(appState.tableros);
+    const exactCandidates = [
+      rawId,
+      rawId.replace(/^DEMO_/, ""),
+      rawId.startsWith("TABLERO_") ? `DEMO_${rawId}` : "",
+    ].filter(Boolean);
+    const exactMatch = exactCandidates.find((id) => appState.tableros[id]);
+    if (exactMatch) return exactMatch;
+
+    const suffix = rawId.match(/(\d+)$/)?.[1];
+    if (!suffix) return null;
+    const paddedSuffix = suffix.padStart(2, "0");
+    const suffixMatches = boardIds.filter((id) => id.match(/(\d+)$/)?.[1].padStart(2, "0") === paddedSuffix);
+    return suffixMatches.length === 1 ? suffixMatches[0] : null;
   }
 
   function refreshAllViews() {

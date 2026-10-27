@@ -533,10 +533,10 @@ html, body {
 .kpi-icon-wrap.red { color: #ef4444; }
 .kpi-icon-wrap.yellow { color: #f59e0b; }
 .kpi-icon-wrap.green { color: #10b981; }
-.kpi-alert-trigger { appearance: none; padding: 0; font: inherit; cursor: pointer; transition: var(--transition); }
-.kpi-alert-trigger:hover:not(:disabled) { filter: brightness(1.2); transform: translateY(-1px); }
-.kpi-alert-trigger:focus-visible { outline: 3px solid var(--color-accent-text); outline-offset: 3px; }
-.kpi-alert-trigger:disabled { opacity: 0.45; cursor: not-allowed; }
+.kpi-alert-box { width: 100%; color: var(--text-main); font: inherit; text-align: left; cursor: pointer; transition: var(--transition); }
+.kpi-alert-box:hover:not(:disabled) { border-color: var(--color-accent-text); filter: brightness(1.08); }
+.kpi-alert-box:focus-visible { outline: 3px solid var(--color-accent-text); outline-offset: 3px; }
+.kpi-alert-box:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .kpi-data {
   display: flex;
