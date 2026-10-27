@@ -1577,7 +1577,7 @@ document.addEventListener("DOMContentLoaded", () => {
       { label: "Nominal", data: [], borderColor: "#10b981", borderWidth: 1, pointRadius: 0, borderDash: [3, 3] },
       { label: "Límite superior", data: [], borderColor: "#f59e0b", borderWidth: 1, pointRadius: 0, borderDash: [5, 4] }
     ] }, options: buildLineOptions("Tensión (V)", 160, 260) });
-    if (currentCanvas) sensorBarChartInstance = new Chart(currentCanvas, { type: "line", data: { labels: [], datasets: [{ label: "Corriente de línea", data: [], borderColor: "#d8b45c", backgroundColor: "rgba(216, 180, 92, .12)", fill: true, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 }] }, options: buildLineOptions("Corriente (A)", 0, 20) });
+    if (currentCanvas) sensorBarChartInstance = new Chart(currentCanvas, { type: "line", data: { labels: [], datasets: [{ label: "Corriente de línea", data: [], borderColor: "#d8b45c", backgroundColor: "rgba(216, 180, 92, .12)", fill: true, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 }] }, options: buildLineOptions("Corriente (A)", 0, 0.05) });
   }
 
   function updateTelemetryCharts(readings) {
@@ -1595,8 +1595,7 @@ document.addEventListener("DOMContentLoaded", () => {
       sensorBarChartInstance.$telemetryTimestamps = readings.map((reading) => reading.timestamp);
       sensorBarChartInstance.data.labels = labels;
       sensorBarChartInstance.data.datasets[0].data = readings.map((reading) => reading.corriente);
-      const peakCurrent = Math.max(0, ...readings.map((reading) => reading.corriente || 0));
-      sensorBarChartInstance.options.scales.y.max = Math.max(20, Math.ceil(peakCurrent * 1.2));
+      sensorBarChartInstance.options.scales.y.max = 0.05;
       sensorBarChartInstance.update("none");
     }
   }
