@@ -39,7 +39,9 @@ document.addEventListener("DOMContentLoaded", () => {
     mqttStatusDot: document.getElementById("mqttStatusDot"),
     mqttStatusText: document.getElementById("mqttStatusText"),
     kpiAlertasCriticas: document.getElementById("kpiAlertasCriticas"),
+    openCriticalAlertBoard: document.getElementById("openCriticalAlertBoard"),
     kpiAdvertencias: document.getElementById("kpiAdvertencias"),
+    openWarningAlertBoard: document.getElementById("openWarningAlertBoard"),
     kpiTotalTableros: document.getElementById("kpiTotalTableros"),
 
     leafletMapContainer: document.getElementById("leafletMapContainer"),
@@ -218,13 +220,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const severidad = ["CRITICA", "ADVERTENCIA", "INFO"].includes(alerta.prioridad)
       ? alerta.prioridad
       : "INFO";
-    const idTableroStr = alerta.id_tablero
-      ? String(alerta.id_tablero).startsWith("TABLERO_")
-        ? String(alerta.id_tablero)
-        : `TABLERO_${String(alerta.id_tablero).padStart(2, "0")}`
-      : alerta.id_tablero_num
-      ? `TABLERO_${String(alerta.id_tablero_num).padStart(2, "0")}`
-      : "TABLERO_01";
+    const rawTableroId = alerta.id_tablero ?? alerta.id_tablero_num;
+    const rawTableroIdText = rawTableroId == null ? "" : String(rawTableroId);
+    const idTableroStr = !rawTableroIdText
+      ? "TABLERO_01"
+      : /^\d+$/.test(rawTableroIdText)
+        ? `TABLERO_${rawTableroIdText.padStart(2, "0")}`
+        : rawTableroIdText;
 
     return {
       id: String(alerta.id_alerta || alerta.id),
@@ -450,6 +452,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // EVENT LISTENERS & DELEGACIÓN
   // ==========================================
   function setupEventListeners() {
+    elements.openCriticalAlertBoard?.addEventListener("click", () => {
+      openLatestAlertBoard("CRITICA");
+    });
+    elements.openWarningAlertBoard?.addEventListener("click", () => {
+      openLatestAlertBoard("ADVERTENCIA");
+    });
+
     const telemetryBoardSelect = document.getElementById("telemetryBoardSelect");
     if (telemetryBoardSelect) {
       telemetryBoardSelect.addEventListener("change", async (event) => {
@@ -840,6 +849,30 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTablerosGrid();
   }
 
+  function openLatestAlertBoard(severity) {
+    const latestAlert = appState.alerts
+      .filter((alert) => alert.severidad === severity && !alert.resuelta)
+      .sort((a, b) => Date.parse(b.timestamp || "") - Date.parse(a.timestamp || ""))
+      .find((alert) => appState.tableros[alert.id_tablero]);
+    if (!latestAlert) return;
+
+    const tableroId = latestAlert.id_tablero;
+    appState.selectedTableroId = tableroId;
+    appState.expandedTableroId = tableroId;
+
+    const tablerosTab = document.querySelector('.nav-tab[data-tab="tableros"]');
+    if (tablerosTab && !tablerosTab.classList.contains("active")) tablerosTab.click();
+    updateTableroUI();
+    renderMapPins();
+
+    requestAnimationFrame(() => {
+      const container = document.getElementById("tablerosGridContainer");
+      const card = [...(container?.querySelectorAll(".tablero-card") || [])]
+        .find((item) => item.dataset.tableroId === tableroId);
+      card?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
   function refreshAllViews() {
     updateTableroUI();
     renderAlerts();
@@ -936,6 +969,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const card = document.createElement("article");
       card.className = `tablero-card ${statusClass} ${isSelected ? "selected" : ""}`;
+      card.dataset.tableroId = tablero.id;
 
       card.innerHTML = `
         <div class="tablero-card-header">
@@ -1241,12 +1275,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (elements.kpiAlertasCriticas) {
       elements.kpiAlertasCriticas.textContent = criticasCount;
     }
+    if (elements.openCriticalAlertBoard) {
+      elements.openCriticalAlertBoard.disabled = criticasCount === 0;
+    }
 
     const advertenciasCount = appState.alerts.filter(
       (a) => a.severidad === "ADVERTENCIA" && !a.resuelta,
     ).length;
     if (elements.kpiAdvertencias) {
       elements.kpiAdvertencias.textContent = advertenciasCount;
+    }
+    if (elements.openWarningAlertBoard) {
+      elements.openWarningAlertBoard.disabled = advertenciasCount === 0;
     }
 
     if (elements.kpiTotalTableros) {

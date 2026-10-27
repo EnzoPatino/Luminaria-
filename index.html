@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <!-- Estilos CSS Personalizados -->
-  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/global.css?v=alert-board-1">
   <link rel="stylesheet" href="css/tableros.css">
   <link rel="stylesheet" href="css/mapa.css">
   <link rel="stylesheet" href="css/alertas.css">
@@ -136,7 +136,9 @@
          ========================================== -->
     <section class="kpi-bar">
       <div class="kpi-box">
-        <div class="kpi-icon-wrap red"><i class="fas fa-triangle-exclamation"></i></div>
+        <button class="kpi-icon-wrap red kpi-alert-trigger" id="openCriticalAlertBoard" type="button" aria-label="Abrir tablero de la alerta crítica más reciente" title="Abrir tablero de la alerta crítica más reciente">
+          <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+        </button>
         <div class="kpi-data">
           <span class="kpi-name">Alertas</span>
           <span class="kpi-num" id="kpiAlertasCriticas">0</span>
@@ -144,7 +146,9 @@
       </div>
 
       <div class="kpi-box">
-        <div class="kpi-icon-wrap yellow"><i class="fas fa-lightbulb"></i></div>
+        <button class="kpi-icon-wrap yellow kpi-alert-trigger" id="openWarningAlertBoard" type="button" aria-label="Abrir tablero de la advertencia más reciente" title="Abrir tablero de la advertencia más reciente">
+          <i class="fas fa-lightbulb" aria-hidden="true"></i>
+        </button>
         <div class="kpi-data">
           <span class="kpi-name">Advertencias</span>
           <span class="kpi-num" id="kpiAdvertencias">0</span>
@@ -489,6 +493,6 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/password-toggle.js?v=password-toggle-1"></script>
-  <script src="js/app.js?v=visible-current-50ma"></script>
+  <script src="js/app.js?v=alert-board-1"></script>
 </body>
 </html>
