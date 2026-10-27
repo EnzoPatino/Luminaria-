@@ -237,6 +237,10 @@
   flex-direction: column;
 }
 
+.info-cell-current {
+  grid-column: 1 / -1;
+}
+
 .info-cell-lbl {
   font-size: 0.72rem;
   color: var(--text-dim);
