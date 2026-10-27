@@ -81,6 +81,27 @@ test('valid service and user credentials pass their route guards', async () => {
   assert.equal(lastWithAuth.status, 200);
 });
 
+test('event ingestion rejects demo boards before writing them to PostgreSQL', async () => {
+  const token = signJwt({ sub: 42, rol: 'admin', email: 'admin@example.test', nombre: 'Admin' });
+  const response = await fetch(`${baseUrl}/api/eventos`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tipo_evento: 'TELEMETRIA_NORMAL',
+      id_tablero: 'DEMO_TABLERO_01',
+      timestamp: new Date().toISOString(),
+      severidad: 'INFO',
+      datos: { tension_medida_v: 220, tension_nominal_v: 220, fase: 'L1' },
+    }),
+  });
+
+  assert.equal(response.status, 422);
+  assert.equal((await response.json()).code, 'DEMO_BOARD_DISABLED');
+});
+
 test('production CORS allows only the configured origin and security headers are set', async () => {
   const allowed = await fetch(`${baseUrl}/`, { headers: { Origin: 'https://trusted.example' } });
   assert.equal(allowed.headers.get('access-control-allow-origin'), 'https://trusted.example');

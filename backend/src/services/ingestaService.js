@@ -108,6 +108,14 @@ function consumeTableroRateLimit(idTablero, now) {
 }
 
 async function ingestValidatedEvent(event, metadata = {}) {
+  if (/^DEMO_/i.test(event.id_tablero)) {
+    throw new IngestionError('Los tableros DEMO_* no están habilitados.', {
+      statusCode: 422,
+      code: 'DEMO_BOARD_DISABLED',
+      details: [{ path: 'id_tablero', message: 'Use el ID de un tablero real.' }],
+    });
+  }
+
   const now = Date.now();
   const reservation = reserveDedupeSlot(event, now);
 

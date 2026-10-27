@@ -41,12 +41,13 @@ app.use(correlationMiddleware);
 // BE-09: Request logger estructurado con correlation_id
 app.use((req, res, next) => {
   const start = Date.now();
+  const requestPath = (req.originalUrl || req.url).split('?')[0];
   res.on('finish', () => {
     const duration = Date.now() - start;
-    logger.info(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`, {
+    logger.info(`${req.method} ${requestPath} ${res.statusCode} ${duration}ms`, {
       correlation_id: req.correlationId,
       method: req.method,
-      path: req.path,
+      path: requestPath,
       status: res.statusCode,
       duration_ms: duration,
       ip: req.ip,
