@@ -31,7 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Instancias de Chart.js
-  let sensorLineChartInstance = null;
   let sensorBarChartInstance = null;
 
   // Referencias a elementos DOM
@@ -203,8 +202,6 @@ document.addEventListener("DOMContentLoaded", () => {
       ubicacion: tablero.ubicacion || "Ubicacion no informada",
       posX: Math.min(Math.max(toFiniteNumber(tablero.pos_x, 50), 0), 100),
       posY: Math.min(Math.max(toFiniteNumber(tablero.pos_y, 50), 0), 100),
-      tension_v: toFiniteNumber(tablero.tension_medida_v, null),
-      tension_nominal_v: toFiniteNumber(tablero.tension_nominal, 220),
       corriente_ma: toFiniteNumber(tablero.corriente_medida_ma ?? tablero.corriente_ma, null),
       fase: tablero.fase || "L1",
       estado: tablero.estado || "ok",
@@ -440,7 +437,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (targetTab === "sensores") {
           setTimeout(() => {
-            if (sensorLineChartInstance) sensorLineChartInstance.resize();
             if (sensorBarChartInstance) sensorBarChartInstance.resize();
           }, 50);
         }
@@ -712,6 +708,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function processIncomingEvent(event) {
     if (!event) return;
 
+    // Los módulos instalados solo reportan corriente; ignora eventos legacy
+    // de baja tensión para no mostrar mediciones que el hardware no produce.
+    if (event.tipo_evento === "BAJA_TENSION") return;
+
     if (isElectricalTelemetryEvent(event)) {
       processElectricalTelemetry(event);
     }
@@ -732,16 +732,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let alertTitle = "";
     let soundType = "info";
 
-    if (event.tipo_evento === "BAJA_TENSION") {
-      const tension = toFiniteNumber(event.datos?.tension_medida_v, NaN);
-      if (!Number.isFinite(tension)) return;
-      tablero.tension_v = tension;
-      tablero.fase = event.datos?.fase || "L1";
-      tablero.fallaActiva = `Baja tensión: ${tension.toFixed(1)} V`;
-      tablero.estado = "critico";
-      alertTitle = `Baja Tensión Detectada: ${tension}V (Umbral: ${event.datos?.umbral_minimo_v || 190}V)`;
-      soundType = "critical";
-    } else if (event.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") {
+    if (event.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") {
       const focoId = event.datos?.id_foco;
       if (!focoId) return;
       if (!tablero.focos[focoId]) {
@@ -776,9 +767,6 @@ document.addEventListener("DOMContentLoaded", () => {
       alertTitle = `Anomalía de Consumo / Foco Quemado en ${tablero.nombre || tableroId}`;
       soundType = "warning";
     } else if (event.tipo_evento === "TELEMETRIA_NORMAL") {
-      const tensionMedida = toFiniteNumber(event.datos?.tension_medida_v, NaN);
-      if (!Number.isFinite(tensionMedida)) return;
-      tablero.tension_v = tensionMedida;
       const corrienteMedida = toFiniteNumber(
         event.datos?.corriente_actual_ma ?? event.datos?.corriente_medida_ma,
         NaN,
@@ -797,10 +785,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
           !a.resuelta &&
           a.id_tablero === tableroId &&
-          (a.tipo_evento === "BAJA_TENSION" ||
-            ((a.tipo_evento === "FOCO_QUEMADO" ||
-              a.tipo_evento === "DESCONEXION_ABRUPTA_FOCO") &&
-             focosRestaurados.includes(String(a.datos?.id_foco ?? a.id_foco_afectado ?? ""))))
+          (["FOCO_QUEMADO", "DESCONEXION_ABRUPTA_FOCO"].includes(a.tipo_evento) &&
+            focosRestaurados.includes(String(a.datos?.id_foco ?? a.id_foco_afectado ?? "")))
         ) {
           a.resuelta = true;
         }
@@ -925,33 +911,35 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       let statusClass = "ok";
-      let statusLabel = isStale ? `Enlace Inactivo (${timeAgoText})` : "En servicio (En vivo)";
+      let statusLabel = isStale ? `Enlace Inactivo (${timeAgoText})` : "Corriente reportada (En vivo)";
       let statusBadgeClass = isStale ? "badge-neutral" : "badge-ok";
       let statusIcon = isStale ? "fa-satellite-dish" : "fa-check-circle";
 
-      const hasVoltageReading = Number.isFinite(tablero.tension_v);
-      const voltageCritical = hasVoltageReading && tablero.tension_v < 190.0;
-      const voltageWarning = hasVoltageReading && tablero.tension_v >= 190.0 && tablero.tension_v < 210.0;
       const focos = Object.values(tablero.focos || {});
       const hayDesconexion = focos.some((foco) => foco.estado === "robado");
       const hayFallaLuminaria = focos.some((foco) => foco.estado === "quemado");
+      const tableroAlerts = appState.alerts.filter(
+        (alerta) => alerta.id_tablero === tablero.id && !alerta.resuelta && alerta.tipo_evento !== "BAJA_TENSION",
+      );
+      const hasCriticalAlert = tableroAlerts.some((alerta) => alerta.severidad === "CRITICA");
+      const hasWarningAlert = tableroAlerts.some((alerta) => alerta.severidad === "ADVERTENCIA");
 
-      if (voltageCritical || hayDesconexion) {
+      if (hayDesconexion || hasCriticalAlert) {
         statusClass = "critical";
         statusBadgeClass = "badge-critical";
         statusIcon = "fa-triangle-exclamation";
         statusLabel = [
-          voltageCritical ? "Baja tensión" : "",
           hayDesconexion ? "Desconexión de luminaria" : "",
+          hasCriticalAlert && !hayDesconexion ? "Alerta crítica" : "",
           isStale ? "(Transmisión detenida)" : "",
         ].filter(Boolean).join(" · ");
-      } else if (voltageWarning || hayFallaLuminaria) {
+      } else if (hayFallaLuminaria || hasWarningAlert) {
         statusClass = "warning";
         statusBadgeClass = "badge-warning";
         statusIcon = "fa-exclamation-circle";
         statusLabel = [
-          voltageWarning ? "Tensión baja" : "",
           hayFallaLuminaria ? "Foco quemado" : "",
+          hasWarningAlert && !hayFallaLuminaria ? "Advertencia" : "",
           isStale ? "(Transmisión detenida)" : "",
         ].filter(Boolean).join(" · ");
       } else if (isStale) {
@@ -962,9 +950,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const fallasActivas = [];
-      if (hasVoltageReading && tablero.tension_v < 210) {
-        fallasActivas.push(`${tablero.tension_v < 190 ? "Baja tensión" : "Tensión fuera de rango"}: ${fmtVoltage(tablero.tension_v)} V`);
-      }
       if (hayDesconexion) fallasActivas.push("Desconexión detectada en el tablero");
       if (hayFallaLuminaria) {
         const focosQuemados = focos
@@ -977,14 +962,13 @@ document.addEventListener("DOMContentLoaded", () => {
             : "Foco quemado detectado",
         );
       }
+      tableroAlerts.forEach((alerta) => {
+        const titulo = alerta.titulo || alerta.tipo_evento;
+        if (titulo && !fallasActivas.includes(titulo)) fallasActivas.push(titulo);
+      });
 
       const isSelected = tablero.id === appState.selectedTableroId;
       const isExpanded = tablero.id === appState.expandedTableroId;
-      const pctVoltage = Math.min(
-        Math.max(((tablero.tension_v || 0) / 250.0) * 100, 0),
-        100,
-      );
-
       const card = document.createElement("article");
       card.className = `tablero-card ${statusClass} ${isSelected ? "selected" : ""}`;
       card.dataset.tableroId = tablero.id;
@@ -1005,22 +989,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
 
         ${fallasActivas.length ? `<div class="tablero-fault ${statusClass}" role="status"><i class="fas fa-triangle-exclamation"></i><span>Fallas detectadas: ${fallasActivas.map((falla) => escapeHtml(falla)).join(" · ")}</span></div>` : ""}
-
-        <div class="tablero-meter-section">
-          <div class="meter-head">
-            <span class="meter-lbl">Tensión RMS</span>
-            <span class="meter-val ${statusClass}">${fmtVoltage(tablero.tension_v)} <span class="meter-unit">V</span></span>
-          </div>
-          <div class="meter-track">
-            <div class="meter-danger-line" title="Límite mínimo 190V (IRAM 2001)"></div>
-            <div class="meter-fill ${statusClass}" style="width: ${pctVoltage}%;"></div>
-          </div>
-          <div class="meter-ticks">
-            <span>0V</span>
-            <span class="danger-tick">190V Mín</span>
-            <span>220V Nominal</span>
-          </div>
-        </div>
 
         <div class="tablero-info-grid">
           <div class="info-cell">
@@ -1050,10 +1018,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="tablero-expand ${isExpanded ? "open" : ""}">
           <div class="tablero-expand-inner">
             <div class="expand-stats-grid">
-              <div class="expand-stat">
-                <span class="expand-stat-lbl">Tensión Nominal</span>
-                <span class="expand-stat-val">${fmtVoltage(tablero.tension_nominal_v || 220.0)} V</span>
-              </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Corriente Reportada</span>
                 <span class="expand-stat-val">${Number.isFinite(tablero.corriente_ma) ? `${tablero.corriente_ma.toFixed(1)} mA` : "--"}</span>
@@ -1097,6 +1061,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.alertsContainer.innerHTML = "";
 
     const filtered = appState.alerts.filter((a) => {
+      if (a.tipo_evento === "BAJA_TENSION") return false;
       if (appState.activeFilter === "ALL") return true;
       return a.severidad === appState.activeFilter;
     });
@@ -1207,12 +1172,6 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.values(appState.tableros).forEach((tablero) => {
       let worstSeverity = "ok";
 
-      if (tablero.tension_v < 190.0) {
-        worstSeverity = "critical";
-      } else if (tablero.tension_v < 210.0 && worstSeverity !== "critical") {
-        worstSeverity = "warning";
-      }
-
       Object.values(tablero.focos || {}).forEach((foco) => {
         if (foco.estado === "robado") {
           worstSeverity = "critical";
@@ -1222,7 +1181,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const tableroAlerts = appState.alerts.filter(
-        (a) => a.id_tablero === tablero.id && !a.resuelta,
+        (a) => a.id_tablero === tablero.id && !a.resuelta && a.tipo_evento !== "BAJA_TENSION",
       );
       if (tableroAlerts.some((a) => a.severidad === "CRITICA")) {
         worstSeverity = "critical";
@@ -1288,7 +1247,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateKPIs() {
     const activeTableros = Object.values(appState.tableros);
     const criticasCount = appState.alerts.filter(
-      (a) => a.severidad === "CRITICA" && !a.resuelta,
+      (a) => a.severidad === "CRITICA" && !a.resuelta && a.tipo_evento !== "BAJA_TENSION",
     ).length;
     if (elements.kpiAlertasCriticas) {
       elements.kpiAlertasCriticas.textContent = criticasCount;
@@ -1298,7 +1257,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const advertenciasCount = appState.alerts.filter(
-      (a) => a.severidad === "ADVERTENCIA" && !a.resuelta,
+      (a) => a.severidad === "ADVERTENCIA" && !a.resuelta && a.tipo_evento !== "BAJA_TENSION",
     ).length;
     if (elements.kpiAdvertencias) {
       elements.kpiAdvertencias.textContent = advertenciasCount;
@@ -1327,7 +1286,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (bannerIcon) bannerIcon.className = "fas fa-triangle-exclamation";
         bannerTitle.textContent =
           "ALERTA URGENTE: REVISAR TABLERO INMEDIATAMENTE";
-        bannerDesc.textContent = `Se detectaron ${criticasCount} problema(s) crítico(s) de caída de tensión o anomalía eléctrica en la red.`;
+        bannerDesc.textContent = `Se detectaron ${criticasCount} problema(s) crítico(s) en los tableros eléctricos.`;
       } else if (advertenciasCount > 0) {
         banner.className = "status-banner yellow";
         if (bannerIcon) bannerIcon.className = "fas fa-triangle-exclamation";
@@ -1405,13 +1364,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function fmtVoltage(v, decimals = 1) {
-    if (v === null || v === undefined || v === "") return "--";
-    const n = Number(v);
-    if (!isFinite(n)) return "--";
-    return n.toFixed(decimals);
-  }
-
   function safeText(v) {
     if (v === null || v === undefined) return "";
     if (typeof v === "string") return v;
@@ -1440,38 +1392,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateTelemetryChartsTheme() {
     const theme = getChartThemeColors();
-
-    if (sensorLineChartInstance) {
-      sensorLineChartInstance.options.plugins.tooltip.backgroundColor =
-        theme.tooltipBg;
-      sensorLineChartInstance.options.plugins.tooltip.titleColor =
-        theme.tooltipText;
-      sensorLineChartInstance.options.plugins.tooltip.bodyColor =
-        theme.tooltipText;
-      sensorLineChartInstance.options.plugins.tooltip.borderColor =
-        theme.tooltipBorder;
-
-      if (sensorLineChartInstance.options.scales.x) {
-        sensorLineChartInstance.options.scales.x.grid.color = theme.gridColor;
-        sensorLineChartInstance.options.scales.x.ticks.color = theme.textDim;
-      }
-      if (sensorLineChartInstance.options.scales.y) {
-        sensorLineChartInstance.options.scales.y.grid.color = theme.gridColor;
-        sensorLineChartInstance.options.scales.y.ticks.color = theme.textDim;
-        sensorLineChartInstance.options.scales.y.title.color = theme.textColor;
-      }
-      if (sensorLineChartInstance.options.scales.yTemp) {
-        sensorLineChartInstance.options.scales.yTemp.grid.color =
-          theme.gridColor;
-        sensorLineChartInstance.options.scales.yTemp.ticks.color =
-          theme.textDim;
-      }
-      if (sensorLineChartInstance.options.scales.yAmp) {
-        sensorLineChartInstance.options.scales.yAmp.ticks.color =
-          theme.textDim;
-      }
-      sensorLineChartInstance.update();
-    }
 
     if (sensorBarChartInstance) {
       sensorBarChartInstance.options.plugins.legend.labels.color =
@@ -1536,9 +1456,8 @@ document.addEventListener("DOMContentLoaded", () => {
     readings.push(reading);
     if (readings.length > appState.telemetry.maxHistoryPoints) readings.splice(0, readings.length - appState.telemetry.maxHistoryPoints);
 
-    if (appState.tableros[tableroId] && reading.tension !== null) {
-      appState.tableros[tableroId].tension_v = reading.tension;
-      appState.tableros[tableroId].fase = reading.fase;
+    if (appState.tableros[tableroId] && (reading.tension !== null || reading.corriente !== null)) {
+      if (reading.fase !== "--") appState.tableros[tableroId].fase = reading.fase;
       appState.tableros[tableroId].ultimaLectura = reading.timestamp;
       if (reading.corriente !== null) {
         appState.tableros[tableroId].corriente_ma = reading.corriente;
@@ -1546,7 +1465,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (tableroId === appState.telemetry.selectedTableroId) {
       updateTelemetryUI();
-      if (reading.tension !== null && reading.tension < 190 && appState.soundEnabled) playAlertAudioSound("critical");
     }
   }
 
@@ -1565,7 +1483,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const params = new URLSearchParams({ id_tablero: tableroId, inicio: telemetryStartDate(), limit: "720" });
       const data = await requestAPI(`/telemetria/historico?${params.toString()}`);
       if (Array.isArray(data)) {
-        appState.telemetry.readings[tableroId] = data.reverse().map((row) => normaliseElectricalReading({ ...row, timestamp: row.timestamp, datos: row })).filter((reading) => reading.tension !== null || reading.corriente !== null);
+        appState.telemetry.readings[tableroId] = data.reverse().map((row) => normaliseElectricalReading({ ...row, timestamp: row.timestamp, datos: row })).filter((reading) => reading.corriente !== null);
       }
     } catch (error) {
       console.warn("No se pudo cargar el historial de telemetría:", error.message);
@@ -1578,13 +1496,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return (appState.telemetry.readings[appState.telemetry.selectedTableroId] || []).filter((reading) => new Date(reading.timestamp).getTime() >= start);
   }
 
-  function voltageStatus(voltage) {
-    if (!Number.isFinite(voltage)) return { label: "Sin lectura", className: "badge-neutral" };
-    if (voltage < 198) return { label: "Baja tensión", className: "badge-critical" };
-    if (voltage > 242) return { label: "Sobretensión", className: "badge-warning" };
-    return { label: "Normal", className: "badge-ok" };
-  }
-
   function setTelemetryText(id, value) {
     const element = document.getElementById(id);
     if (element) element.textContent = value;
@@ -1593,15 +1504,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateTelemetryUI() {
     const readings = getSelectedTelemetryReadings();
     const latest = readings[readings.length - 1];
-    const voltages = readings.map((reading) => reading.tension).filter(Number.isFinite);
-    const voltage = latest?.tension;
-    const status = voltageStatus(voltage);
-    setTelemetryText("telemetryVoltageValue", Number.isFinite(voltage) ? voltage.toFixed(1) : "--");
     setTelemetryText("telemetryCurrentValue", Number.isFinite(latest?.corriente) ? latest.corriente.toFixed(1) : "--");
     setTelemetryText("telemetryLastUpdate", latest ? formatTelemetryTime(latest.timestamp) : "--:--");
-    setTelemetryText("telemetryAverageValue", voltages.length ? `${(voltages.reduce((sum, value) => sum + value, 0) / voltages.length).toFixed(1)} V` : "--");
-    setTelemetryText("telemetryMinimumValue", voltages.length ? `${Math.min(...voltages).toFixed(1)} V` : "--");
-    setTelemetryText("telemetryMaximumValue", voltages.length ? `${Math.max(...voltages).toFixed(1)} V` : "--");
     const phaseNames = { L1: "L1 / R", L2: "L2 / S", L3: "L3 / T" };
     setTelemetryText("telemetryPhaseValue", phaseNames[latest?.fase] || latest?.fase || "--");
     setTelemetryText("telemetryRssiValue", Number.isFinite(latest?.rssi) ? `${latest.rssi} dBm` : "-- dBm");
@@ -1611,8 +1515,6 @@ document.addEventListener("DOMContentLoaded", () => {
       : (latest?.conexion === "ONLINE" ? "En servicio (En vivo)" : latest?.conexion || "En servicio");
 
     setTelemetryText("telemetryConnectionState", connectionText);
-    const badge = document.getElementById("telemetryVoltageBadge");
-    if (badge) { badge.className = `sensor-range-badge ${status.className}`; badge.textContent = status.label; }
     const rssiFill = document.getElementById("telemetrySignalFill");
     if (rssiFill) {
       const quality = Number.isFinite(latest?.rssi) ? Math.max(0, Math.min(100, ((latest.rssi + 120) / 50) * 100)) : 0;
@@ -1631,28 +1533,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const timestamp = items[0]?.chart.$telemetryTimestamps?.[items[0].dataIndex];
       return timestamp ? new Date(timestamp).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : items[0]?.label || "";
     } } } }, scales: { x: { grid: { color: theme.gridColor }, ticks: { color: theme.textDim, maxTicksLimit: 5, font: { family: "JetBrains Mono", size: 10 } } }, y: { min, max, title: { display: true, text: title, color: theme.textColor }, grid: { color: theme.gridColor }, ticks: { color: theme.textDim, font: { family: "JetBrains Mono", size: 10 } } } } });
-    const voltageCanvas = document.getElementById("sensorLineChart");
     const currentCanvas = document.getElementById("sensorBarChart");
-    if (voltageCanvas) sensorLineChartInstance = new Chart(voltageCanvas, { type: "line", data: { labels: [], datasets: [
-      { label: "Tensión RMS", data: [], borderColor: "#4fb3e0", borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 },
-      { label: "Límite inferior", data: [], borderColor: "#ef4444", borderWidth: 1, pointRadius: 0, borderDash: [5, 4] },
-      { label: "Nominal", data: [], borderColor: "#10b981", borderWidth: 1, pointRadius: 0, borderDash: [3, 3] },
-      { label: "Límite superior", data: [], borderColor: "#f59e0b", borderWidth: 1, pointRadius: 0, borderDash: [5, 4] }
-    ] }, options: buildLineOptions("Tensión (V)", 160, 260) });
     if (currentCanvas) sensorBarChartInstance = new Chart(currentCanvas, { type: "line", data: { labels: [], datasets: [{ label: "Corriente de línea", data: [], borderColor: "#d8b45c", backgroundColor: "rgba(216, 180, 92, .12)", fill: true, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 }] }, options: buildLineOptions("Corriente (mA)", 0, 50) });
   }
 
   function updateTelemetryCharts(readings) {
     const labels = readings.map((reading) => formatTelemetryTime(reading.timestamp));
-    if (sensorLineChartInstance) {
-      sensorLineChartInstance.$telemetryTimestamps = readings.map((reading) => reading.timestamp);
-      sensorLineChartInstance.data.labels = labels;
-      sensorLineChartInstance.data.datasets[0].data = readings.map((reading) => reading.tension);
-      sensorLineChartInstance.data.datasets[1].data = readings.map(() => 198);
-      sensorLineChartInstance.data.datasets[2].data = readings.map(() => 220);
-      sensorLineChartInstance.data.datasets[3].data = readings.map(() => 242);
-      sensorLineChartInstance.update("none");
-    }
     if (sensorBarChartInstance) {
       sensorBarChartInstance.$telemetryTimestamps = readings.map((reading) => reading.timestamp);
       sensorBarChartInstance.data.labels = labels;

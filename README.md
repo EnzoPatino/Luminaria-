@@ -6,14 +6,14 @@
 
 ## 1. Introducción
 
-El proyecto **Luminaria** es un sistema de monitoreo en tiempo real para tableros de iluminación pública en la ciudad de Neuquén (Parque Norte, Paseo de la Costa, avenidas y plazas). El objetivo principal es detectar anomalias eléctricas (bajas de tensión, focos quemados y desconexiones o robos de luminarias) y notificar al personal técnico de mantenimiento de forma inmediata.
+El proyecto **Luminaria** monitorea en tiempo real tableros de iluminación pública en la ciudad de Neuquén (Parque Norte, Paseo de la Costa, avenidas y plazas). Los módulos instalados reportan corriente; el panel muestra esa lectura y las alertas de fallas de luminarias.
 
 ## 2. Componentes de la Interfaz Web (UI)
 
 La interfaz web es una aplicación liviana desarrollada con **HTML5, CSS3 vanilla y JavaScript**, diseñada para ser ejecutada directamente en cualquier navegador o servidor web sin necesidad de compilación o frameworks pesados.
 
 ### Funcionalidades
-- **Tableros Eléctricos**: Grilla de tarjetas por tablero con tensión, fase, luminarias operativas y estado semáforo.
+- **Tableros Eléctricos**: Grilla de tarjetas por tablero con corriente reportada, fase, luminarias operativas y estado de enlace.
 - **Mapa de Zonas**: Mapa SVG representativo con pines interactivos por tablero; al hacer clic selecciona el tablero y muestra su telemetría.
 - **Alertas**: Historial de eventos filtrable por severidad (`CRITICA`, `ADVERTENCIA`, `INFO`) con posibilidad de marcar alertas como resueltas.
 - **Consola de Telemetría MQTT**: Inspector de mensajes JSON recibidos y transmitidos por el broker.
@@ -64,7 +64,7 @@ El backend recibe la telemetría enviada por los sensores y gateways a través d
 2. **Endpoint de verificación:** `GET /api/uplink` (informa si el receptor está listo).
 3. **Inspección de diagnóstico:** `GET /api/uplink/last` (requiere token JWT de operador autorizado).
 
-El adaptador (`chirpstackAdapter.js`) mapea el identificador del dispositivo (DevEUI) con el tablero asignado, clasifica los voltajes y persiste los registros en PostgreSQL local.
+El adaptador (`chirpstackAdapter.js`) mapea el DevEUI con el tablero asignado, decodifica la corriente en mA y persiste las lecturas en PostgreSQL local.
 
 ### Configuración autenticada de Mosquitto MQTT (opcional)
 

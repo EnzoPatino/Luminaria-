@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="css/alertas.css">
   <link rel="stylesheet" href="css/consola.css">
   <link rel="stylesheet" href="css/modales.css">
-  <link rel="stylesheet" href="css/telemetria.css">
+  <link rel="stylesheet" href="css/telemetria.css?v=current-only-20261110">
   <link rel="stylesheet" href="css/auth.css?v=login-mobile-2">
 
   <!-- Librería MQTT Paho para WebSockets -->
@@ -127,7 +127,7 @@
       <div class="banner-info">
         <span class="banner-tag">ESTADO DEL SISTEMA DE ALUMBRADO</span>
         <h2 id="generalStatusTitle">FUNCIONAMIENTO NORMAL</h2>
-        <p id="generalStatusDesc">Todos los tableros eléctricos operan sin anomalías de tensión ni desconexiones.</p>
+        <p id="generalStatusDesc">Todos los tableros eléctricos operan sin anomalías de corriente ni desconexiones.</p>
       </div>
     </div>
 
@@ -203,7 +203,7 @@
             <i class="fas fa-microchip"></i>
             <h3>Monitoreo de Tableros Eléctricos de Neuquén</h3>
           </div>
-          <span class="pane-subtitle">Estado de red y potencia por punto de control municipal</span>
+          <span class="pane-subtitle">Corriente reportada y estado de enlace por tablero</span>
         </div>
 
         <div class="tableros-grid" id="tablerosGridContainer">
@@ -283,23 +283,6 @@
 
         <!-- TARJETAS DE ESTADO ACTUAL DEL SENSOR Y CONSUMO -->
         <div class="sensor-kpi-grid">
-          <div class="sensor-kpi-card" id="telemetryVoltageCard">
-            <div class="sensor-kpi-top">
-              <div class="sensor-kpi-icon voltage"><i class="fas fa-bolt"></i></div>
-              <span class="sensor-range-badge badge-neutral" id="telemetryVoltageBadge">Sin lectura</span>
-            </div>
-            <div class="sensor-kpi-data">
-              <span class="sensor-kpi-label">Tensión actual RMS</span>
-              <div class="sensor-kpi-value-row">
-                <span class="sensor-kpi-value" id="telemetryVoltageValue">--</span>
-                <span class="sensor-kpi-unit">V</span>
-              </div>
-              <div class="sensor-kpi-meta">
-                <span>Admisible: <strong>198 V a 242 V</strong></span>
-              </div>
-            </div>
-          </div>
-
           <div class="sensor-kpi-card" id="telemetryCurrentCard">
             <div class="sensor-kpi-top">
               <div class="sensor-kpi-icon current"><i class="fas fa-gauge-high"></i></div>
@@ -319,23 +302,11 @@
 
           <div class="sensor-kpi-card">
             <div class="sensor-kpi-top">
-              <div class="sensor-kpi-icon stats"><i class="fas fa-chart-column"></i></div>
-              <span class="sensor-range-badge badge-neutral">Ventana</span>
-            </div>
-            <div class="sensor-kpi-data">
-              <span class="sensor-kpi-label">Tensión: promedio / mínima / máxima</span>
-              <div class="telemetry-stat-row"><span id="telemetryAverageValue">--</span><span id="telemetryMinimumValue">--</span><span id="telemetryMaximumValue">--</span></div>
-              <div class="telemetry-stat-labels"><span>Prom.</span><span>Mín.</span><span>Máx.</span></div>
-            </div>
-          </div>
-
-          <div class="sensor-kpi-card">
-            <div class="sensor-kpi-top">
               <div class="sensor-kpi-icon signal"><i class="fas fa-tower-broadcast"></i></div>
               <span class="sensor-range-badge badge-neutral" id="telemetryConnectionState">Sin enlace</span>
             </div>
             <div class="sensor-kpi-data">
-              <span class="sensor-kpi-label">Fase y enlace LoRaWAN</span>
+              <span class="sensor-kpi-label">Fase configurada y enlace LoRaWAN</span>
               <div class="sensor-kpi-value-row"><span class="sensor-kpi-value" id="telemetryPhaseValue">--</span><span class="sensor-kpi-unit" id="telemetryRssiValue">-- dBm</span></div>
               <div class="signal-meter" aria-label="Calidad de señal"><span class="signal-meter-fill" id="telemetrySignalFill"></span></div>
             </div>
@@ -344,35 +315,19 @@
 
         <!-- GRILLA DE GRÁFICOS -->
         <div class="sensor-charts-grid">
-          <!-- GRÁFICO 1: LÍNEAS (HISTORIAL TEMPERATURA Y CONSUMO) -->
+          <!-- HISTORIAL DE CORRIENTE -->
           <div class="sensor-chart-card">
             <div class="sensor-chart-header">
               <div class="sensor-chart-title">
                 <i class="fas fa-chart-line" style="color: var(--color-accent-text);"></i>
                 <div>
-                  <h4>Tensión RMS en el tiempo</h4>
-                  <p>Límites de servicio: 198 V a 242 V · Nominal: 220 V</p>
+                  <h4>Corriente reportada</h4>
+                  <p>Historial de las mediciones enviadas por el módulo.</p>
                 </div>
               </div>
             </div>
             <div class="sensor-chart-body">
-              <canvas id="sensorLineChart" role="img" aria-label="Gráfico de tensión RMS en volts a través del tiempo"></canvas>
-            </div>
-          </div>
-
-          <!-- GRÁFICO 2: BARRAS (VALORES ACTUALES VS RANGO ACEPTABLE) -->
-          <div class="sensor-chart-card">
-            <div class="sensor-chart-header">
-              <div class="sensor-chart-title">
-                <i class="fas fa-wave-square" style="color: var(--color-gold);"></i>
-                <div>
-                  <h4>Perfil de corriente</h4>
-                  <p>Variación de corriente para detectar maniobras y anomalías.</p>
-                </div>
-              </div>
-            </div>
-            <div class="sensor-chart-body">
-              <canvas id="sensorBarChart" role="img" aria-label="Gráfico de corriente de línea en miliamperes a través del tiempo"></canvas>
+              <canvas id="sensorBarChart" role="img" aria-label="Historial de corriente de línea en miliamperes"></canvas>
             </div>
           </div>
         </div>
@@ -489,6 +444,6 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/password-toggle.js?v=password-toggle-2"></script>
-  <script src="js/app.js?v=current-ma-20261110"></script>
+  <script src="js/app.js?v=current-only-20261110"></script>
 </body>
 </html>
