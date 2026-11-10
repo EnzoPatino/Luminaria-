@@ -20,6 +20,7 @@ const DEFAULT_DEVICE_MAP = {
   'arduinorfm95_v2': 'TABLERO_01',
   'arduinorfm95_v.2': 'TABLERO_01',
 };
+const MAX_ACCEPTABLE_CURRENT_MA = 50;
 
 function normalizeDevEui(value) {
   const original = String(value || '').trim();
@@ -291,7 +292,6 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
   const deviceInfo = body.deviceInfo || {};
   const devEui = deviceInfo.devEui || deviceInfo.devEUI || body.devEUI || body.devEui || '';
   const deviceName = deviceInfo.deviceName || body.deviceName || 'ArduinoRFM95_v2';
-  const appName = deviceInfo.applicationName || body.applicationName || '';
   const idTablero = resolveTableroId(deviceInfo, devEui);
 
   const { rssi, snr } = extractRadioMetrics(body.rxInfo, body);
@@ -336,6 +336,17 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
       ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',
     };
+  } else if (Number.isFinite(corriente) && corriente > MAX_ACCEPTABLE_CURRENT_MA) {
+    tipoEvento = 'SOBRECORRIENTE';
+    severidad = 'CRITICA';
+    datos = {
+      corriente_medida_ma: corriente,
+      corriente_actual_ma: corriente,
+      umbral_maximo_ma: MAX_ACCEPTABLE_CURRENT_MA,
+      ...(fase ? { fase } : {}),
+      ...(rssi !== null ? { rssi_lora: rssi } : {}),
+      estado_conexion: 'ONLINE',
+    };
   } else if (
     focoAfectado &&
     Number.isFinite(corriente) && corriente < 50 &&
@@ -372,7 +383,9 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
     id_tablero: idTablero,
     timestamp,
     severidad,
-    ubicacion: appName ? `Aplicación: ${appName}` : 'Neuquén Capital',
+    ...(typeof body.ubicacion === 'string' && body.ubicacion.trim()
+      ? { ubicacion: body.ubicacion.trim() }
+      : {}),
     datos,
   };
 
