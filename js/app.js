@@ -1061,6 +1061,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.alertsContainer.innerHTML = "";
 
     const filtered = appState.alerts.filter((a) => {
+      if (a.tipo_evento === "BAJA_TENSION") return false;
       if (appState.activeFilter === "ALL") return true;
       return a.severidad === appState.activeFilter;
     });
