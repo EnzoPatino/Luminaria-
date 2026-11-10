@@ -1190,9 +1190,16 @@ document.addEventListener("DOMContentLoaded", () => {
           </li>`;
         }).join("")
       : `<li class="map-popup-empty">No hay alertas activas para este tablero.</li>`;
-    const query = encodeURIComponent(`${tablero.nombre || tablero.id} ${tablero.ubicacion || "Neuquén"}`);
+    const query = encodeURIComponent(`${lat.toFixed(6)},${lng.toFixed(6)}`);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
     const sortLabel = mapAlertSortOrder === "newest" ? "Más recientes primero" : "Más antiguas primero";
+    const currentMa = tablero.corriente_ma == null || tablero.corriente_ma === ""
+      ? Number.NaN
+      : Number(tablero.corriente_ma);
+    const currentOutOfRange = Number.isFinite(currentMa) && (currentMa < 0 || currentMa > CURRENT_ACCEPTABLE_MAX_MA);
+    const currentSummary = Number.isFinite(currentMa)
+      ? `<p class="map-popup-current ${currentOutOfRange ? "out-of-range" : ""}"><i class="fas fa-gauge-high"></i> Corriente: <strong>${currentMa.toFixed(1)} mA</strong> <span>(máximo 50 mA)</span></p>`
+      : "";
 
     return `<div class="map-board-popup">
       <div class="map-popup-heading">
@@ -1200,6 +1207,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <strong>${escapeHtml(tablero.nombre || tablero.id)}</strong>
       </div>
       <p class="map-popup-location"><i class="fas fa-location-dot"></i> ${escapeHtml(tablero.ubicacion || "Ubicación no informada")}</p>
+      ${currentSummary}
       <div class="map-popup-alerts-heading"><strong>Alertas activas (${activeAlerts.length})</strong>
         <button type="button" class="map-popup-sort" data-map-popup-action="sort">${sortLabel}</button>
       </div>
@@ -1259,6 +1267,13 @@ document.addEventListener("DOMContentLoaded", () => {
         worstSeverity = "warning";
       }
 
+      const currentMa = tablero.corriente_ma == null || tablero.corriente_ma === ""
+        ? Number.NaN
+        : Number(tablero.corriente_ma);
+      if (Number.isFinite(currentMa) && (currentMa < 0 || currentMa > CURRENT_ACCEPTABLE_MAX_MA)) {
+        worstSeverity = "critical";
+      }
+
       let pinColor = "#10b981";
       if (worstSeverity === "critical") {
         pinColor = "#ef4444";
@@ -1298,7 +1313,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         marker.on("popupopen", (event) => {
           const popupElement = event.popup.getElement();
-          if (!popupElement || marker._luminariaPopupActionsBound) return;
+          if (!popupElement) return;
+          popupElement.classList.add("luminaria-board-popup");
+          if (marker._luminariaPopupActionsBound) return;
           marker._luminariaPopupActionsBound = true;
           popupElement.addEventListener("click", (clickEvent) => {
             const action = clickEvent.target.closest("[data-map-popup-action]")?.dataset.mapPopupAction;
