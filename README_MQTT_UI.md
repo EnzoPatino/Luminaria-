@@ -8,11 +8,12 @@
 
 Este documento describe la integracion entre la interfaz de usuario (UI) desarrollada en HTML, CSS y JavaScript nativo y el broker de mensajeria **Mosquitto MQTT**. 
 
-La interfaz permite visualizar la telemetria enviada por los microcontroladores (ESP32) instalados en los tableros electricos y mostrar alertas inmediatas cuando se detectan anomalias de tension o fallas en las luminarias.
+La interfaz muestra la corriente reportada por los módulos instalados en los tableros y las alertas de fallas de luminarias. Los módulos actuales no miden tensión.
 
-La corriente se intercambia y persiste en miliamperios (mA), dentro del rango
-operativo de 0 a 50 mA. El panel convierte esas lecturas a amperios (A) para
-mostrarlas en los tableros.
+ChirpStack entrega `corriente_A` y `corriente_mA` en `objectJSON`. El campo
+`corriente_mA` es la fuente preferida; el payload binario de dos bytes representa
+el mismo valor como entero sin signo Big-Endian. El panel lo muestra y persiste
+en mA, con el rango representable por ese formato (`0` a `65535` mA).
 
 ---
 
@@ -38,8 +39,8 @@ HTTPS autenticado de ChirpStack.
 
 Todos los eventos enviados a traves del topic `api/evento` o sub-topics bajo `neuquen/iluminacion/#` deben respetar el formato JSON especificado.
 
-### 4.1 Evento: Baja Tension en Red (`BAJA_TENSION`)
-Se emite cuando la tension en la red de 220V cae por debajo del umbral de 190V.
+### 4.1 Evento histórico: Baja Tensión (`BAJA_TENSION`)
+Este evento se conserva por compatibilidad con fuentes antiguas que sí reportaban tensión. Los módulos EPET instalados actualmente no la miden ni la generan.
 
 ```json
 {

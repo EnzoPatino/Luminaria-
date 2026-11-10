@@ -21,12 +21,25 @@ const DEFAULT_DEVICE_MAP = {
   'arduinorfm95_v.2': 'TABLERO_01',
 };
 
+function normalizeDevEui(value) {
+  const original = String(value || '').trim();
+  const raw = original.toLowerCase();
+  if (/^[0-9a-f]{16}$/.test(raw)) return raw;
+
+  if (/^[a-z0-9+/]+={0,2}$/i.test(original)) {
+    const decoded = Buffer.from(original, 'base64');
+    if (decoded.length === 8) return decoded.toString('hex');
+  }
+
+  return raw;
+}
+
 /**
  * Resuelve el identificador de tablero (id_tablero) a partir de los metadatos del dispositivo LoRaWAN.
  */
 function resolveTableroId(deviceInfo = {}, devEuiRaw = '') {
   const customMap = parseCustomDeviceMap();
-  const devEui = String(deviceInfo.devEui || deviceInfo.devEUI || devEuiRaw || '').trim().toLowerCase();
+  const devEui = normalizeDevEui(deviceInfo.devEui || deviceInfo.devEUI || devEuiRaw || '');
   const deviceName = String(deviceInfo.deviceName || '').trim();
   const deviceNameLower = deviceName.toLowerCase();
 
@@ -107,7 +120,7 @@ function extractRadioMetrics(rxInfo, body = {}) {
 
 /**
  * Decodifica el payload si viene crudo en Base64 (data).
- * Soporta payloads binarios de 2 bytes (Arduino EPET 14: ADC uint16 Big-Endian).
+ * Soporta payloads binarios de 2 bytes (corriente uint16 Big-Endian en mA).
  */
 function decodeBase64Payload(base64Data) {
   if (!base64Data || typeof base64Data !== 'string') return null;
@@ -116,15 +129,10 @@ function decodeBase64Payload(base64Data) {
     const buf = Buffer.from(base64Data, 'base64');
     if (buf.length === 0) return null;
 
-    // Caso A: Trama binaria de 2 bytes (Arduino UNO + Shield Dragino RFM95 EPET N° 14)
-    // Representa lectura analógica de 10 bits (0-1023) en formato Big-Endian
+    // El módulo EPET transmite corriente en mA como uint16 Big-Endian.
     if (buf.length === 2) {
-      const adc = buf.readUInt16BE(0);
-      const volt = Math.round((adc * 5.0 / 1023.0) * 1000) / 1000;
       return {
-        potenciometro: adc,
-        voltaje: volt,
-        adc,
+        corriente_medida_ma: buf.readUInt16BE(0),
         rawHex: buf.toString('hex'),
       };
     }
@@ -192,7 +200,7 @@ function decodeBase64Payload(base64Data) {
 /**
  * Normaliza las mediciones extraídas a valores numéricos consistentes.
  * Maneja los tres escenarios de ChirpStack v3 (object, objectJSON como objeto, objectJSON como string JSON)
- * y escala adecuadamente el potenciómetro a la tensión de prueba de red (0-250V).
+ * y normaliza la corriente a miliamperios.
  */
 function extractMeasurements(body) {
   let objectData = {};
@@ -240,12 +248,15 @@ function extractMeasurements(body) {
   // Extracción de corriente
   const corrienteEnMa = merged.corriente_medida_ma
     ?? merged.corriente_actual_ma
+    ?? merged.corriente_mA
+    ?? merged.corriente_ma
     ?? merged.ma;
-  let corriente = corrienteEnMa
-    ?? merged.corriente
-    ?? merged.current
-    ?? merged.amperaje
-    ?? merged.i;
+  const corrienteEnA = merged.corriente_A ?? merged.corriente_a;
+  let corriente = corrienteEnMa ?? (
+    typeof corrienteEnA === 'number' && Number.isFinite(corrienteEnA)
+      ? corrienteEnA * 1000
+      : merged.corriente ?? merged.current ?? merged.amperaje ?? merged.i
+  );
 
   // Si la corriente viene en Amperes decimales (ej: 0.45A), convertir a mA
   if (corrienteEnMa === undefined && typeof corriente === 'number' && corriente > 0 && corriente < 20) {
@@ -253,10 +264,8 @@ function extractMeasurements(body) {
   }
 
   // Extracción de fase
-  let fase = String(merged.fase || 'L1').trim().toUpperCase();
-  if (!['L1', 'L2', 'L3'].includes(fase)) {
-    fase = 'L1';
-  }
+  const faseRaw = String(merged.fase || '').trim().toUpperCase();
+  const fase = ['L1', 'L2', 'L3'].includes(faseRaw) ? faseRaw : null;
 
   const corrientePrevia = merged.corriente_previa_ma ?? merged.corriente_anterior_ma;
   const tiempoCaidaMs = merged.tiempo_caida_ms;
@@ -298,8 +307,8 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
     rawPotenciometro,
     sensorVoltaje,
   } = extractMeasurements(body);
-  if (!Number.isFinite(tension)) {
-    throw new Error('El uplink no contiene una medición válida de tension_medida_v.');
+  if (!Number.isFinite(tension) && !Number.isFinite(corriente)) {
+    throw new Error('El uplink no contiene una medición válida de corriente.');
   }
 
   // Timestamp ISO
@@ -315,14 +324,14 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
   let severidad = 'INFO';
   let datos = {};
 
-  if (tension < 190.0) {
+  if (Number.isFinite(tension) && tension < 190.0) {
     tipoEvento = 'BAJA_TENSION';
     severidad = 'CRITICA';
     datos = {
       tension_medida_v: tension,
       tension_nominal_v: 220.0,
       umbral_minimo_v: 190.0,
-      fase,
+      ...(fase ? { fase } : {}),
       ...(Number.isFinite(corriente) ? { corriente_medida_ma: corriente, corriente_actual_ma: corriente } : {}),
       ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',
@@ -342,18 +351,16 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
       corriente_actual_ma: corriente,
       tiempo_caida_ms: tiempoCaidaMs,
       estado_circuito: 'ACTIVO',
-      tension_medida_v: tension,
-      tension_nominal_v: 220.0,
-      fase,
+      ...(Number.isFinite(tension) ? { tension_medida_v: tension, tension_nominal_v: 220.0 } : {}),
+      ...(fase ? { fase } : {}),
       ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',
     };
   } else {
     // Caso normal
     datos = {
-      tension_medida_v: tension,
-      tension_nominal_v: 220.0,
-      fase,
+      ...(Number.isFinite(tension) ? { tension_medida_v: tension, tension_nominal_v: 220.0 } : {}),
+      ...(fase ? { fase } : {}),
       ...(Number.isFinite(corriente) ? { corriente_medida_ma: corriente, corriente_actual_ma: corriente } : {}),
       ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',

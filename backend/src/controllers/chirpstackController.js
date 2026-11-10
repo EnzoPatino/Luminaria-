@@ -82,8 +82,7 @@ async function handleChirpstackUplink(req, res, next) {
 
     console.log(`\x1b[34m[ChirpStack Uplink]\x1b[0m Recibido paquete de: \x1b[1m${meta.deviceName}\x1b[0m (DevEUI: ${meta.devEui})`);
     console.log(`                    -> Mapeado a Tablero: \x1b[33m${meta.idTablero}\x1b[0m | Tipo: ${normalizedEvent.tipo_evento}`);
-    const potInfo = meta.rawPotenciometro !== undefined ? ` | ADC: ${meta.rawPotenciometro} (${meta.sensorVoltaje ?? ''}V sensor)` : '';
-    console.log(`                    -> Tensión: ${normalizedEvent.datos.tension_medida_v}V${potInfo} | Corriente: ${normalizedEvent.datos.corriente_medida_ma}mA | RSSI: ${normalizedEvent.datos.rssi_lora}dBm`);
+    console.log(`                    -> Corriente: ${normalizedEvent.datos.corriente_medida_ma}mA | RSSI: ${normalizedEvent.datos.rssi_lora}dBm`);
 
     // Ingestar en la base de datos PostgreSQL mediante el servicio transaccional existente
     const ingestionResult = await ingestEvent(normalizedEvent, {

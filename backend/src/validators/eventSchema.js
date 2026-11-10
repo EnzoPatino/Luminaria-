@@ -9,6 +9,7 @@ const ROOT_KEYS = new Set([
   'severidad',
   'ubicacion',
 ]);
+const MAX_CURRENT_MA = 65535;
 
 const EVENT_SCHEMAS = {
   BAJA_TENSION: {
@@ -18,8 +19,8 @@ const EVENT_SCHEMAS = {
       tension_nominal_v: z.number().min(1).max(1000),
       umbral_minimo_v: z.number().min(1).max(1000),
       fase: z.enum(['L1', 'L2', 'L3']),
-      corriente_actual_ma: z.number().min(0).max(50).optional(),
-      corriente_medida_ma: z.number().min(0).max(50).optional(),
+      corriente_actual_ma: z.number().min(0).max(MAX_CURRENT_MA).optional(),
+      corriente_medida_ma: z.number().min(0).max(MAX_CURRENT_MA).optional(),
       rssi_lora: z.number().min(-150).max(20).optional(),
       estado_conexion: z.string().max(50).optional(),
     }).strict(),
@@ -28,8 +29,8 @@ const EVENT_SCHEMAS = {
     severidades: ['CRITICA'],
     campos: z.object({
       id_foco: z.string().trim().min(1).max(80),
-      corriente_previa_ma: z.number().min(0).max(50),
-      corriente_actual_ma: z.number().min(0).max(50),
+      corriente_previa_ma: z.number().min(0).max(MAX_CURRENT_MA),
+      corriente_actual_ma: z.number().min(0).max(MAX_CURRENT_MA),
       tiempo_caida_ms: z.number().int().min(0).max(60000),
       estado_circuito: z.enum(['ACTIVO', 'INACTIVO']),
       tension_medida_v: z.number().min(0).max(1000).optional(),
@@ -43,8 +44,8 @@ const EVENT_SCHEMAS = {
     severidades: ['ADVERTENCIA'],
     campos: z.object({
       id_foco: z.string().trim().min(1).max(80),
-      corriente_esperada_ma: z.number().min(0).max(50),
-      corriente_medida_ma: z.number().min(0).max(50),
+      corriente_esperada_ma: z.number().min(0).max(MAX_CURRENT_MA),
+      corriente_medida_ma: z.number().min(0).max(MAX_CURRENT_MA),
       duracion_anomalia_s: z.number().int().min(0).max(86400),
       estado_circuito: z.enum(['ACTIVO', 'INACTIVO']),
       tension_medida_v: z.number().min(0).max(1000).optional(),
@@ -57,15 +58,19 @@ const EVENT_SCHEMAS = {
   TELEMETRIA_NORMAL: {
     severidades: ['INFO'],
     campos: z.object({
-      tension_medida_v: z.number().min(0).max(1000),
-      tension_nominal_v: z.number().min(1).max(1000),
-      fase: z.enum(['L1', 'L2', 'L3']),
-      corriente_actual_ma: z.number().min(0).max(50).optional(),
-      corriente_medida_ma: z.number().min(0).max(50).optional(),
+      tension_medida_v: z.number().min(0).max(1000).optional(),
+      tension_nominal_v: z.number().min(1).max(1000).optional(),
+      fase: z.enum(['L1', 'L2', 'L3']).optional(),
+      corriente_actual_ma: z.number().min(0).max(MAX_CURRENT_MA).optional(),
+      corriente_medida_ma: z.number().min(0).max(MAX_CURRENT_MA).optional(),
       focos_restaurados: z.array(z.string().trim().min(1).max(80)).max(200).optional(),
       rssi_lora: z.number().min(-150).max(20).optional(),
       estado_conexion: z.string().max(50).optional(),
-    }).strict(),
+    }).strict().refine((data) => (
+      data.tension_medida_v !== undefined ||
+      data.corriente_actual_ma !== undefined ||
+      data.corriente_medida_ma !== undefined
+    ), { message: 'Debe incluir una medición de corriente o tensión.' }),
   },
 };
 
