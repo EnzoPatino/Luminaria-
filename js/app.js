@@ -11,6 +11,10 @@ document.addEventListener("DOMContentLoaded", () => {
       ? "http://localhost:3000/api"
       : `${window.location.origin}/api`;
   const API_TIMEOUT_MS = 5000;
+  const CURRENT_ACCEPTABLE_MAX_MA = 50;
+  // Las muestras compartidas tienen intervalos de hasta 6 min 30 s.
+  // Diez minutos deja margen para la variabilidad sin marcar cada pausa normal como caída.
+  const TELEMETRY_STALE_AFTER_MS = 10 * 60 * 1000;
   // ==========================================
   // ESTADO DE LA APLICACIÓN
   // ==========================================
@@ -893,6 +897,14 @@ document.addEventListener("DOMContentLoaded", () => {
       // Detección de enlace activo o transmisión inactiva
       let isStale = false;
       let timeAgoText = "Sin enlace";
+      const currentMa = tablero.corriente_ma == null || tablero.corriente_ma === ""
+        ? Number.NaN
+        : Number(tablero.corriente_ma);
+      const hasCurrent = Number.isFinite(currentMa);
+      const isCurrentOutOfRange = hasCurrent && (currentMa < 0 || currentMa > CURRENT_ACCEPTABLE_MAX_MA);
+      const currentFillPercent = hasCurrent
+        ? Math.max(0, Math.min(100, (currentMa / CURRENT_ACCEPTABLE_MAX_MA) * 100))
+        : 0;
       if (tablero.ultimaLectura) {
         const diffMs = Date.now() - new Date(tablero.ultimaLectura).getTime();
         const diffSec = Math.floor(diffMs / 1000);
@@ -903,7 +915,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           timeAgoText = `Hace ${Math.floor(diffSec / 3600)} h`;
         }
-        if (diffSec > 60) {
+        if (diffMs > TELEMETRY_STALE_AFTER_MS) {
           isStale = true;
         }
       } else {
@@ -1000,8 +1012,16 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="info-cell-val">${isStale ? `<i class="fas fa-clock"></i> ${timeAgoText} (Inactivo)` : `<i class="fas fa-circle text-success pulse"></i> ${timeAgoText} (En vivo)`}</span>
           </div>
           <div class="info-cell info-cell-current">
-            <span class="info-cell-lbl">Corriente</span>
-            <span class="info-cell-val">${Number.isFinite(tablero.corriente_ma) ? `${tablero.corriente_ma.toFixed(1)} mA` : "--"}</span>
+            <div class="current-meter-head">
+              <span class="info-cell-lbl">Corriente</span>
+              <span class="current-meter-value ${isCurrentOutOfRange ? "out-of-range" : ""}">${hasCurrent ? `${currentMa.toFixed(1)} mA` : "--"}</span>
+            </div>
+            <div class="current-meter-track" role="meter" aria-label="Corriente medida" aria-valuemin="0" aria-valuemax="${CURRENT_ACCEPTABLE_MAX_MA}" ${hasCurrent ? `aria-valuenow="${Math.max(0, Math.min(CURRENT_ACCEPTABLE_MAX_MA, currentMa))}" aria-valuetext="${currentMa.toFixed(1)} mA; rango aceptable de 0 a 50 mA"` : "aria-valuetext=\"Sin medición\""}>
+              <div class="current-meter-fill ${isCurrentOutOfRange ? "out-of-range" : ""}" style="width:${currentFillPercent}%"></div>
+              <span class="current-meter-limit" aria-hidden="true"></span>
+            </div>
+            <div class="current-meter-scale"><span>0 mA</span><span class="current-meter-range">Rango aceptable: 0–50 mA</span><span>50 mA</span></div>
+            ${isCurrentOutOfRange ? `<span class="current-meter-warning" role="status">Fuera del rango aceptable</span>` : ""}
           </div>
         </div>
 
@@ -1277,7 +1297,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const anyActiveTransmission = activeTableros.some((t) => {
       if (!t.ultimaLectura) return false;
-      return (Date.now() - new Date(t.ultimaLectura).getTime()) < 65000;
+      return (Date.now() - new Date(t.ultimaLectura).getTime()) <= TELEMETRY_STALE_AFTER_MS;
     });
 
     if (banner && bannerTitle && bannerDesc) {
@@ -1297,7 +1317,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (bannerIcon) bannerIcon.className = "fas fa-satellite-dish";
         bannerTitle.textContent = "RED EN ESPERA / SIN TELEMETRÍA ACTIVA";
         bannerDesc.textContent =
-          "No se registran datos recientes en los últimos 60 segundos. Transmisión inactiva o nodos apagados.";
+          "No se registran datos recientes en los últimos 10 minutos. Transmisión inactiva o nodos apagados.";
       } else {
         banner.className = "status-banner green";
         if (bannerIcon) bannerIcon.className = "fas fa-check-circle";
@@ -1509,7 +1529,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const phaseNames = { L1: "L1 / R", L2: "L2 / S", L3: "L3 / T" };
     setTelemetryText("telemetryPhaseValue", phaseNames[latest?.fase] || latest?.fase || "--");
     setTelemetryText("telemetryRssiValue", Number.isFinite(latest?.rssi) ? `${latest.rssi} dBm` : "-- dBm");
-    const isLatestStale = !latest || (Date.now() - new Date(latest.timestamp).getTime()) > 60000;
+    const isLatestStale = !latest || (Date.now() - new Date(latest.timestamp).getTime()) > TELEMETRY_STALE_AFTER_MS;
     const connectionText = isLatestStale
       ? (latest ? `Inactivo (${formatTelemetryTime(latest.timestamp)})` : "Sin enlace")
       : (latest?.conexion === "ONLINE" ? "En servicio (En vivo)" : latest?.conexion || "En servicio");
