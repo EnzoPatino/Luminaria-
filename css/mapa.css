@@ -29,6 +29,35 @@
 .legend-dot.yellow { background-color: var(--color-warning); }
 .legend-dot.green { background-color: var(--color-ok); }
 
+.map-board-popup {
+  min-width: 250px;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+}
+
+.map-popup-heading { display: grid; gap: 0.15rem; }
+.map-popup-heading > span { color: var(--text-dim); font: 700 0.68rem var(--font-mono); }
+.map-popup-heading > strong { color: var(--text-main); font-size: 1rem; }
+.map-popup-location { margin: 0.45rem 0 0.7rem; color: var(--text-muted); font-size: 0.76rem; }
+.map-popup-location i { color: var(--color-accent-text); }
+.map-popup-alerts-heading { display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; font-size: 0.78rem; }
+.map-popup-sort { padding: 0.25rem 0.4rem; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-card); color: var(--text-muted); font: inherit; font-size: 0.65rem; cursor: pointer; }
+.map-popup-alert-list { display: grid; gap: 0.4rem; max-height: 190px; overflow-y: auto; margin: 0.5rem 0; padding: 0; list-style: none; }
+.map-popup-alert { display: grid; gap: 0.18rem; padding: 0.45rem 0.55rem; border-left: 3px solid var(--color-accent-text); border-radius: 4px; background: var(--bg-card); }
+.map-popup-alert.critical { border-left-color: var(--color-critical); }
+.map-popup-alert.warning { border-left-color: var(--color-warning); }
+.map-popup-alert.info { border-left-color: var(--color-accent-text); }
+.map-popup-alert-meta { display: flex; justify-content: space-between; gap: 0.4rem; color: var(--text-dim); font: 0.64rem var(--font-mono); }
+.map-popup-severity { font-weight: 800; color: var(--color-accent-text); }
+.map-popup-alert.critical .map-popup-severity { color: var(--color-critical); }
+.map-popup-alert.warning .map-popup-severity { color: var(--color-warning); }
+.map-popup-alert strong { color: var(--text-main); font-size: 0.75rem; }
+.map-popup-alert-type { color: var(--text-muted); font-size: 0.67rem; }
+.map-popup-empty { padding: 0.55rem; color: var(--text-muted); font-size: 0.75rem; }
+.map-popup-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.65rem; }
+.map-popup-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.4rem 0.55rem; border: 1px solid var(--color-accent-text); border-radius: 5px; background: var(--color-accent-bg); color: var(--color-accent-text); font: 700 0.72rem var(--font-sans); text-decoration: none; cursor: pointer; }
+.map-popup-button.secondary { border-color: var(--border-color); background: var(--bg-card); color: var(--text-main); }
+
 .map-svg-wrapper {
   position: relative;
   width: 100%;

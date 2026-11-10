@@ -44,9 +44,9 @@ body.session-required .login-screen { display: grid; place-items: center; }
 .logout-btn:hover { color: var(--color-critical); }
 .user-admin-card { border: 1px solid var(--border-color); background: var(--bg-card); padding: 24px; max-width: 720px; }
 .user-admin-card h4 { font-size: 1.3rem; margin-bottom: 6px; } .user-admin-card > p { color: var(--text-muted); margin-bottom: 24px; }
-.user-create-form { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; }
+.user-create-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: end; }
 .user-create-form label { display: grid; gap: 8px; color: var(--text-muted); font-size: .88rem; }
-.user-create-form input { min-height: 44px; padding: 0 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font: inherit; }
+.user-create-form input, .user-create-form select { min-height: 44px; padding: 0 12px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font: inherit; }
 .credential-result { display: none; margin-top: 22px; padding: 18px; border-left: 4px solid var(--color-ok); background: var(--color-ok-bg); }
 .credential-result.visible { display: block; } .credential-result p { margin-bottom: 10px; }
 .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

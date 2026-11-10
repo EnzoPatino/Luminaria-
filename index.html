@@ -18,12 +18,12 @@
   <!-- Estilos CSS Personalizados -->
   <link rel="stylesheet" href="css/global.css?v=alert-board-2">
   <link rel="stylesheet" href="css/tableros.css?v=current-range-20261110">
-  <link rel="stylesheet" href="css/mapa.css">
+  <link rel="stylesheet" href="css/mapa.css?v=map-alert-popup-20261110">
   <link rel="stylesheet" href="css/alertas.css">
   <link rel="stylesheet" href="css/consola.css">
   <link rel="stylesheet" href="css/modales.css">
   <link rel="stylesheet" href="css/telemetria.css?v=current-only-20261110">
-  <link rel="stylesheet" href="css/auth.css?v=login-mobile-2">
+  <link rel="stylesheet" href="css/auth.css?v=admin-role-20261110">
 
   <!-- Librería MQTT Paho para WebSockets -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" integrity="sha384-FtgI6XBQHroa6RTQqVE29PsMgDmibchdhIXlikZhRqly3P0ZGnfxior+GiKyxF7/" crossorigin="anonymous"></script>
@@ -362,10 +362,16 @@
         </div>
         <div class="user-admin-card">
           <h4>Nueva cuenta de acceso</h4>
-          <p>Ingresá el nombre de la persona. El sistema generará un usuario y una contraseña segura que deberás entregar de forma privada.</p>
+          <p>Ingresá el nombre y el tipo de cuenta. El sistema generará un usuario y una contraseña segura que deberás entregar de forma privada.</p>
           <form class="user-create-form" id="createUserForm">
             <label for="newUserName">Nombre completo
               <input id="newUserName" name="nombre" minlength="2" maxlength="120" autocomplete="name" required placeholder="Ej. Ana Pérez">
+            </label>
+            <label for="newUserRole">Tipo de cuenta
+              <select id="newUserRole" name="rol">
+                <option value="tecnico">Técnico</option>
+                <option value="admin">Administrador</option>
+              </select>
             </label>
             <button class="btn btn-primary" id="createUserSubmit" type="submit"><i class="fas fa-user-plus"></i> Crear usuario</button>
           </form>
@@ -444,6 +450,6 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/password-toggle.js?v=password-toggle-2"></script>
-  <script src="js/app.js?v=current-range-20261110"></script>
+  <script src="js/app.js?v=map-alert-popup-20261110"></script>
 </body>
 </html>
