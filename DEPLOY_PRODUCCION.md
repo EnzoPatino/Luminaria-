@@ -56,9 +56,15 @@ El proceso desactiva automáticamente las cuentas históricas `admin` y `tecnico
 
 ```bash
 git pull --ff-only
-docker compose up -d --build
+docker compose up -d --build --force-recreate backend caddy
 docker compose logs --tail=100 backend
+curl -sSI https://luminarias.neuquencapital.gob.ar/ | grep -i '^cache-control:'
 ```
+
+La recreación de Caddy vuelve a cargar `deploy/Caddyfile`; allí `/` y `/index.html`
+se sirven con `Cache-Control: no-store, no-cache, must-revalidate` para que el
+ReverseProxy y el navegador no conserven una versión anterior del panel. La
+respuesta de `curl` debe incluir esa cabecera.
 
 Conservá el mismo `.env`: el administrador inicial no se modifica si ya existe. Para crear más personas, ingresá con el administrador y usá **Crear usuario** dentro del panel.
 
@@ -70,7 +76,8 @@ El servidor de producción se administra por VPN. El runner hospedado por GitHub
 cd ~/luminaria
 git pull --ff-only origin main
 docker compose config --quiet
-docker compose up -d --build
+docker compose up -d --build --force-recreate backend caddy
+curl -sSI https://luminarias.neuquencapital.gob.ar/ | grep -i '^cache-control:'
 ```
 
 No agregues secretos de despliegue ni habilites un workflow de GitHub Actions mientras no exista una ruta de red aprobada hacia el servidor.
