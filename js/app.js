@@ -1031,9 +1031,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="info-cell-lbl">Telemetría / Enlace</span>
             <span class="info-cell-val">${isStale ? `<i class="fas fa-clock"></i> ${timeAgoText} (Inactivo)` : `<i class="fas fa-circle text-success pulse"></i> ${timeAgoText} (En vivo)`}</span>
           </div>
-          <div class="info-cell">
+          <div class="info-cell info-cell-current">
             <span class="info-cell-lbl">Corriente</span>
-            <span class="info-cell-val">${Number.isFinite(tablero.corriente_ma) ? `${(tablero.corriente_ma / 1000).toFixed(3)} A` : "--"}</span>
+            <span class="info-cell-val">${Number.isFinite(tablero.corriente_ma) ? `${tablero.corriente_ma.toFixed(1)} mA` : "--"}</span>
           </div>
         </div>
 
@@ -1056,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Corriente Reportada</span>
-                <span class="expand-stat-val">${Number.isFinite(tablero.corriente_ma) ? `${(tablero.corriente_ma / 1000).toFixed(3)} A` : "--"}</span>
+                <span class="expand-stat-val">${Number.isFinite(tablero.corriente_ma) ? `${tablero.corriente_ma.toFixed(1)} mA` : "--"}</span>
               </div>
               <div class="expand-stat">
                 <span class="expand-stat-lbl">Último Reporte</span>
@@ -1521,7 +1521,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       timestamp: event.timestamp || data.timestamp || new Date().toISOString(),
       tension: Number.isFinite(tension) ? tension : null,
-      corriente: Number.isFinite(currentRaw) ? currentRaw / 1000 : null,
+      corriente: Number.isFinite(currentRaw) ? currentRaw : null,
       fase: data.fase || "--",
       rssi: Number.isFinite(Number(data.rssi_lora)) ? Number(data.rssi_lora) : null,
       conexion: data.estado_conexion || "ONLINE",
@@ -1541,7 +1541,7 @@ document.addEventListener("DOMContentLoaded", () => {
       appState.tableros[tableroId].fase = reading.fase;
       appState.tableros[tableroId].ultimaLectura = reading.timestamp;
       if (reading.corriente !== null) {
-        appState.tableros[tableroId].corriente_ma = reading.corriente * 1000;
+        appState.tableros[tableroId].corriente_ma = reading.corriente;
       }
     }
     if (tableroId === appState.telemetry.selectedTableroId) {
@@ -1597,7 +1597,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const voltage = latest?.tension;
     const status = voltageStatus(voltage);
     setTelemetryText("telemetryVoltageValue", Number.isFinite(voltage) ? voltage.toFixed(1) : "--");
-    setTelemetryText("telemetryCurrentValue", Number.isFinite(latest?.corriente) ? latest.corriente.toFixed(3) : "--");
+    setTelemetryText("telemetryCurrentValue", Number.isFinite(latest?.corriente) ? latest.corriente.toFixed(1) : "--");
     setTelemetryText("telemetryLastUpdate", latest ? formatTelemetryTime(latest.timestamp) : "--:--");
     setTelemetryText("telemetryAverageValue", voltages.length ? `${(voltages.reduce((sum, value) => sum + value, 0) / voltages.length).toFixed(1)} V` : "--");
     setTelemetryText("telemetryMinimumValue", voltages.length ? `${Math.min(...voltages).toFixed(1)} V` : "--");
@@ -1639,7 +1639,7 @@ document.addEventListener("DOMContentLoaded", () => {
       { label: "Nominal", data: [], borderColor: "#10b981", borderWidth: 1, pointRadius: 0, borderDash: [3, 3] },
       { label: "Límite superior", data: [], borderColor: "#f59e0b", borderWidth: 1, pointRadius: 0, borderDash: [5, 4] }
     ] }, options: buildLineOptions("Tensión (V)", 160, 260) });
-    if (currentCanvas) sensorBarChartInstance = new Chart(currentCanvas, { type: "line", data: { labels: [], datasets: [{ label: "Corriente de línea", data: [], borderColor: "#d8b45c", backgroundColor: "rgba(216, 180, 92, .12)", fill: true, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 }] }, options: buildLineOptions("Corriente (A)", 0, 0.05) });
+    if (currentCanvas) sensorBarChartInstance = new Chart(currentCanvas, { type: "line", data: { labels: [], datasets: [{ label: "Corriente de línea", data: [], borderColor: "#d8b45c", backgroundColor: "rgba(216, 180, 92, .12)", fill: true, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, tension: .2 }] }, options: buildLineOptions("Corriente (mA)", 0, 50) });
   }
 
   function updateTelemetryCharts(readings) {
@@ -1657,7 +1657,7 @@ document.addEventListener("DOMContentLoaded", () => {
       sensorBarChartInstance.$telemetryTimestamps = readings.map((reading) => reading.timestamp);
       sensorBarChartInstance.data.labels = labels;
       sensorBarChartInstance.data.datasets[0].data = readings.map((reading) => reading.corriente);
-      sensorBarChartInstance.options.scales.y.max = 0.05;
+      sensorBarChartInstance.options.scales.y.max = Math.max(50, Math.ceil(Math.max(0, ...readings.map((reading) => reading.corriente || 0)) * 1.2));
       sensorBarChartInstance.update("none");
     }
   }
