@@ -37,4 +37,13 @@ body.session-required .login-screen { display: grid; place-items: center; }
 .credential-result.visible { display: block; } .credential-result p { margin-bottom: 10px; }
 .credential-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .credential-grid div { background: var(--bg-card); padding: 10px; } .credential-grid span { display:block; font-size:.78rem; color:var(--text-dim); } .credential-grid strong { font-family: var(--font-mono); }
-@media (max-width: 680px) { .login-screen { padding: 0; } .login-panel { min-height: 100vh; grid-template-columns: 1fr; } .login-brand { min-height: 240px; padding: 32px; } .login-brand h1 { font-size: 2.25rem; margin-top: 22px; } .login-form-wrap { padding: 40px 28px; } .user-create-form { grid-template-columns: 1fr; } }
+@media (max-width: 680px) {
+  .login-screen { padding: 0; }
+  .login-panel { min-height: 100vh; grid-template-columns: 1fr; }
+  .login-brand { min-height: 240px; padding: 32px; }
+  .login-brand h1 { font-size: 2.25rem; margin-top: 22px; }
+  .login-form-wrap { padding: 40px 28px; }
+  .login-password-wrap input { padding-right: 94px; }
+  .login-password-toggle { min-width: 76px; touch-action: manipulation; }
+  .user-create-form { grid-template-columns: 1fr; }
+}
