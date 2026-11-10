@@ -1,11 +1,12 @@
 const { ingestValidatedEvent } = require('../services/ingestaService');
 
-async function createEvent(req, res, next) {
+async function persistEvent(req, res, next, options = {}) {
   try {
     // Seccion: HTTP usa la misma capa de integridad que el worker MQTT.
     const result = await ingestValidatedEvent(req.validatedEvent, {
-      source: 'http',
+      source: options.source || 'http',
       ip: req.ip,
+      allowDemo: options.allowDemo === true,
     });
 
     if (result.duplicate) {
@@ -26,4 +27,12 @@ async function createEvent(req, res, next) {
   }
 }
 
-module.exports = { createEvent };
+function createEvent(req, res, next) {
+  return persistEvent(req, res, next);
+}
+
+function createSimulationEvent(req, res, next) {
+  return persistEvent(req, res, next, { source: 'simulator', allowDemo: true });
+}
+
+module.exports = { createEvent, createSimulationEvent };
