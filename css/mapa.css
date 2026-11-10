@@ -58,6 +58,35 @@
 .map-popup-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.4rem 0.55rem; border: 1px solid var(--color-accent-text); border-radius: 5px; background: var(--color-accent-bg); color: var(--color-accent-text); font: 700 0.72rem var(--font-sans); text-decoration: none; cursor: pointer; }
 .map-popup-button.secondary { border-color: var(--border-color); background: var(--bg-card); color: var(--text-main); }
 
+.leaflet-popup.luminaria-board-popup .leaflet-popup-content-wrapper,
+.leaflet-popup.luminaria-board-popup .leaflet-popup-tip {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+}
+
+.leaflet-popup.luminaria-board-popup .leaflet-popup-content {
+  margin: 14px 16px;
+}
+
+.leaflet-popup.luminaria-board-popup .leaflet-popup-close-button {
+  color: var(--text-muted);
+}
+
+.map-popup-current {
+  margin: 0 0 0.65rem;
+  color: var(--color-ok);
+  font-size: 0.75rem;
+}
+
+.map-popup-current.out-of-range {
+  color: var(--color-critical);
+}
+
+.map-popup-current strong { color: inherit; }
+.map-popup-current span { color: var(--text-muted); font-size: 0.68rem; }
+
 .map-svg-wrapper {
   position: relative;
   width: 100%;
