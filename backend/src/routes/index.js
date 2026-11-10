@@ -6,12 +6,14 @@ const alertaRoutes = require('./alertaRoutes');
 const uplinkRoutes = require('./uplinkRoutes');
 const authRoutes = require('./authRoutes');
 const telemetriaRoutes = require('./telemetriaRoutes');
+const simulacionRoutes = require('./simulacionRoutes');
 
 const router = express.Router();
 
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/eventos', eventRoutes);
+router.use('/simulacion', simulacionRoutes);
 router.use('/uplink', uplinkRoutes);
 router.use('/tableros', tableroRoutes);
 router.use('/alertas', alertaRoutes);

@@ -108,7 +108,7 @@ function consumeTableroRateLimit(idTablero, now) {
 }
 
 async function ingestValidatedEvent(event, metadata = {}) {
-  if (/^DEMO_/i.test(event.id_tablero)) {
+  if (/^DEMO_/i.test(event.id_tablero) && metadata.allowDemo !== true) {
     throw new IngestionError('Los tableros DEMO_* no están habilitados.', {
       statusCode: 422,
       code: 'DEMO_BOARD_DISABLED',

@@ -4,13 +4,13 @@
 .tableros-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-  grid-auto-rows: 1fr;
+  grid-auto-rows: auto;
   gap: 1.25rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .tablero-card {
-  align-self: stretch;
+  align-self: start;
   min-width: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
