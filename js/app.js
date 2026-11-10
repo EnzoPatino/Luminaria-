@@ -478,6 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
     createUserForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const nameInput = document.getElementById("newUserName");
+      const roleInput = document.getElementById("newUserRole");
       const message = document.getElementById("createUserMessage");
       const submit = document.getElementById("createUserSubmit");
       const result = document.getElementById("credentialResult");
@@ -488,7 +489,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const response = await window.luminariaRequest("/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombre: nameInput.value.trim() }),
+          body: JSON.stringify({ nombre: nameInput.value.trim(), rol: roleInput?.value || "tecnico" }),
         });
         const body = await response.json();
         if (!response.ok || !body?.data) throw new Error(body?.message || "No se pudo crear la cuenta.");
@@ -496,6 +497,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("createdPassword").textContent = body.data.password;
         result?.classList.add("visible");
         nameInput.value = "";
+        if (roleInput) roleInput.value = "tecnico";
         if (message) { message.textContent = "Entregá estas credenciales por un canal privado."; message.className = "login-message success"; }
       } catch (error) {
         if (message) { message.textContent = error.message || "No se pudo crear la cuenta."; message.className = "login-message error"; }
@@ -1163,6 +1165,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let leafletMap = null;
   let leafletMarkers = {};
+  let mapAlertSortOrder = "newest";
+
+  function buildBoardMapPopup(tablero, lat, lng) {
+    const activeAlerts = appState.alerts
+      .filter((alert) => alert.id_tablero === tablero.id && !alert.resuelta && alert.tipo_evento !== "BAJA_TENSION")
+      .sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime() || 0;
+        const timeB = new Date(b.timestamp).getTime() || 0;
+        return mapAlertSortOrder === "newest" ? timeB - timeA : timeA - timeB;
+      });
+    const severityClass = { CRITICA: "critical", ADVERTENCIA: "warning", INFO: "info" };
+    const alertItems = activeAlerts.length
+      ? activeAlerts.map((alert) => {
+          const severity = severityClass[alert.severidad] ? alert.severidad : "INFO";
+          const timestamp = new Date(alert.timestamp);
+          const timeText = Number.isNaN(timestamp.getTime())
+            ? "Fecha no informada"
+            : timestamp.toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+          return `<li class="map-popup-alert ${severityClass[severity]}">
+            <span class="map-popup-alert-meta"><span class="map-popup-severity">${severity}</span><time>${escapeHtml(timeText)}</time></span>
+            <strong>${escapeHtml(alert.titulo || "Alerta")}</strong>
+            <span class="map-popup-alert-type">${escapeHtml(String(alert.tipo_evento || "ALERTA").replace(/_/g, " "))}</span>
+          </li>`;
+        }).join("")
+      : `<li class="map-popup-empty">No hay alertas activas para este tablero.</li>`;
+    const query = encodeURIComponent(`${tablero.nombre || tablero.id} ${tablero.ubicacion || "Neuquén"}`);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    const sortLabel = mapAlertSortOrder === "newest" ? "Más recientes primero" : "Más antiguas primero";
+
+    return `<div class="map-board-popup">
+      <div class="map-popup-heading">
+        <span>${escapeHtml(tablero.id)}</span>
+        <strong>${escapeHtml(tablero.nombre || tablero.id)}</strong>
+      </div>
+      <p class="map-popup-location"><i class="fas fa-location-dot"></i> ${escapeHtml(tablero.ubicacion || "Ubicación no informada")}</p>
+      <div class="map-popup-alerts-heading"><strong>Alertas activas (${activeAlerts.length})</strong>
+        <button type="button" class="map-popup-sort" data-map-popup-action="sort">${sortLabel}</button>
+      </div>
+      <ul class="map-popup-alert-list">${alertItems}</ul>
+      <div class="map-popup-actions">
+        <a class="map-popup-button" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer"><i class="fas fa-map-location-dot"></i> Google Maps</a>
+        <button type="button" class="map-popup-button secondary" data-map-popup-action="select">Ver tablero</button>
+      </div>
+    </div>`;
+  }
 
   function initLeafletMap() {
     const neuquenCoords = [-38.9516, -68.0591];
@@ -1227,6 +1274,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (leafletMarkers[tablero.id]) {
         const marker = leafletMarkers[tablero.id];
         marker.setLatLng([lat, lng]);
+        marker.setPopupContent(buildBoardMapPopup(tablero, lat, lng));
         marker.setStyle({
           color: isSelected ? "#000000" : "#ffffff",
           fillColor: pinColor,
@@ -1246,17 +1294,30 @@ document.addEventListener("DOMContentLoaded", () => {
           direction: 'top',
           offset: [0, -10]
         });
+        marker.bindPopup(buildBoardMapPopup(tablero, lat, lng), { maxWidth: 340 });
+
+        marker.on("popupopen", (event) => {
+          const popupElement = event.popup.getElement();
+          if (!popupElement || marker._luminariaPopupActionsBound) return;
+          marker._luminariaPopupActionsBound = true;
+          popupElement.addEventListener("click", (clickEvent) => {
+            const action = clickEvent.target.closest("[data-map-popup-action]")?.dataset.mapPopupAction;
+            if (action === "sort") {
+              mapAlertSortOrder = mapAlertSortOrder === "newest" ? "oldest" : "newest";
+              marker.setPopupContent(buildBoardMapPopup(tablero, lat, lng));
+            } else if (action === "select") {
+              appState.selectedTableroId = tablero.id;
+              appState.expandedTableroId = tablero.id;
+              updateTableroUI();
+              document.querySelector('.nav-tab[data-tab="tableros"]')?.click();
+            }
+          });
+        });
 
         marker.on("click", () => {
           appState.selectedTableroId = tablero.id;
           appState.expandedTableroId = tablero.id;
           updateTableroUI();
-          renderMapPins();
-
-          const tablerosNavTab = document.querySelector(
-            '.nav-tab[data-tab="tableros"]',
-          );
-          if (tablerosNavTab) tablerosNavTab.click();
         });
 
         leafletMarkers[tablero.id] = marker;
