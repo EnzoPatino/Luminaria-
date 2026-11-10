@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setPasswordVisibility(visible) {
     passwordInput.type = visible ? 'text' : 'password';
-    passwordToggle.textContent = visible ? 'Ocultar' : 'Mostrar';
+    passwordToggle.textContent = visible ? 'Ocultar contraseña' : 'Mostrar contraseña';
     passwordToggle.setAttribute('aria-label', `${visible ? 'Ocultar' : 'Mostrar'} contraseña`);
     passwordToggle.setAttribute('aria-pressed', String(visible));
   }
