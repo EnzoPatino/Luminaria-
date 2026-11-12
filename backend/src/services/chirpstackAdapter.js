@@ -22,6 +22,50 @@ const DEFAULT_DEVICE_MAP = {
 };
 const MAX_ACCEPTABLE_CURRENT_MA = 50;
 
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getUplinkTimestamp(value) {
+  const body = isPlainObject(value?.payload) ? value.payload : value;
+  const timestamp = body?.time || body?.publishedAt;
+  const parsed = Date.parse(timestamp);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Normaliza la envoltura que usan algunas integraciones de ChirpStack.
+ *
+ * Además del webhook habitual, acepta registros como
+ * `{ type: 'up', payload: { ... } }` y colecciones de esos registros. Cuando
+ * llega un lote se usa el uplink con fecha más reciente para no sobrescribir el
+ * estado del tablero con una lectura histórica.
+ */
+function unwrapChirpstackUplink(input) {
+  let envelope = input;
+
+  if (Array.isArray(input)) {
+    const records = input.filter(isPlainObject);
+    if (records.length === 0) return { body: {}, eventType: '' };
+
+    envelope = records.reduce((latest, current) => {
+      const latestTimestamp = getUplinkTimestamp(latest);
+      const currentTimestamp = getUplinkTimestamp(current);
+
+      if (currentTimestamp !== null && (latestTimestamp === null || currentTimestamp > latestTimestamp)) {
+        return current;
+      }
+      return latest;
+    }, records[0]);
+  }
+
+  if (!isPlainObject(envelope)) return { body: {}, eventType: '' };
+
+  const eventType = String(envelope.event || envelope.type || '').toLowerCase();
+  const body = isPlainObject(envelope.payload) ? envelope.payload : envelope;
+  return { body, eventType };
+}
+
 function normalizeDevEui(value) {
   const original = String(value || '').trim();
   const raw = original.toLowerCase();
@@ -234,12 +278,21 @@ function extractMeasurements(body) {
   const merged = { ...decodedData, ...objectData };
 
   // Extracción de lectura de tensión directa o potenciometro
-  const rawTension = merged.tension_medida_v
-    ?? merged.tension
-    ?? merged.voltage
-    ?? merged.volts;
+  const rawTension = objectData.tension_medida_v
+    ?? objectData.tension
+    ?? objectData.voltage
+    ?? objectData.volts
+    ?? decodedData.tension_medida_v
+    ?? decodedData.tension
+    ?? decodedData.voltage
+    ?? decodedData.volts;
 
-  const rawPotenciometro = merged.potenciometro ?? merged.adc ?? merged.adc_val;
+  const rawPotenciometro = objectData.potenciometro
+    ?? objectData.adc
+    ?? objectData.adc_val
+    ?? decodedData.potenciometro
+    ?? decodedData.adc
+    ?? decodedData.adc_val;
 
   let tension = null;
   if (typeof rawTension === 'number' && Number.isFinite(rawTension)) {
@@ -247,16 +300,34 @@ function extractMeasurements(body) {
   }
 
   // Extracción de corriente
-  const corrienteEnMa = merged.corriente_medida_ma
-    ?? merged.corriente_actual_ma
-    ?? merged.corriente_mA
-    ?? merged.corriente_ma
-    ?? merged.ma;
-  const corrienteEnA = merged.corriente_A ?? merged.corriente_a;
+  // El códec de ChirpStack (object/objectJSON) es autoritativo frente al
+  // fallback binario. Esto también evita que un alias del binario opaque un
+  // campo equivalente del objeto decodificado.
+  const corrienteEnMa = objectData.corriente_medida_ma
+    ?? objectData.corriente_actual_ma
+    ?? objectData.corriente_mA
+    ?? objectData.corriente_ma
+    ?? objectData.ma
+    ?? decodedData.corriente_medida_ma
+    ?? decodedData.corriente_actual_ma
+    ?? decodedData.corriente_mA
+    ?? decodedData.corriente_ma
+    ?? decodedData.ma;
+  const corrienteEnA = objectData.corriente_A
+    ?? objectData.corriente_a
+    ?? decodedData.corriente_A
+    ?? decodedData.corriente_a;
   let corriente = corrienteEnMa ?? (
     typeof corrienteEnA === 'number' && Number.isFinite(corrienteEnA)
       ? corrienteEnA * 1000
-      : merged.corriente ?? merged.current ?? merged.amperaje ?? merged.i
+      : objectData.corriente
+        ?? objectData.current
+        ?? objectData.amperaje
+        ?? objectData.i
+        ?? decodedData.corriente
+        ?? decodedData.current
+        ?? decodedData.amperaje
+        ?? decodedData.i
   );
 
   // Si la corriente viene en Amperes decimales (ej: 0.45A), convertir a mA
@@ -265,11 +336,14 @@ function extractMeasurements(body) {
   }
 
   // Extracción de fase
-  const faseRaw = String(merged.fase || '').trim().toUpperCase();
+  const faseRaw = String(objectData.fase ?? decodedData.fase ?? '').trim().toUpperCase();
   const fase = ['L1', 'L2', 'L3'].includes(faseRaw) ? faseRaw : null;
 
-  const corrientePrevia = merged.corriente_previa_ma ?? merged.corriente_anterior_ma;
-  const tiempoCaidaMs = merged.tiempo_caida_ms;
+  const corrientePrevia = objectData.corriente_previa_ma
+    ?? objectData.corriente_anterior_ma
+    ?? decodedData.corriente_previa_ma
+    ?? decodedData.corriente_anterior_ma;
+  const tiempoCaidaMs = objectData.tiempo_caida_ms ?? decodedData.tiempo_caida_ms;
 
   return {
     tension,
@@ -277,11 +351,11 @@ function extractMeasurements(body) {
     corrientePrevia: typeof corrientePrevia === 'number' && Number.isFinite(corrientePrevia) ? corrientePrevia : null,
     tiempoCaidaMs: typeof tiempoCaidaMs === 'number' && Number.isFinite(tiempoCaidaMs) ? tiempoCaidaMs : null,
     fase,
-    focoAfectado: merged.id_foco || merged.foco || null,
-    estadoCircuito: merged.estado_circuito || null,
+    focoAfectado: objectData.id_foco ?? objectData.foco ?? decodedData.id_foco ?? decodedData.foco ?? null,
+    estadoCircuito: objectData.estado_circuito ?? decodedData.estado_circuito ?? null,
     rawObject: merged,
     rawPotenciometro,
-    sensorVoltaje: merged.voltaje,
+    sensorVoltaje: objectData.voltaje ?? decodedData.voltaje,
   };
 }
 
@@ -289,6 +363,7 @@ function extractMeasurements(body) {
  * Transforma un cuerpo de uplink de ChirpStack en un evento válido para ingestEvent().
  */
 function adaptChirpstackUplink(body, query = {}, headers = {}) {
+  ({ body } = unwrapChirpstackUplink(body));
   const deviceInfo = body.deviceInfo || {};
   const devEui = deviceInfo.devEui || deviceInfo.devEUI || body.devEUI || body.devEui || '';
   const deviceName = deviceInfo.deviceName || body.deviceName || 'ArduinoRFM95_v2';
@@ -409,6 +484,7 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
 
 module.exports = {
   adaptChirpstackUplink,
+  unwrapChirpstackUplink,
   resolveTableroId,
   decodeBase64Payload,
   extractRadioMetrics,
