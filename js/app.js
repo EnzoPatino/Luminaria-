@@ -11,7 +11,13 @@ document.addEventListener("DOMContentLoaded", () => {
       ? "http://localhost:3000/api"
       : `${window.location.origin}/api`;
   const API_TIMEOUT_MS = 5000;
-  const CURRENT_ACCEPTABLE_MAX_MA = 50;
+  const CURRENT_ACCEPTABLE_MIN_MA = 1000;
+  const CURRENT_ACCEPTABLE_MAX_MA = 2500;
+  const STALE_BOARD_REFERENCE_CURRENTS_MA = {
+    TABLERO_02: 1500,
+    TABLERO_03: 1800,
+    TABLERO_04: 2200,
+  };
   // Las muestras compartidas tienen intervalos de hasta 6 min 30 s.
   // Diez minutos deja margen para la variabilidad sin marcar cada pausa normal como caída.
   const TELEMETRY_STALE_AFTER_MS = 10 * 60 * 1000;
@@ -904,14 +910,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // Detección de enlace activo o transmisión inactiva
       let isStale = false;
       let timeAgoText = "Sin enlace";
-      const currentMa = tablero.corriente_ma == null || tablero.corriente_ma === ""
+      const reportedCurrentMa = tablero.corriente_ma == null || tablero.corriente_ma === ""
         ? Number.NaN
         : Number(tablero.corriente_ma);
-      const hasCurrent = Number.isFinite(currentMa);
-      const isCurrentOutOfRange = hasCurrent && (currentMa < 0 || currentMa > CURRENT_ACCEPTABLE_MAX_MA);
-      const currentFillPercent = hasCurrent
-        ? Math.max(0, Math.min(100, (currentMa / CURRENT_ACCEPTABLE_MAX_MA) * 100))
-        : 0;
       if (tablero.ultimaLectura) {
         const diffMs = Date.now() - new Date(tablero.ultimaLectura).getTime();
         const diffSec = Math.floor(diffMs / 1000);
@@ -928,6 +929,15 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         isStale = true;
       }
+
+      const referenceCurrentMa = isStale ? STALE_BOARD_REFERENCE_CURRENTS_MA[tablero.id] : undefined;
+      const isReferenceCurrent = Number.isFinite(referenceCurrentMa);
+      const currentMa = isReferenceCurrent ? referenceCurrentMa : reportedCurrentMa;
+      const hasCurrent = Number.isFinite(currentMa);
+      const isCurrentOutOfRange = hasCurrent && (currentMa < CURRENT_ACCEPTABLE_MIN_MA || currentMa > CURRENT_ACCEPTABLE_MAX_MA);
+      const currentFillPercent = hasCurrent
+        ? Math.max(0, Math.min(100, ((currentMa - CURRENT_ACCEPTABLE_MIN_MA) / (CURRENT_ACCEPTABLE_MAX_MA - CURRENT_ACCEPTABLE_MIN_MA)) * 100))
+        : 0;
 
       let statusClass = "ok";
       let statusLabel = isStale ? `Enlace Inactivo (${timeAgoText})` : "Corriente reportada (En vivo)";
@@ -1020,14 +1030,14 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div class="info-cell info-cell-current">
             <div class="current-meter-head">
-              <span class="info-cell-lbl">Corriente</span>
+            <span class="info-cell-lbl">${isReferenceCurrent ? "Corriente (referencia)" : "Corriente"}</span>
               <span class="current-meter-value ${isCurrentOutOfRange ? "out-of-range" : ""}">${hasCurrent ? `${currentMa.toFixed(1)} mA` : "--"}</span>
             </div>
-            <div class="current-meter-track" role="meter" aria-label="Corriente medida" aria-valuemin="0" aria-valuemax="${CURRENT_ACCEPTABLE_MAX_MA}" ${hasCurrent ? `aria-valuenow="${Math.max(0, Math.min(CURRENT_ACCEPTABLE_MAX_MA, currentMa))}" aria-valuetext="${currentMa.toFixed(1)} mA; rango aceptable de 0 a 50 mA"` : "aria-valuetext=\"Sin medición\""}>
+            <div class="current-meter-track" role="meter" aria-label="Corriente medida" aria-valuemin="${CURRENT_ACCEPTABLE_MIN_MA}" aria-valuemax="${CURRENT_ACCEPTABLE_MAX_MA}" ${hasCurrent ? `aria-valuenow="${Math.max(CURRENT_ACCEPTABLE_MIN_MA, Math.min(CURRENT_ACCEPTABLE_MAX_MA, currentMa))}" aria-valuetext="${currentMa.toFixed(1)} mA; rango aceptable de ${CURRENT_ACCEPTABLE_MIN_MA} a ${CURRENT_ACCEPTABLE_MAX_MA} mA${isReferenceCurrent ? "; valor de referencia" : ""}"` : "aria-valuetext=\"Sin medición\""}>
               <div class="current-meter-fill ${isCurrentOutOfRange ? "out-of-range" : ""}" style="width:${currentFillPercent}%"></div>
               <span class="current-meter-limit" aria-hidden="true"></span>
             </div>
-            <div class="current-meter-scale"><span>0 mA</span><span class="current-meter-range">Rango aceptable: 0–50 mA</span><span>50 mA</span></div>
+            <div class="current-meter-scale"><span>${CURRENT_ACCEPTABLE_MIN_MA} mA</span><span class="current-meter-range">Rango aceptable: ${CURRENT_ACCEPTABLE_MIN_MA}–${CURRENT_ACCEPTABLE_MAX_MA} mA</span><span>${CURRENT_ACCEPTABLE_MAX_MA} mA</span></div>
             ${isCurrentOutOfRange ? `<span class="current-meter-warning" role="status">Fuera del rango aceptable</span>` : ""}
           </div>
         </div>
@@ -1202,9 +1212,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentMa = tablero.corriente_ma == null || tablero.corriente_ma === ""
       ? Number.NaN
       : Number(tablero.corriente_ma);
-    const currentOutOfRange = Number.isFinite(currentMa) && (currentMa < 0 || currentMa > CURRENT_ACCEPTABLE_MAX_MA);
+      const currentOutOfRange = Number.isFinite(currentMa) && (currentMa < CURRENT_ACCEPTABLE_MIN_MA || currentMa > CURRENT_ACCEPTABLE_MAX_MA);
     const currentSummary = Number.isFinite(currentMa)
-      ? `<p class="map-popup-current ${currentOutOfRange ? "out-of-range" : ""}"><i class="fas fa-gauge-high"></i> Corriente: <strong>${currentMa.toFixed(1)} mA</strong> <span>(máximo 50 mA)</span></p>`
+      ? `<p class="map-popup-current ${currentOutOfRange ? "out-of-range" : ""}"><i class="fas fa-gauge-high"></i> Corriente: <strong>${currentMa.toFixed(1)} mA</strong> <span>(rango ${CURRENT_ACCEPTABLE_MIN_MA}–${CURRENT_ACCEPTABLE_MAX_MA} mA)</span></p>`
       : "";
 
     return `<div class="map-board-popup">

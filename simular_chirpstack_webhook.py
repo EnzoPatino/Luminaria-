@@ -40,7 +40,7 @@ def normalizar_url(value):
 
 
 def construir_payload(application_name, tablero, sobrecorriente):
-    corriente_ma = 75 if sobrecorriente else 25
+    corriente_ma = 2600 if sobrecorriente else 1500
     payload_binario = corriente_ma.to_bytes(2, byteorder="big", signed=False)
     return {
         "deduplicationId": str(uuid.uuid4()),
@@ -97,7 +97,7 @@ def main():
         return 2
 
     application_name = input("Nombre de la aplicación ChirpStack [Simulador]: ").strip() or "Simulador"
-    tipo = input("Lectura [N]ormal (25 mA) o [S]obrecorriente (75 mA) (defecto N): ").strip().lower()
+    tipo = input("Lectura [N]ormal (1500 mA) o [S]obrecorriente (2600 mA) (defecto N): ").strip().lower()
     sobrecorriente = tipo == "s"
     print(f"AVISO: se escribirá una medición en {tablero}; esto puede crear o resolver una alerta real.")
     if input(f"Para confirmar, escribí ENVIAR A {tablero}: ").strip().upper() != f"ENVIAR A {tablero}":

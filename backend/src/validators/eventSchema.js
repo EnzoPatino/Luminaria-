@@ -36,6 +36,17 @@ const EVENT_SCHEMAS = {
       estado_conexion: z.string().max(50).optional(),
     }).strict(),
   },
+  BAJA_CORRIENTE: {
+    severidades: ['CRITICA'],
+    campos: z.object({
+      corriente_medida_ma: z.number().min(0).max(MAX_CURRENT_MA),
+      corriente_actual_ma: z.number().min(0).max(MAX_CURRENT_MA).optional(),
+      umbral_minimo_ma: z.number().min(0).max(MAX_CURRENT_MA),
+      fase: z.enum(['L1', 'L2', 'L3']).optional(),
+      rssi_lora: z.number().min(-150).max(20).optional(),
+      estado_conexion: z.string().max(50).optional(),
+    }).strict(),
+  },
   DESCONEXION_ABRUPTA_FOCO: {
     severidades: ['CRITICA'],
     campos: z.object({

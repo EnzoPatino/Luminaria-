@@ -57,7 +57,7 @@ TABLEROS = [
 ]
 
 # Rangos de simulación: los módulos reportan corriente, expresada en mA.
-CORRIENTE_NORMAL_MA = (0.0, 50.0)
+CORRIENTE_NORMAL_MA = (1000.0, 2500.0)
 INTERVALO_ENVIO = 2.0
 TIMEOUT_HTTP = 5
 
@@ -66,12 +66,12 @@ def evento(tablero, tipo):
     """Construye una medición y su payload para un tablero."""
     rssi = -random.randint(65, 105)
     if tipo == "SOBRECORRIENTE":
-        corriente = round(random.uniform(51.0, 80.0), 1)
+        corriente = round(random.uniform(2501.0, 3500.0), 1)
         severidad = "CRITICA"
         datos = {
             "corriente_medida_ma": corriente,
             "corriente_actual_ma": corriente,
-            "umbral_maximo_ma": 50.0,
+            "umbral_maximo_ma": 2500.0,
             "fase": tablero["fase"],
             "rssi_lora": rssi,
             "estado_conexion": "ONLINE",
@@ -81,7 +81,7 @@ def evento(tablero, tipo):
         severidad = "ADVERTENCIA"
         datos = {
             "id_foco": "FOCO_02",
-            "corriente_esperada_ma": 50.0,
+            "corriente_esperada_ma": 2500.0,
             "corriente_medida_ma": corriente,
             "duracion_anomalia_s": 30,
             "estado_circuito": "ACTIVO",
@@ -94,7 +94,7 @@ def evento(tablero, tipo):
         severidad = "CRITICA"
         datos = {
             "id_foco": "FOCO_02",
-            "corriente_previa_ma": round(random.uniform(40.0, 50.0), 1),
+            "corriente_previa_ma": round(random.uniform(1000.0, 2500.0), 1),
             "corriente_actual_ma": corriente,
             "tiempo_caida_ms": random.randint(20, 250),
             "estado_circuito": "INACTIVO",
@@ -175,7 +175,7 @@ def dibujar(stdscr, valores, alertas, estados, ultimo_envio, mensaje):
 
     linea(0, "LUMINARIA | Simulador interactivo de telemetría")
     linea(1, f"Destino: {SERVER_URL}")
-    linea(2, "Telemetría actual: corriente solamente; rango normal 0–50 mA.")
+    linea(2, "Telemetría actual: corriente solamente; rango normal 1000–2500 mA.")
     linea(3, "Teclas: 1–4 seleccionan tablero; s = sobrecorriente, f = foco quemado, d = desconexión; misma tecla alterna.")
     linea(4, "q = salir. Las mediciones se envían a todos los tableros cada 2 s.")
     linea(6, f"{'TABLERO':<18} {'ESTADO':<25} {'CORRIENTE':>12}  ÚLTIMO ENVÍO")

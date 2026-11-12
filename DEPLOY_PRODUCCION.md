@@ -41,7 +41,7 @@ cada minuto; estos intervalos se pueden ajustar con `DEMO_DATA_TTL_MS` y
 El simulador interactivo `python3 simular_envio.py` envía cuatro tableros DEMO
 a `/api/simulacion`. Ese endpoint requiere una cuenta administradora y acepta
 solo `DEMO_TABLERO_01` a `DEMO_TABLERO_04`; `/api/eventos` sigue rechazando IDs
-DEMO. Las lecturas son de corriente (0–50 mA normal); `s`, `f` y `d` alternan
+DEMO. Las lecturas de tablero normales son de corriente (1000–2500 mA); `s`, `f` y `d` alternan
 sobrecorriente, foco quemado y desconexión en el tablero seleccionado.
 
 ## Primer despliegue

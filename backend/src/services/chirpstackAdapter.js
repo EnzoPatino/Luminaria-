@@ -20,7 +20,8 @@ const DEFAULT_DEVICE_MAP = {
   'arduinorfm95_v2': 'TABLERO_01',
   'arduinorfm95_v.2': 'TABLERO_01',
 };
-const MAX_ACCEPTABLE_CURRENT_MA = 50;
+const MIN_ACCEPTABLE_CURRENT_MA = 1000;
+const MAX_ACCEPTABLE_CURRENT_MA = 2500;
 
 function normalizeDevEui(value) {
   const original = String(value || '').trim();
@@ -336,6 +337,17 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
       ...(rssi !== null ? { rssi_lora: rssi } : {}),
       estado_conexion: 'ONLINE',
     };
+  } else if (Number.isFinite(corriente) && corriente < MIN_ACCEPTABLE_CURRENT_MA) {
+    tipoEvento = 'BAJA_CORRIENTE';
+    severidad = 'CRITICA';
+    datos = {
+      corriente_medida_ma: corriente,
+      corriente_actual_ma: corriente,
+      umbral_minimo_ma: MIN_ACCEPTABLE_CURRENT_MA,
+      ...(fase ? { fase } : {}),
+      ...(rssi !== null ? { rssi_lora: rssi } : {}),
+      estado_conexion: 'ONLINE',
+    };
   } else if (Number.isFinite(corriente) && corriente > MAX_ACCEPTABLE_CURRENT_MA) {
     tipoEvento = 'SOBRECORRIENTE';
     severidad = 'CRITICA';
@@ -349,8 +361,8 @@ function adaptChirpstackUplink(body, query = {}, headers = {}) {
     };
   } else if (
     focoAfectado &&
-    Number.isFinite(corriente) && corriente < 50 &&
-    Number.isFinite(corrientePrevia) && corrientePrevia >= 50 &&
+    Number.isFinite(corriente) && corriente < MIN_ACCEPTABLE_CURRENT_MA &&
+    Number.isFinite(corrientePrevia) && corrientePrevia >= MIN_ACCEPTABLE_CURRENT_MA &&
     Number.isFinite(tiempoCaidaMs) && tiempoCaidaMs <= 200 &&
     estadoCircuito === 'ACTIVO'
   ) {

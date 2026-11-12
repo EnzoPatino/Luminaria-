@@ -5,7 +5,8 @@ const lecturasModel = require('../models/lecturasModel');
 const alertasModel = require('../models/alertasModel');
 
 const VALID_SEVERITIES = new Set(['CRITICA', 'ADVERTENCIA', 'INFO']);
-const MAX_ACCEPTABLE_CURRENT_MA = 50;
+const MIN_ACCEPTABLE_CURRENT_MA = 1000;
+const MAX_ACCEPTABLE_CURRENT_MA = 2500;
 
 function isPersistentSeverity(severidad) {
   return severidad === 'CRITICA';
@@ -81,7 +82,11 @@ async function persistEvent(event) {
 
     if (event.tipo_evento === 'TELEMETRIA_NORMAL') {
       const currentReported = toNullableNumber(data.corriente_actual_ma ?? data.corriente_medida_ma);
-      if (currentReported !== null && currentReported <= MAX_ACCEPTABLE_CURRENT_MA) {
+      if (
+        currentReported !== null &&
+        currentReported >= MIN_ACCEPTABLE_CURRENT_MA &&
+        currentReported <= MAX_ACCEPTABLE_CURRENT_MA
+      ) {
         await client.query(
           `UPDATE alertas
            SET estado_alerta = 'resuelta',
@@ -89,7 +94,7 @@ async function persistEvent(event) {
                fecha_resolucion = now(),
                resuelto_por = NULL
            WHERE id_tablero = $1
-             AND tipo_alerta = 'SOBRECORRIENTE'
+             AND tipo_alerta IN ('SOBRECORRIENTE', 'BAJA_CORRIENTE')
              AND estado_alerta = 'activa'`,
           [tablero.id_tablero]
         );
