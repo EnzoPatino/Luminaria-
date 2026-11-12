@@ -1,4 +1,4 @@
-const { adaptChirpstackUplink } = require('../services/chirpstackAdapter');
+const { adaptChirpstackUplink, unwrapChirpstackUplink } = require('../services/chirpstackAdapter');
 const { ingestEvent } = require('../services/ingestaService');
 
 // Almacén en memoria del último payload recibido para inspección y depuración
@@ -16,10 +16,10 @@ async function handleChirpstackUplink(req, res, next) {
     const queryEvent = (req.query.event || '').toLowerCase();
     const headerEvent = (req.headers['x-chirpstack-event'] || '').toLowerCase();
     
-    // Soporte si el webhook envía un arreglo de paquetes o un objeto directo
+    // Soporte para el webhook directo, la envoltura { type, payload } y lotes.
     const rawBody = req.body;
-    const body = Array.isArray(rawBody) ? (rawBody[rawBody.length - 1] || {}) : (rawBody || {});
-    const bodyEvent = (body.event || body.type || '').toLowerCase();
+    const { body, eventType: wrappedEvent } = unwrapChirpstackUplink(rawBody);
+    const bodyEvent = wrappedEvent || (body.event || body.type || '').toLowerCase();
 
     // Determinar el tipo de evento ChirpStack (v3 y v4)
     let eventType = queryEvent || headerEvent || bodyEvent;

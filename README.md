@@ -64,7 +64,7 @@ El backend recibe la telemetría enviada por los sensores y gateways a través d
 2. **Endpoint de verificación:** `GET /api/uplink` (informa si el receptor está listo).
 3. **Inspección de diagnóstico:** `GET /api/uplink/last` (requiere token JWT de operador autorizado).
 
-El adaptador (`chirpstackAdapter.js`) mapea el DevEUI con el tablero asignado, decodifica la corriente en mA y persiste las lecturas en PostgreSQL local.
+El adaptador (`chirpstackAdapter.js`) mapea el DevEUI con el tablero asignado, decodifica la corriente en mA y persiste las lecturas en PostgreSQL local. Admite el webhook directo de ChirpStack y la envoltura de exportación `{"type":"up","payload":{...}}`; si recibe un lote, procesa el uplink más reciente.
 
 ### Configuración autenticada de Mosquitto MQTT (opcional)
 
