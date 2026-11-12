@@ -435,7 +435,12 @@ document.addEventListener("DOMContentLoaded", () => {
           if (targetPane) {
             targetPane.classList.add("active");
             if (targetPaneId === "tabMapa" && leafletMap) {
-               setTimeout(() => leafletMap.invalidateSize(), 50);
+               setTimeout(() => {
+                 leafletMap.invalidateSize();
+                 if (greenSpacesBounds) {
+                   leafletMap.fitBounds(greenSpacesBounds, { padding: [24, 24], maxZoom: 13 });
+                 }
+               }, 50);
             }
           }
 
@@ -1165,6 +1170,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let leafletMap = null;
   let leafletMarkers = {};
+  let greenSpacesBounds = null;
   let mapAlertSortOrder = "newest";
 
   function buildBoardMapPopup(tablero, lat, lng) {
@@ -1236,21 +1242,32 @@ document.addEventListener("DOMContentLoaded", () => {
         return response.json();
       })
       .then((spaces) => {
-        L.geoJSON(spaces, {
+        const spacesLayer = L.geoJSON(spaces, {
           style: (feature) => ({
             className: `map-park-area ${feature.properties.type}`,
-            color: feature.properties.type === 'parque' ? '#0f766e' : '#15803d',
+            color: feature.properties.type === 'parque' ? '#0f766e' : '#166534',
             fillColor: feature.properties.type === 'parque' ? '#14b8a6' : '#22c55e',
-            weight: 1.5,
-            opacity: 0.72,
-            fillOpacity: 0.2
+            weight: 2,
+            opacity: 0.95,
+            fillOpacity: 0.34
           }),
           onEachFeature: (feature, layer) => {
             const label = document.createElement('span');
             label.textContent = `${feature.properties.name} · ${feature.properties.type}`;
             layer.bindTooltip(label, { className: 'map-park-tooltip', sticky: true });
+            const dotColor = feature.properties.type === 'parque' ? '#0891b2' : '#16a34a';
+            L.circleMarker(layer.getBounds().getCenter(), {
+              radius: 6,
+              color: '#ffffff',
+              weight: 2,
+              fillColor: dotColor,
+              fillOpacity: 1,
+              className: 'map-green-space-dot',
+              interactive: false
+            }).addTo(leafletMap);
           }
         }).addTo(leafletMap);
+        greenSpacesBounds = spacesLayer.getBounds();
       })
       .catch((error) => console.warn('[Luminaria] Capa de plazas no disponible.', error));
 

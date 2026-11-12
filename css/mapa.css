@@ -3,13 +3,14 @@
 /* ============================================ */
 .map-park-area {
   fill: #22c55e;
-  fill-opacity: .2;
-  color: #15803d;
-  opacity: .72;
-  weight: 1.5;
+  fill-opacity: .34;
+  color: #166534;
+  opacity: .95;
+  weight: 2;
 }
-.map-park-area:hover { fill-opacity: .42; opacity: 1; }
+.map-park-area:hover { fill-opacity: .55; opacity: 1; weight: 3; }
 .map-park-area.parque { fill: #14b8a6; color: #0f766e; }
+.map-green-space-dot { filter: drop-shadow(0 1px 3px rgba(15, 23, 42, .8)); }
 .map-park-tooltip {
   border: 0;
   border-radius: 6px;
