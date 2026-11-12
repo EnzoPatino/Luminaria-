@@ -1285,41 +1285,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const baseLng = -68.08;
 
     Object.values(appState.tableros).forEach((tablero) => {
-      let worstSeverity = "ok";
-
-      Object.values(tablero.focos || {}).forEach((foco) => {
-        if (foco.estado === "robado") {
-          worstSeverity = "critical";
-        } else if (foco.estado === "quemado" && worstSeverity !== "critical") {
-          worstSeverity = "warning";
-        }
-      });
-
-      const tableroAlerts = appState.alerts.filter(
-        (a) => a.id_tablero === tablero.id && !a.resuelta && a.tipo_evento !== "BAJA_TENSION",
-      );
-      if (tableroAlerts.some((a) => a.severidad === "CRITICA")) {
-        worstSeverity = "critical";
-      } else if (
-        tableroAlerts.some((a) => a.severidad === "ADVERTENCIA") &&
-        worstSeverity !== "critical"
-      ) {
-        worstSeverity = "warning";
-      }
-
-      const currentMa = tablero.corriente_ma == null || tablero.corriente_ma === ""
-        ? Number.NaN
-        : Number(tablero.corriente_ma);
-      if (Number.isFinite(currentMa) && (currentMa < 0 || currentMa > CURRENT_ACCEPTABLE_MAX_MA)) {
-        worstSeverity = "critical";
-      }
-
-      let pinColor = "#10b981";
-      if (worstSeverity === "critical") {
-        pinColor = "#ef4444";
-      } else if (worstSeverity === "warning") {
-        pinColor = "#f59e0b";
-      }
+      const pinColor = "#10b981";
 
       const isSelected = tablero.id === appState.selectedTableroId;
 
