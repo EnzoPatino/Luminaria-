@@ -1,6 +1,24 @@
 /* ============================================ */
 /* MAPA DE ZONAS Y SEMÁFORO                      */
 /* ============================================ */
+.map-park-area {
+  fill: #22c55e;
+  fill-opacity: .2;
+  color: #15803d;
+  opacity: .72;
+  weight: 1.5;
+}
+.map-park-area:hover { fill-opacity: .42; opacity: 1; }
+.map-park-area.parque { fill: #14b8a6; color: #0f766e; }
+.map-park-tooltip {
+  border: 0;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, .94);
+  color: #f8fafc;
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
+  font: 600 12px/1.4 var(--font-main, sans-serif);
+}
+.map-park-tooltip::before { border-top-color: rgba(15, 23, 42, .94); }
 .map-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);

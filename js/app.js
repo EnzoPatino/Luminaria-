@@ -1218,7 +1218,6 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     </div>`;
   }
-
   function initLeafletMap() {
     const neuquenCoords = [-38.9516, -68.0591];
 
@@ -1230,6 +1229,30 @@ document.addEventListener("DOMContentLoaded", () => {
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19
     }).addTo(leafletMap);
+
+    fetch('js/espacios-verdes.geojson')
+      .then((response) => {
+        if (!response.ok) throw new Error('No se pudo cargar la capa de espacios verdes');
+        return response.json();
+      })
+      .then((spaces) => {
+        L.geoJSON(spaces, {
+          style: (feature) => ({
+            className: `map-park-area ${feature.properties.type}`,
+            color: feature.properties.type === 'parque' ? '#0f766e' : '#15803d',
+            fillColor: feature.properties.type === 'parque' ? '#14b8a6' : '#22c55e',
+            weight: 1.5,
+            opacity: 0.72,
+            fillOpacity: 0.2
+          }),
+          onEachFeature: (feature, layer) => {
+            const label = document.createElement('span');
+            label.textContent = `${feature.properties.name} · ${feature.properties.type}`;
+            layer.bindTooltip(label, { className: 'map-park-tooltip', sticky: true });
+          }
+        }).addTo(leafletMap);
+      })
+      .catch((error) => console.warn('[Luminaria] Capa de plazas no disponible.', error));
 
     renderMapPins();
   }
